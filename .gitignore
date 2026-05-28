@@ -1,0 +1,17 @@
+# --- Build-time tooling (used to derive this template; contains source-author data) ---
+/scripts/template_blocklist.json
+/scripts/check_template_clean.py
+/scripts/depersonalize.py
+/scripts/tests/
+
+# --- Internal planning/design docs (contain real source data) ---
+/docs/superpowers/
+
+# --- OS / editor noise ---
+.DS_Store
+**/__pycache__/
+**/.pytest_cache/
+
+# --- Obsidian workspace state (per-user, not shareable) ---
+.obsidian/workspace.json
+.obsidian/workspace-mobile.json
