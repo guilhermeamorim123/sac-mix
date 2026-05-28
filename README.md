@@ -2,6 +2,25 @@
 
 Um segundo cérebro reutilizável para gestores, em Obsidian + Claude Code. Clone, abra no Claude Code e rode `/cos-setup`: o Claude entrevista você e monta o vault com o seu contexto, seu time e as ferramentas que você usa. Tudo funciona **vault-first**, sem nenhuma integração ligada já entrega valor; conecte Slack/Gmail/ClickUp/Calendar quando quiser.
 
+## Quickstart em 1 prompt
+
+Cole o bloco abaixo no **Claude Code** ou no **Codex** que você usa hoje. Ele pergunta onde clonar, baixa o projeto e te guia até rodar a entrevista de personalização (`/cos-setup`).
+
+```text
+Quero montar meu segundo cérebro do Chief of Staff. Faça assim:
+
+1. Me pergunte em qual pasta do meu PC clonar o projeto
+   (default sugerido: ~/Documents/Chief of Staff).
+2. Clone https://github.com/will-pagane/chief-of-staff-template.git
+   na pasta que eu indicar.
+3. Confirme que clonou e me mostre o conteúdo da pasta.
+4. Me instrua a abrir essa pasta como projeto no Claude Code
+   (ou Codex) e rodar /cos-setup para a entrevista de personalização.
+5. Antes da entrevista, me lembre dos pré-requisitos do README:
+   Obsidian com plugins Tasks e Dataview, e
+   `export CLAUDE_CODE_FORK_SUBAGENT=1` no shell rc se for Claude Code.
+```
+
 ## O que é
 Um "Chief of Staff" que prepara e processa 1:1s, weeklys e reuniões de projeto, mantém um log de decisões, rastreia tarefas e o desenvolvimento do time, e monta seu briefing diário. As notas são Markdown puro no Obsidian; o Claude opera sobre elas via skills.
 
