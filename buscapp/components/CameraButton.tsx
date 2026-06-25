@@ -26,7 +26,6 @@ export function CameraButton({ onCapture }: CameraButtonProps) {
         ref={inputRef}
         type="file"
         accept="image/*"
-        // @ts-expect-error capture attribute is valid HTML but not in React types
         capture="environment"
         className="hidden"
         onChange={handleFile}
