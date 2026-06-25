@@ -3,7 +3,7 @@ name: answer-questions
 description: Run the full ML question-answering cycle — fetch pending buyer questions from all configured accounts, analyze sentiment, generate persuasive responses, post automatically when confident, escalate otherwise.
 argument-hint: "[--dry-run]"
 user-invocable: true
-allowed-tools: Bash, Read, Write, Edit
+allowed-tools: Bash, Read, Write, Edit, WebSearch
 ---
 
 # Answer Questions Skill
@@ -42,7 +42,7 @@ Read the question text and classify: curioso / cético / urgente / sensível_a_p
 State your classification and reasoning in one sentence before drafting.
 
 **3c. Check escalation triggers**
-If question mentions any of: preço / desconto / negociação / devolução / troca / reembolso / defeito / reclamação / garantia → mark ESCALATE immediately, skip to 3h.
+If question mentions any of: preço / desconto / negociação / devolução / troca / reembolso / defeito / reclamação / garantia / ameaça / processo / Procon / Reclame → mark ESCALATE immediately, skip to 3h.
 
 **3d. Evaluate confidence**
 Score 0–100 based on whether item attributes and description directly answer the question.
@@ -60,12 +60,18 @@ If `--dry-run`: show draft, do NOT call post_answer.py. Continue to next questio
 
 If NOT `--dry-run`:
 ```bash
-python scripts/post_answer.py --question-id QUESTION_ID --text "RESPONSE_TEXT"
+python scripts/post_answer.py --question-id QUESTION_ID --text "RESPONSE_TEXT" --account N
 ```
 Then append to log:
 ```bash
 # Append to logs/YYYY-MM-DD.md (create if needed)
 ```
+
+Log entry format:
+- ML-sourced answer: `- [HH:MM] Q#QUESTION_ID — Item ITEM_ID — [ML] — [sentimento] — resposta postada`
+- Web-sourced answer: `- [HH:MM] Q#QUESTION_ID — Item ITEM_ID — [WEB] — [sentimento] — resposta postada`
+
+Append to `logs/YYYY-MM-DD.md` (create file with header `# Log YYYY-MM-DD\n` if it doesn't exist).
 
 **3f. WebSearch fallback**
 Chegou aqui porque a confiança nos dados do anúncio foi < 90% e o tópico não é bloqueado.
@@ -74,11 +80,13 @@ Construa a query: `"[title do anúncio] [especificação perguntada]"` — em po
 
 Execute WebSearch com essa query. Avalie até 3 resultados conforme as regras em `context/answer-guidelines.md` seção "Busca Web".
 
-- Resultado aceito → use o dado encontrado para redigir a resposta em 3e (volte ao Step 3e usando o dado web como fonte, sinalize internamente que a fonte é web)
+- Resultado aceito → use o dado encontrado para redigir a resposta em 3e (volte ao Step 3e usando o dado web como fonte; aplique a lógica de `--dry-run` normalmente; use a tag `[WEB]` no log)
 - Nenhum resultado aceito → vá para 3g
 
 **3g. Generic response**
 Nenhuma fonte (anúncio ML nem web) tem o dado. Poste a resposta genérica padrão:
+
+If `--dry-run`: show the generic text below but DO NOT call post_answer.py. Log entry still applies.
 
 ```bash
 python scripts/post_answer.py --question-id QUESTION_ID --text "Olá! Para mais detalhes sobre essa especificação, recomendo entrar em contato pelo chat do Mercado Livre — assim consigo te ajudar com mais precisão. 😊" --account N
