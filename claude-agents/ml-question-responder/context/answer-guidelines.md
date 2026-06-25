@@ -161,6 +161,8 @@ Use quando a confiança nos dados do anúncio ML for < 90% E o tópico não for 
 
 ### Construção da Query
 
+Execute no máximo uma busca por pergunta.
+
 ```
 "[title do anúncio] [especificação perguntada]"
 ```
@@ -168,6 +170,8 @@ Use quando a confiança nos dados do anúncio ML for < 90% E o tópico não for 
 Exemplos:
 - Produto "Caixa de Som JBL Go 3", pergunta "qual a potência?" → query: `JBL Go 3 potência watts`
 - Produto "Tênis Nike Air Max 270", pergunta "é de couro?" → query: `Nike Air Max 270 material couro sintético`
+
+> As aspas no template são estruturais — não inclua aspas literais na query enviada ao buscador.
 
 ### Validação do Resultado
 
@@ -181,6 +185,8 @@ Descarte o resultado se:
 - Contradiz um atributo do anúncio ML
 - O trecho é ambíguo ou cita "depende do modelo"
 
+Se um resultado for aceito, use o dado encontrado para redigir a resposta seguindo a estrutura e os templates normais desta seção — sinalize internamente que a fonte é web (não mencione isso ao comprador).
+
 Se nenhum dos 3 resultados for aceito → use a resposta genérica padrão.
 
 ### Resposta Genérica Padrão
@@ -193,7 +199,7 @@ Olá! Para mais detalhes sobre essa especificação, recomendo entrar em contato
 
 - Máximo 300 caracteres (essa tem ~170)
 - Nunca mencione que fez uma busca ou que o dado não existe no anúncio
-- Registre no log com tag `[GENÉRICA]`
+- Registre no log com o formato: `- [HH:MM] Q#QUESTION_ID — Item ITEM_ID — [GENÉRICA] — Dado não encontrado em anúncio nem na web`
 
 ---
 
