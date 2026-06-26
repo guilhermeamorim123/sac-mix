@@ -83,7 +83,7 @@ Extraia do JSON retornado por `get_item.py`:
 | `sale_price` | Mencionar promoção ativa (NUNCA invente) |
 | `condition` | "novo" / "usado" quando relevante |
 
-**Regra de ouro:** Se a informação não estiver no JSON, não escreva. Prefira escalar.
+**Regra de ouro:** Se a informação não estiver no JSON, não escreva. Acione a busca web — só escale se o tópico for bloqueado.
 
 ---
 
