@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python scripts/ml_auth.py*)",
+      "Bash(python scripts/get_questions.py*)",
+      "Bash(python scripts/get_item.py*)",
+      "Bash(python scripts/post_answer.py*)",
+      "Bash(pip install requests)",
+      "Read(context/*)",
+      "Read(pending-questions.md)",
+      "Read(logs/*)",
+      "Write(pending-questions.md)",
+      "Write(logs/*)"
+    ],
+    "deny": []
+  }
+}

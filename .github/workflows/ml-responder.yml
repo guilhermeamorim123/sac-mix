@@ -1,0 +1,73 @@
+# ML Question Auto-Responder
+#
+# Runs automatically every 15 minutes to answer unanswered buyer questions on Mercado Livre.
+# Requires the following GitHub repository secrets:
+#
+#   ANTHROPIC_API_KEY      → Anthropic API key (get it at console.anthropic.com/keys)
+#   ML_CLIENT_ID_1         → ML app Client ID
+#   ML_CLIENT_SECRET_1     → ML app Secret Key
+#   ML_REFRESH_TOKEN_1     → ML refresh token (primary long-lived credential)
+#   ML_ACCESS_TOKEN_1      → ML access token (optional; refreshed automatically when expired)
+#
+# Optional (to auto-update ML_ACCESS_TOKEN_1 secret after token refresh):
+#   GH_PAT                 → Personal Access Token with 'repo' scope
+
+name: ML Question Responder
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'   # every 5 minutes (GitHub minimum)
+  workflow_dispatch:         # allow manual trigger for testing
+
+jobs:
+  answer-questions:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10      # safety cap — each run should finish in < 3 min
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+          cache-dependency-path: claude-agents/ml-question-responder/requirements.txt
+
+      - name: Install dependencies
+        run: pip install -r claude-agents/ml-question-responder/requirements.txt
+
+      - name: Run ML question responder
+        env:
+          ANTHROPIC_API_KEY:    ${{ secrets.ANTHROPIC_API_KEY }}
+          # Account 1
+          ML_CLIENT_ID_1:       ${{ secrets.ML_CLIENT_ID_1 }}
+          ML_CLIENT_SECRET_1:   ${{ secrets.ML_CLIENT_SECRET_1 }}
+          ML_ACCESS_TOKEN_1:    ${{ secrets.ML_ACCESS_TOKEN_1 }}
+          ML_REFRESH_TOKEN_1:   ${{ secrets.ML_REFRESH_TOKEN_1 }}
+          # Account 2 (uncomment and add secrets if needed)
+          # ML_CLIENT_ID_2:     ${{ secrets.ML_CLIENT_ID_2 }}
+          # ML_CLIENT_SECRET_2: ${{ secrets.ML_CLIENT_SECRET_2 }}
+          # ML_ACCESS_TOKEN_2:  ${{ secrets.ML_ACCESS_TOKEN_2 }}
+          # ML_REFRESH_TOKEN_2: ${{ secrets.ML_REFRESH_TOKEN_2 }}
+        run: python claude-agents/ml-question-responder/scripts/auto_responder.py
+
+      # Auto-update ML_ACCESS_TOKEN secret after token refresh.
+      # Only runs when the script performed a refresh (NEW_ML_ACCESS_TOKEN_1 env var set).
+      # Requires GH_PAT secret with 'repo' scope — skip this step if not configured.
+      - name: Update refreshed ML token in GitHub Secrets
+        if: env.NEW_ML_ACCESS_TOKEN_1 != ''
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.GH_PAT }}
+        run: |
+          if [ -z "$GH_TOKEN" ]; then
+            echo "GH_PAT não configurado — atualize ML_ACCESS_TOKEN_1 manualmente nas configurações do repositório."
+            exit 0
+          fi
+          echo "${NEW_ML_ACCESS_TOKEN_1}" | gh secret set ML_ACCESS_TOKEN_1 --repo "$GITHUB_REPOSITORY"
+          if [ -n "${NEW_ML_REFRESH_TOKEN_1}" ]; then
+            echo "${NEW_ML_REFRESH_TOKEN_1}" | gh secret set ML_REFRESH_TOKEN_1 --repo "$GITHUB_REPOSITORY"
+          fi
+          echo "Tokens atualizados com sucesso."
