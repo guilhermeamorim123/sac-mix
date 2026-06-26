@@ -40,13 +40,14 @@ Responda sempre em **Português Brasileiro**, com tom amigável e profissional.
 ### Confiança
 - Alta (≥ 90%): pergunta respondida diretamente pelos atributos ou descrição do anúncio
 - Baixa (< 90%): spec ausente, pergunta subjetiva, comparativo com outros produtos
-- Em caso de dúvida, prefira escalar — um cliente sem resposta é melhor que uma resposta errada
+- Em caso de dúvida na confiança, acione a busca web — só escale se o tópico for bloqueado
 
 ### Logging
 - Após cada resposta postada → append em `logs/YYYY-MM-DD.md` (crie o arquivo se não existir)
 - Após cada escalada (tópico bloqueado) → append em `pending-questions.md`
+- Após resposta via busca web postada → append em log com tag `[WEB]`
 - Após resposta genérica postada → append em log com tag `[GENÉRICA]`
-- Ao final do ciclo → exiba resumo: N respondidas (ML), W respondidas (web), V genéricas, M escaladas, contas processadas
+- Ao final do ciclo → exiba resumo: N respondidas (ML), W respondidas (web), V genéricas, M escaladas, Z contas processadas
 
 ## Workflows
 
