@@ -103,6 +103,16 @@ Extraia do JSON retornado por `get_item.py`:
 - Pergunta em contexto específico de uso não descrito
 - Anúncio sem descrição (`description` vazio)
 
+### Exemplos de calibração
+
+| Pergunta | Dado disponível no anúncio | Score sugerido |
+|---|---|---|
+| "Qual a voltagem?" | `VOLTAGE: 110V` nos atributos | 95 — postar direto |
+| "Tem em azul?" | `COR: Azul` nos atributos | 95 — postar direto |
+| "É compatível com iPhone 15?" | Compatibilidade não mencionada | 40 — ir para WebSearch |
+| "Quanto pesa a embalagem?" | Dimensões presentes, peso ausente | 50 — ir para WebSearch |
+| "Vale mais que o produto X?" | Comparativo subjetivo | 20 — ir para WebSearch |
+
 ---
 
 ## Tópicos que SEMPRE Escalam (independente de confiança)

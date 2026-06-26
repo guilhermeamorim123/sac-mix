@@ -42,7 +42,7 @@ Read the question text and classify: curioso / cético / urgente / sensível_a_p
 State your classification and reasoning in one sentence before drafting.
 
 **3c. Check escalation triggers**
-If question mentions any of: preço / desconto / negociação / devolução / troca / reembolso / defeito / reclamação / garantia / ameaça / processo / Procon / Reclame → mark ESCALATE immediately, skip to 3h.
+If question mentions any of: preço / desconto / negociação / devolução / troca / reembolso / defeito / reclamação / garantia / assistência técnica / ameaça / processo / Procon / Reclame → mark ESCALATE immediately, skip to 3h.
 
 **3d. Evaluate confidence**
 Score 0–100 based on whether item attributes and description directly answer the question.
@@ -52,7 +52,7 @@ Score 0–100 based on whether item attributes and description directly answer t
 **3e. Draft persuasive response**
 Use the sentiment strategy and template from answer-guidelines.md:
 1. Empathy opening aligned to sentiment
-2. Direct, factual answer (data from API only)
+2. Direct, factual answer (data from API or accepted web result — when reached from 3f, use web-sourced fact as the approved source)
 3. Benefit-chave relevant to the question
 4. Soft CTA appropriate to confidence level
 
@@ -86,7 +86,7 @@ Execute WebSearch com essa query. Avalie até 3 resultados conforme as regras em
 **3g. Generic response**
 Nenhuma fonte (anúncio ML nem web) tem o dado. Poste a resposta genérica padrão:
 
-If `--dry-run`: show the generic text below but DO NOT call post_answer.py. Log entry still applies.
+If `--dry-run`: show the generic text below but DO NOT call post_answer.py. Continue to next question.
 
 ```bash
 python scripts/post_answer.py --question-id QUESTION_ID --text "Olá! Para mais detalhes sobre essa especificação, recomendo entrar em contato pelo chat do Mercado Livre — assim consigo te ajudar com mais precisão. 😊" --account N
@@ -94,7 +94,7 @@ python scripts/post_answer.py --question-id QUESTION_ID --text "Olá! Para mais 
 
 Append to log:
 ```
-- [HH:MM] Q#QUESTION_ID — Item ITEM_ID — [GENÉRICA] — Dado não encontrado em anúncio nem na web
+- [HH:MM] Q#QUESTION_ID — Item ITEM_ID — [GENÉRICA] — [sentimento] — Dado não encontrado em anúncio nem na web
 ```
 
 **3h. Escalate** *(apenas tópicos bloqueados — vindo do Step 3c)*
