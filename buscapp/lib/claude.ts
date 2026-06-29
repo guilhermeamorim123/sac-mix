@@ -116,7 +116,7 @@ export async function identifyVehicle(imageBase64: string, plate?: string): Prom
     }],
   })
 
-  const text = response.content[0].type === 'text' ? response.content[0].text : ''
+  const text = response.content[0].type === 'text' ? response.content[0].text : '{}'
   return JSON.parse(extractJson(text)) as VehicleInfo
 }
 
