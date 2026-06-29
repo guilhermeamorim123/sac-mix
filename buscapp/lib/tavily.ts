@@ -44,3 +44,18 @@ export async function searchProduct(productName: string): Promise<string[]> {
 
   return results
 }
+
+export async function searchVehicle(vehicleQuery: string): Promise<string[]> {
+  const apiKey = process.env.TAVILY_API_KEY
+  if (!apiKey) throw new Error('TAVILY_API_KEY não configurada')
+
+  const queries = [
+    `${vehicleQuery} tabela FIPE valor 2025`,
+    `${vehicleQuery} Webmotors comprar preço anúncios`,
+    `${vehicleQuery} especificações cavalos torque motor câmbio`,
+    `${vehicleQuery} consumo combustível km litro`,
+    `${vehicleQuery} anúncios venda km rodados`,
+  ]
+
+  return Promise.all(queries.map(q => tavilySearch(q, apiKey)))
+}
