@@ -16,11 +16,12 @@ interface TabBarProps {
 
 export function TabBar({ active }: TabBarProps) {
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-background border-t border-border flex h-16 z-50">
+    <nav aria-label="Navegação principal" className="fixed bottom-0 left-0 right-0 bg-background border-t border-border flex h-16 z-50">
       {TABS.map(tab => (
         <Link
           key={tab.id}
           href={tab.href}
+          aria-current={active === tab.id ? 'page' : undefined}
           className={`flex-1 flex flex-col items-center justify-center gap-0.5 transition-colors active:opacity-70 ${
             active === tab.id ? 'text-primary' : 'text-text-secondary'
           }`}
