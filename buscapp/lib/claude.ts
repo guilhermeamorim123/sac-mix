@@ -2,7 +2,7 @@ import Anthropic from '@anthropic-ai/sdk'
 import type {
   ProductInfo, PriceInfo, MarketInfo, InvestmentInfo, Verdict, SimilarProduct,
   VehicleInfo, VehicleSpecs, VehiclePrices, VehicleMarket,
-  FashionItem, FashionAuthenticity, FashionPrices, AuthenticityVerdict, AuthenticitySignal,
+  FashionItem, FashionPrices, AuthenticityVerdict, AuthenticitySignal,
 } from './types'
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
