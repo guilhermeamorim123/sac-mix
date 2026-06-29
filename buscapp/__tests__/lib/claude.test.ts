@@ -1,4 +1,4 @@
-import { identifyProduct, synthesizeReport } from '@/lib/claude'
+import { identifyProduct, synthesizeReport, identifyVehicle, synthesizeAutoReport } from '@/lib/claude'
 import Anthropic from '@anthropic-ai/sdk'
 
 jest.mock('@anthropic-ai/sdk', () => {
@@ -58,5 +58,62 @@ describe('synthesizeReport', () => {
 
     expect(result.verdict.rating).toBe('VALE INVESTIR')
     expect(result.prices.avg).toBe(349)
+  })
+})
+
+describe('identifyVehicle', () => {
+  beforeEach(() => { jest.clearAllMocks() })
+
+  it('retorna dados do veículo a partir de imagem', async () => {
+    mockCreate.mockResolvedValueOnce({
+      content: [{ type: 'text', text: JSON.stringify({
+        brand: 'Toyota', model: 'Corolla', year: '2022',
+        version: 'XEi 2.0', category: 'Sedan',
+      })}],
+    })
+
+    const result = await identifyVehicle('fake-base64')
+
+    expect(result.brand).toBe('Toyota')
+    expect(result.model).toBe('Corolla')
+    expect(result.year).toBe('2022')
+  })
+
+  it('inclui a placa no prompt quando fornecida', async () => {
+    mockCreate.mockResolvedValueOnce({
+      content: [{ type: 'text', text: JSON.stringify({
+        brand: 'Honda', model: 'Civic', year: '2021', version: 'EXL', category: 'Sedan',
+      })}],
+    })
+
+    await identifyVehicle('fake-base64', 'XYZ-9876')
+
+    const callArgs = mockCreate.mock.calls[0][0]
+    const textContent = callArgs.messages[0].content.find((c: { type: string }) => c.type === 'text')
+    expect(textContent.text).toContain('XYZ-9876')
+  })
+})
+
+describe('synthesizeAutoReport', () => {
+  beforeEach(() => { jest.clearAllMocks() })
+
+  it('retorna relatório estruturado de veículo', async () => {
+    const mockAutoReport = {
+      prices: { fipe: 112000, marketAvg: 118000, marketMin: 108000, marketMax: 128000 },
+      specs: { horsepower: 177, torque: '20,4 kgfm', engine: '2.0 Flex', transmission: 'CVT', fuelCity: 10.8, fuelHighway: 13.1 },
+      market: { listings: [], listingsCount: 342, liquidity: 'Alta', vsFIPE: 5.4 },
+      verdict: { rating: 'VALE INVESTIR', justification: 'Alta liquidez' },
+    }
+
+    mockCreate.mockResolvedValueOnce({
+      content: [{ type: 'text', text: JSON.stringify(mockAutoReport) }],
+    })
+
+    const vehicle = { brand: 'Toyota', model: 'Corolla', year: '2022', version: 'XEi', category: 'Sedan' }
+    const result = await synthesizeAutoReport(vehicle, ['resultado 1'])
+
+    expect(result.specs.horsepower).toBe(177)
+    expect(result.prices.fipe).toBe(112000)
+    expect(result.verdict.rating).toBe('VALE INVESTIR')
   })
 })
