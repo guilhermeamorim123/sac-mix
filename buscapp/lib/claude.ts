@@ -2,6 +2,7 @@ import Anthropic from '@anthropic-ai/sdk'
 import type {
   ProductInfo, PriceInfo, MarketInfo, InvestmentInfo, Verdict, SimilarProduct,
   VehicleInfo, VehicleSpecs, VehiclePrices, VehicleMarket,
+  FashionItem, FashionAuthenticity, FashionPrices, AuthenticityVerdict, AuthenticitySignal,
 } from './types'
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
@@ -168,6 +169,90 @@ Gere um relatório em JSON válido (sem markdown):
 }
 
 Máximo 5 itens em listings. Use 0 para campos numéricos sem dados. Sempre retorne JSON válido.`,
+    }],
+  })
+
+  const text = response.content[0].type === 'text' ? response.content[0].text : '{}'
+  return JSON.parse(extractJson(text))
+}
+
+export async function identifyFashionItem(imageBase64: string): Promise<{
+  item: FashionItem
+  authenticity: { score: number; verdict: AuthenticityVerdict; signals: AuthenticitySignal[] }
+}> {
+  const response = await client.messages.create({
+    model: 'claude-sonnet-4-6',
+    max_tokens: 800,
+    messages: [{
+      role: 'user',
+      content: [
+        {
+          type: 'image',
+          source: { type: 'base64', media_type: 'image/jpeg', data: imageBase64 },
+        },
+        {
+          type: 'text',
+          text: `Analise esta peça de roupa ou acessório. Identifique o item E avalie sinais de autenticidade.
+Responda APENAS com JSON válido neste formato, sem markdown:
+{
+  "brand": "marca",
+  "model": "modelo específico",
+  "colorway": "nome do colorway ou cor",
+  "year": "ano de lançamento estimado",
+  "category": "Calçado | Bolsa | Roupa | Acessório | Relógio | Joia",
+  "itemType": "tipo específico (ex: Tênis, Jaqueta, Carteira)",
+  "authenticityScore": <número 0-100>,
+  "signals": [{"status": "ok" | "warning" | "fail", "detail": "descrição do sinal"}]
+}
+Para authenticityScore: avalie costura, logotipo, proporções, acabamento visível.
+Para signals: liste 3-6 sinais específicos.
+Se não identificar a marca, use "Marca não identificada".`,
+        },
+      ],
+    }],
+  })
+
+  const text = response.content[0].type === 'text' ? response.content[0].text : '{}'
+  const parsed = JSON.parse(extractJson(text))
+
+  const score: number = parsed.authenticityScore ?? 0
+  const verdict: AuthenticityVerdict = score >= 70 ? 'ORIGINAL' : score >= 40 ? 'SUSPEITO' : 'RÉPLICA'
+
+  return {
+    item: {
+      brand: parsed.brand,
+      model: parsed.model,
+      colorway: parsed.colorway,
+      year: parsed.year,
+      category: parsed.category,
+      itemType: parsed.itemType,
+    },
+    authenticity: { score, verdict, signals: parsed.signals ?? [] },
+  }
+}
+
+export async function synthesizeFashionPrices(
+  item: FashionItem,
+  searchResults: string[]
+): Promise<FashionPrices> {
+  const resultsText = searchResults.join('\n\n---\n\n')
+
+  const response = await client.messages.create({
+    model: 'claude-sonnet-4-6',
+    max_tokens: 600,
+    messages: [{
+      role: 'user',
+      content: `Extraia preços de mercado para este item a partir dos resultados de busca.
+
+Item: ${item.brand} ${item.model} ${item.colorway}
+
+Resultados:
+${resultsText}
+
+Responda APENAS com JSON válido (sem markdown):
+{"platforms":[{"name":"nome da plataforma","price":"valor formatado (ex: R$ 1.299 ou US$ 180)","currency":"BRL" | "USD"}]}
+
+Máximo 4 plataformas. Se não houver dados, retorne {"platforms":[]}.`,
     }],
   })
 

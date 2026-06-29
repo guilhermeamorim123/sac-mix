@@ -1,4 +1,4 @@
-import { identifyProduct, synthesizeReport, identifyVehicle, synthesizeAutoReport } from '@/lib/claude'
+import { identifyProduct, synthesizeReport, identifyVehicle, synthesizeAutoReport, identifyFashionItem, synthesizeFashionPrices } from '@/lib/claude'
 import Anthropic from '@anthropic-ai/sdk'
 
 jest.mock('@anthropic-ai/sdk', () => {
@@ -115,5 +115,81 @@ describe('synthesizeAutoReport', () => {
     expect(result.specs.horsepower).toBe(177)
     expect(result.prices.fipe).toBe(112000)
     expect(result.verdict.rating).toBe('VALE INVESTIR')
+  })
+})
+
+describe('identifyFashionItem', () => {
+  beforeEach(() => { jest.clearAllMocks() })
+
+  it('retorna item identificado com score e sinais', async () => {
+    const mockResponse = {
+      brand: 'Nike', model: 'Air Jordan 1', colorway: 'Chicago',
+      year: '2019', category: 'Calçado', itemType: 'Tênis',
+      authenticityScore: 82,
+      signals: [
+        { status: 'ok', detail: 'Costura uniforme' },
+        { status: 'warning', detail: 'Etiqueta não visível' },
+      ],
+    }
+
+    mockCreate.mockResolvedValueOnce({
+      content: [{ type: 'text', text: JSON.stringify(mockResponse) }],
+    })
+
+    const result = await identifyFashionItem('fake-base64')
+
+    expect(result.item.brand).toBe('Nike')
+    expect(result.authenticity.score).toBe(82)
+    expect(result.authenticity.verdict).toBe('ORIGINAL')
+    expect(result.authenticity.signals).toHaveLength(2)
+  })
+
+  it('mapeia score < 40 para RÉPLICA', async () => {
+    mockCreate.mockResolvedValueOnce({
+      content: [{ type: 'text', text: JSON.stringify({
+        brand: 'Louis Vuitton', model: 'Neverfull', colorway: 'Monogram',
+        year: '2023', category: 'Bolsa', itemType: 'Tote',
+        authenticityScore: 25, signals: [],
+      })}],
+    })
+
+    const result = await identifyFashionItem('fake-base64')
+
+    expect(result.authenticity.verdict).toBe('RÉPLICA')
+  })
+
+  it('mapeia score 40-69 para SUSPEITO', async () => {
+    mockCreate.mockResolvedValueOnce({
+      content: [{ type: 'text', text: JSON.stringify({
+        brand: 'Gucci', model: 'Marmont', colorway: 'Black',
+        year: '2022', category: 'Bolsa', itemType: 'Shoulder Bag',
+        authenticityScore: 55, signals: [],
+      })}],
+    })
+
+    const result = await identifyFashionItem('fake-base64')
+
+    expect(result.authenticity.verdict).toBe('SUSPEITO')
+  })
+})
+
+describe('synthesizeFashionPrices', () => {
+  beforeEach(() => { jest.clearAllMocks() })
+
+  it('retorna preços por plataforma', async () => {
+    mockCreate.mockResolvedValueOnce({
+      content: [{ type: 'text', text: JSON.stringify({
+        platforms: [
+          { name: 'Nike.com.br', price: 'R$ 1.299', currency: 'BRL' },
+          { name: 'StockX', price: 'US$ 180', currency: 'USD' },
+        ],
+      })}],
+    })
+
+    const item = { brand: 'Nike', model: 'Air Jordan 1', colorway: 'Chicago', year: '2019', category: 'Calçado', itemType: 'Tênis' }
+    const result = await synthesizeFashionPrices(item, ['resultado 1'])
+
+    expect(result.platforms).toHaveLength(2)
+    expect(result.platforms[0].name).toBe('Nike.com.br')
   })
 })
