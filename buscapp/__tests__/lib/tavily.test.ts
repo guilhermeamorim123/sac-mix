@@ -1,4 +1,4 @@
-import { searchProduct, searchVehicle } from '@/lib/tavily'
+import { searchProduct, searchVehicle, searchFashionItem } from '@/lib/tavily'
 
 global.fetch = jest.fn()
 
@@ -58,5 +58,34 @@ describe('searchVehicle', () => {
   it('lança erro se TAVILY_API_KEY não estiver definida', async () => {
     delete process.env.TAVILY_API_KEY
     await expect(searchVehicle('Toyota Corolla')).rejects.toThrow('TAVILY_API_KEY')
+  })
+})
+
+describe('searchFashionItem', () => {
+  beforeEach(() => {
+    jest.clearAllMocks()
+    process.env.TAVILY_API_KEY = 'test-key'
+  })
+
+  it('executa 3 buscas em paralelo para item de moda', async () => {
+    ;(global.fetch as jest.Mock).mockImplementation((_url: string, opts: RequestInit) => {
+      const body = JSON.parse(opts.body as string)
+      return Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({
+          results: [{ content: `resultado: ${body.query}`, url: 'http://example.com', title: 'Título' }],
+        }),
+      })
+    })
+
+    const results = await searchFashionItem('Nike Air Jordan 1 Chicago')
+
+    expect(global.fetch).toHaveBeenCalledTimes(3)
+    expect(results).toHaveLength(3)
+  })
+
+  it('lança erro se TAVILY_API_KEY não estiver definida', async () => {
+    delete process.env.TAVILY_API_KEY
+    await expect(searchFashionItem('Nike Air Jordan 1')).rejects.toThrow('TAVILY_API_KEY')
   })
 })

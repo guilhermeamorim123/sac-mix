@@ -59,3 +59,16 @@ export async function searchVehicle(vehicleQuery: string): Promise<string[]> {
 
   return Promise.all(queries.map(q => tavilySearch(q, apiKey)))
 }
+
+export async function searchFashionItem(itemQuery: string): Promise<string[]> {
+  const apiKey = process.env.TAVILY_API_KEY
+  if (!apiKey) throw new Error('TAVILY_API_KEY não configurada')
+
+  const queries = [
+    `${itemQuery} preço oficial brasil site comprar`,
+    `${itemQuery} farfetch stockx preço dolar real`,
+    `${itemQuery} original vs fake como identificar autenticidade`,
+  ]
+
+  return Promise.all(queries.map(q => tavilySearch(q, apiKey)))
+}
