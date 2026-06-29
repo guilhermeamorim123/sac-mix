@@ -66,7 +66,7 @@ export interface VehicleInfo {
 
 export interface VehicleSpecs {
   horsepower: number
-  torque: string
+  torque: string       // pre-formatted with unit, e.g. "20,4 kgfm" (returned by Claude)
   engine: string
   transmission: string
   fuelCity: number
@@ -83,7 +83,7 @@ export interface VehiclePrices {
 export interface VehicleListing {
   title: string
   price: number
-  km: string
+  km: string           // pre-formatted odometer from listing, e.g. "28.000 km"
   city: string
 }
 
@@ -132,7 +132,7 @@ export interface FashionAuthenticity {
 
 export interface FashionPlatformPrice {
   name: string
-  price: string
+  price: string        // formatted with symbol, e.g. "R$ 1.299" or "US$ 180"
   currency: 'BRL' | 'USD'
 }
 
@@ -140,6 +140,8 @@ export interface FashionPrices {
   platforms: FashionPlatformPrice[]
 }
 
+/** Fashion analysis does not use the investment Verdict (VALE INVESTIR/ATENÇÃO/NÃO VALE).
+ *  The authenticity result lives at `authenticity.verdict` (AuthenticityVerdict). */
 export interface FashionAnalysis {
   id: string
   createdAt: string
