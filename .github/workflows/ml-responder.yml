@@ -46,11 +46,11 @@ jobs:
           ML_CLIENT_SECRET_1:   ${{ secrets.ML_CLIENT_SECRET_1 }}
           ML_ACCESS_TOKEN_1:    ${{ secrets.ML_ACCESS_TOKEN_1 }}
           ML_REFRESH_TOKEN_1:   ${{ secrets.ML_REFRESH_TOKEN_1 }}
-          # Account 2 (uncomment and add secrets if needed)
-          # ML_CLIENT_ID_2:     ${{ secrets.ML_CLIENT_ID_2 }}
-          # ML_CLIENT_SECRET_2: ${{ secrets.ML_CLIENT_SECRET_2 }}
-          # ML_ACCESS_TOKEN_2:  ${{ secrets.ML_ACCESS_TOKEN_2 }}
-          # ML_REFRESH_TOKEN_2: ${{ secrets.ML_REFRESH_TOKEN_2 }}
+          # Account 2 — Mix Conecta
+          ML_CLIENT_ID_2:       ${{ secrets.ML_CLIENT_ID_2 }}
+          ML_CLIENT_SECRET_2:   ${{ secrets.ML_CLIENT_SECRET_2 }}
+          ML_ACCESS_TOKEN_2:    ${{ secrets.ML_ACCESS_TOKEN_2 }}
+          ML_REFRESH_TOKEN_2:   ${{ secrets.ML_REFRESH_TOKEN_2 }}
         run: python claude-agents/ml-question-responder/scripts/auto_responder.py
 
       # Auto-update ML_ACCESS_TOKEN secret after token refresh.
