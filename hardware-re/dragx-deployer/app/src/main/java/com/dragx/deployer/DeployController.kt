@@ -52,11 +52,14 @@ class DeployController(
 
         val libPath = "$packageDir/$nativeLibRelativePath"
         var allPatchesOk = true
+        // Never break/return early here — every patch must be checked even
+        // after one fails, or a partially-patched device could be misreported
+        // as fully working (the exact historical bug this app exists to catch).
         for (check in PatchVerifier.ALL_CHECKS) {
-            val actualBytes = readRemoteBytes(libPath, check.offset, check.expectedBytes.size)
+            val (actualBytes, ddResult) = readRemoteBytes(libPath, check.offset, check.expectedBytes.size)
             if (actualBytes == null) {
                 steps += DeployStepResult.Failure(
-                    "Não consegui ler bytes de $libPath no offset ${check.offset} para checar '${check.name}'"
+                    "Não consegui ler bytes de $libPath no offset ${check.offset} para checar '${check.name}': ${ddResult.stdout}${ddResult.stderr}"
                 )
                 allPatchesOk = false
                 continue
@@ -75,15 +78,16 @@ class DeployController(
         return DeployReport(steps, overallSuccess = allPatchesOk)
     }
 
-    private fun readRemoteBytes(remotePath: String, offset: Long, count: Int): ByteArray? {
+    private fun readRemoteBytes(remotePath: String, offset: Long, count: Int): Pair<ByteArray?, AdbResult> {
         val remoteCommand = "dd if=$remotePath bs=1 skip=$offset count=$count 2>/dev/null | od -An -tx1"
         val ddResult = adb.run(listOf("shell", remoteCommand))
         val hexTokens = ddResult.stdout.trim().split(Regex("\\s+")).filter { it.isNotBlank() }
-        if (hexTokens.size != count) return null
-        return try {
+        if (hexTokens.size != count) return null to ddResult
+        val bytes = try {
             ByteArray(hexTokens.size) { i -> hexTokens[i].toInt(16).toByte() }
         } catch (e: NumberFormatException) {
             null
         }
+        return bytes to ddResult
     }
 }

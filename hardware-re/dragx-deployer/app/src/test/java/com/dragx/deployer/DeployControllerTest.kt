@@ -108,4 +108,59 @@ class DeployControllerTest {
         val failure = report.steps.last() as DeployStepResult.Failure
         assertTrue(failure.message.contains("getHandshake"))
     }
+
+    @Test
+    fun `unparseable pm path output stops before verification`() {
+        val fake = FakeAdbRunner { args ->
+            when {
+                args == listOf("connect", "192.168.15.13:5555") ->
+                    AdbResult(0, "connected to 192.168.15.13:5555\n", "")
+                args == listOf("install", "-r", fakeApkPath) ->
+                    AdbResult(0, "Performing Streamed Install\nSuccess\n", "")
+                args == listOf("shell", "am", "force-stop", "cn.upus.app.upprinting") ->
+                    AdbResult(0, "", "")
+                args == listOf("shell", "pm", "path", "cn.upus.app.upprinting") ->
+                    AdbResult(0, "", "") // no "package:" line -- unparseable
+                else -> AdbResult(1, "", "should not be called: $args")
+            }
+        }
+        val controller = DeployController(fake, fakeApkPath)
+
+        val report = controller.deploy("192.168.15.13:5555")
+
+        assertFalse(report.overallSuccess)
+        assertEquals(4, report.steps.size)
+        assertTrue(report.steps.last() is DeployStepResult.Failure)
+    }
+
+    @Test
+    fun `truncated dd read for a patch check is reported as failure without crashing`() {
+        val fake = FakeAdbRunner { args ->
+            when {
+                args == listOf("connect", "192.168.15.13:5555") ->
+                    AdbResult(0, "connected to 192.168.15.13:5555\n", "")
+                args == listOf("install", "-r", fakeApkPath) ->
+                    AdbResult(0, "Performing Streamed Install\nSuccess\n", "")
+                args == listOf("shell", "am", "force-stop", "cn.upus.app.upprinting") ->
+                    AdbResult(0, "", "")
+                args == listOf("shell", "pm", "path", "cn.upus.app.upprinting") ->
+                    AdbResult(0, "package:$fakePackageDir/base.apk\n", "")
+                args.size == 2 && args[0] == "shell" && args[1].contains("skip=90350") ->
+                    AdbResult(0, "00\n", "") // truncated -- expected 2 bytes, got 1
+                args.size == 2 && args[0] == "shell" && args[1].contains("skip=75988") ->
+                    AdbResult(0, "00 20 00 bf\n", "")
+                else -> AdbResult(1, "", "unexpected call: $args")
+            }
+        }
+        val controller = DeployController(fake, fakeApkPath)
+
+        val report = controller.deploy("192.168.15.13:5555")
+
+        assertFalse(report.overallSuccess)
+        // 3 setup successes + 2 loop iterations (one failure for the truncated read, one success)
+        assertEquals(5, report.steps.size)
+        val truncatedFailure = report.steps[3] as DeployStepResult.Failure
+        assertTrue(truncatedFailure.message.contains("JNI_OnLoad crash bypass"))
+        assertTrue(report.steps[4] is DeployStepResult.Success)
+    }
 }
