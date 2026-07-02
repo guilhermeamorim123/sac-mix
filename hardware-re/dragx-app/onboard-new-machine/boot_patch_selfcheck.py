@@ -203,6 +203,13 @@ check("verify_roundtrip rejects kernel tail mismatch", ok4, False)
 ok5, message5 = boot_patch.verify_roundtrip(b"not a real boot image", expected_kernel_tail=real_kernel_tail, must_contain_trigger=True)
 check("verify_roundtrip rejects garbage input", ok5, False)
 
+# --- verify_roundtrip correctly rejects a short-but-magic-matching image
+# without raising (regression test: parse_boot_image raises struct.error,
+# not ValueError, when the KRNL magic matches but the buffer is too short
+# for the size field at bytes [4:8]) ---
+ok6, message6 = boot_patch.verify_roundtrip(b"KRNL" + b"\x01\x02", expected_kernel_tail=b"", must_contain_trigger=False)
+check("verify_roundtrip rejects short magic-matching input without raising", ok6, False)
+
 if failures:
     print(f"\n{failures} check(s) FAILED")
     sys.exit(1)

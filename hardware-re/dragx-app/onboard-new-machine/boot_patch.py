@@ -240,7 +240,7 @@ def verify_roundtrip(image_bytes, expected_kernel_tail, must_contain_trigger=Tru
     message: str), so a malformed image is reported, not crashed on."""
     try:
         compressed_ramdisk, kernel_tail = parse_boot_image(image_bytes)
-    except ValueError as e:
+    except (ValueError, struct.error) as e:
         return False, f"boot image parse failed: {e}"
 
     try:
