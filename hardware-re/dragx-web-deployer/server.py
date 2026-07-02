@@ -39,6 +39,72 @@ def run_adb(args):
     return result.returncode, result.stdout, result.stderr
 
 
+def read_remote_bytes(lib_path, offset, count):
+    """Reads `count` bytes at `offset` from `lib_path` on the connected device.
+    Returns (bytes_or_None, stdout, stderr)."""
+    remote_command = f"dd if={lib_path} bs=1 skip={offset} count={count} 2>/dev/null | od -An -tx1"
+    exit_code, stdout, stderr = run_adb(["shell", remote_command])
+    hex_tokens = stdout.split()
+    if len(hex_tokens) != count:
+        return None, stdout, stderr
+    try:
+        return bytes(int(tok, 16) for tok in hex_tokens), stdout, stderr
+    except ValueError:
+        return None, stdout, stderr
+
+
+def deploy(ip_port):
+    """Runs the full deploy flow. Returns {"overall_success": bool, "steps": [...]}."""
+    steps = []
+
+    exit_code, stdout, stderr = run_adb(["connect", ip_port])
+    if not parse_connect_result(stdout):
+        steps.append({"status": "failure", "message": f"Não foi possível conectar em {ip_port}: {stdout}{stderr}"})
+        return {"overall_success": False, "steps": steps}
+    steps.append({"status": "success", "message": f"Conectado a {ip_port}"})
+
+    exit_code, stdout, stderr = run_adb(["install", "-r", APK_PATH])
+    if not parse_install_result(stdout):
+        steps.append({"status": "failure", "message": f"Falha ao instalar: {stdout}{stderr}"})
+        return {"overall_success": False, "steps": steps}
+    steps.append({"status": "success", "message": "DragX instalado"})
+
+    run_adb(["shell", "am", "force-stop", TARGET_PACKAGE])
+    steps.append({"status": "success", "message": "Processo antigo finalizado"})
+
+    exit_code, stdout, stderr = run_adb(["shell", "pm", "path", TARGET_PACKAGE])
+    package_dir = parse_package_dir(stdout)
+    if package_dir is None:
+        steps.append({"status": "failure", "message": f"Não achei o caminho do pacote instalado: {stdout}{stderr}"})
+        return {"overall_success": False, "steps": steps}
+
+    lib_path = f"{package_dir}/{NATIVE_LIB_RELATIVE_PATH}"
+    all_patches_ok = True
+    # Never break/return early here -- every patch must be checked even
+    # after one fails, or a partially-patched device could be misreported
+    # as fully working (the exact historical bug this tool exists to catch).
+    for patch in PATCHES:
+        actual_bytes, dd_stdout, dd_stderr = read_remote_bytes(lib_path, patch["offset"], len(patch["expected"]))
+        if actual_bytes is None:
+            steps.append({
+                "status": "failure",
+                "message": f"Não consegui ler bytes de {lib_path} no offset {patch['offset']} para checar '{patch['name']}': {dd_stdout}{dd_stderr}",
+            })
+            all_patches_ok = False
+            continue
+        passed, expected_hex, actual_hex = verify_patch(patch, actual_bytes)
+        if passed:
+            steps.append({"status": "success", "message": f"{patch['name']}: OK"})
+        else:
+            steps.append({
+                "status": "failure",
+                "message": f"{patch['name']}: FALHOU (esperado {expected_hex}, encontrado {actual_hex})",
+            })
+            all_patches_ok = False
+
+    return {"overall_success": all_patches_ok, "steps": steps}
+
+
 def parse_connect_result(stdout):
     """'adb connect' prints 'connected to <ip>:<port>' on success, and
     'already connected to <ip>:<port>' if already open -- both contain
