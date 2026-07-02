@@ -51,3 +51,11 @@ def parse_package_dir(pm_path_output):
                 return None
             return apk_path[:last_slash]
     return None
+
+
+def verify_patch(patch, actual_bytes):
+    """Returns (passed: bool, expected_hex: str, actual_hex: str)."""
+    passed = actual_bytes == patch["expected"]
+    expected_hex = patch["expected"].hex(" ")
+    actual_hex = actual_bytes.hex(" ")
+    return passed, expected_hex, actual_hex

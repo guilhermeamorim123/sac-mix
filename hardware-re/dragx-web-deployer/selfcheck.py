@@ -60,6 +60,37 @@ check(
     None,
 )
 
+
+# --- verify_patch ---
+jni_patch = server.PATCHES[0]
+cert_patch = server.PATCHES[1]
+
+check(
+    "jni patch passes with patched bytes",
+    server.verify_patch(jni_patch, bytes.fromhex("00bf"))[0],
+    True,
+)
+check(
+    "jni patch fails with original bytes",
+    server.verify_patch(jni_patch, bytes.fromhex("04bf"))[0],
+    False,
+)
+check(
+    "cert patch passes with patched bytes",
+    server.verify_patch(cert_patch, bytes.fromhex("002000bf"))[0],
+    True,
+)
+check(
+    "cert patch fails with original bytes",
+    server.verify_patch(cert_patch, bytes.fromhex("f9f710ea"))[0],
+    False,
+)
+check(
+    "failure reports both expected and actual hex",
+    server.verify_patch(jni_patch, bytes.fromhex("1122"))[1:],
+    ("00 bf", "11 22"),
+)
+
 if failures:
     print(f"\n{failures} check(s) FAILED")
     sys.exit(1)
