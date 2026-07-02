@@ -161,11 +161,105 @@ def phase2_backup_and_check(ip_port):
     }, None
 
 
-if __name__ == "__main__":
+import hashlib
+
+
+def phase3_patch_and_write(ip_port, check_result):
+    print("=== FASE 3: Aplicando o patch de boot ===")
+
+    entries = check_result["entries"]
+    patched_entries, already_patched = boot_patch.patch_init_usb_rc(list(entries))
+
+    if already_patched:
+        print("init.usb.rc já contém o gatilho de WiFi ADB -- essa máquina já foi configurada antes.")
+        print("Nada a fazer. FASE 3: OK (sem alterações)\n")
+        return True
+
+    new_ramdisk = boot_patch.rebuild_cpio(patched_entries)
+    max_compressed_size = check_result["partition_size"] - 8 - len(check_result["kernel_tail"])
+
+    try:
+        compressed = boot_patch.compress_ramdisk_to_fit(new_ramdisk, max_compressed_size)
+    except ValueError as e:
+        print(f"ERRO: {e}")
+        print("Não escrevi nada. A máquina continua exatamente como estava.")
+        return False
+
+    new_image = boot_patch.reassemble_boot_image(
+        compressed, check_result["kernel_tail"], check_result["partition_size"]
+    )
+
+    ok, message = boot_patch.verify_roundtrip(
+        new_image, expected_kernel_tail=check_result["kernel_tail"], must_contain_trigger=True
+    )
+    if not ok:
+        print(f"ERRO na verificação antes de gravar: {message}")
+        print("Não escrevi nada. A máquina continua exatamente como estava.")
+        return False
+    print(f"Verificação antes de gravar: {message}")
+
+    local_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "backups")
+    safe_ip = ip_port.replace(":", "_")
+    local_modified_path = os.path.join(local_dir, f"boot_modified_{safe_ip}.img")
+    open(local_modified_path, "wb").write(new_image)
+
+    remote_modified_path = "/data/onboard_boot_modified.img"
+    push_result = subprocess.run(
+        [web_deployer.ADB_PATH, "-s", ip_port, "push", local_modified_path, remote_modified_path],
+        capture_output=True, text=True,
+    )
+    if push_result.returncode != 0:
+        print(f"ERRO ao enviar a imagem modificada: {push_result.stderr}")
+        return False
+
+    exit_code, stdout, stderr = run_adb(["-s", ip_port, "shell", "md5sum", remote_modified_path])
+    pushed_md5 = stdout.strip().split()[0] if stdout.strip() else None
+    expected_md5 = hashlib.md5(new_image).hexdigest()
+    if pushed_md5 != expected_md5:
+        print(f"ERRO: md5 não bateu após o envio ({pushed_md5} != {expected_md5}). Não vou gravar na partição.")
+        return False
+    print("Transferência verificada por md5.")
+
+    block_count = check_result["partition_size"] // 4096
+    exit_code, stdout, stderr = run_adb([
+        "-s", ip_port, "shell",
+        f"dd if={remote_modified_path} of={check_result['device_path']} bs=4096 count={block_count}",
+    ])
+    if "records out" not in stdout and "records out" not in stderr:
+        print(f"ERRO ao gravar na partição: {stdout}{stderr}")
+        return False
+    print("Gravado na partição de boot.")
+
+    print("FASE 3: OK\n")
+    return True
+
+
+def main():
+    exit_code, stdout, stderr = run_adb(["devices"])
+    print(stdout)
+
     ip_port = phase1_setup_wifi_and_deploy()
     check_result, error = phase2_backup_and_check(ip_port)
+
     if check_result is None:
         print(f"\nFASE 2 FALHOU: {error}")
+        print("PARANDO AQUI. Nada foi escrito na partição de boot.")
+        print("O backup, se algum foi feito com sucesso antes do erro, está em ./backups/")
         sys.exit(1)
-    print(f"(fim do teste da Fase 2 -- partição: {check_result['device_path']}, "
-          f"{len(check_result['entries'])} entradas no cpio)")
+
+    success = phase3_patch_and_write(ip_port, check_result)
+    if not success:
+        print("\nFASE 3 não completou com sucesso. Veja as mensagens acima.")
+        sys.exit(1)
+
+    print("=" * 60)
+    print("PRONTO. Agora teste com um desliga-religa REAL (não adb reboot,")
+    print("tira da tomada de verdade) e confirme que:")
+    print(f"  1. A máquina liga normalmente")
+    print(f"  2. 'adb connect {ip_port}' funciona sozinho, sem cabo USB")
+    print(f"  3. O app DragX abre normalmente")
+    print("=" * 60)
+
+
+if __name__ == "__main__":
+    main()
