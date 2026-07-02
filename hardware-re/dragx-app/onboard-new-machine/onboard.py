@@ -31,7 +31,6 @@ _DEPLOYER_DIR = os.path.join(
 sys.path.insert(0, os.path.abspath(_DEPLOYER_DIR))
 import server as web_deployer  # noqa: E402
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import boot_patch  # noqa: E402
 
 
@@ -46,13 +45,20 @@ def phase1_setup_wifi_and_deploy():
     print(f"adb tcpip 5555: {stdout}{stderr}".strip())
     time.sleep(2)
 
-    exit_code, stdout, stderr = run_adb(["shell", "ip", "addr", "show", "wlan0"])
     ip = None
-    for line in stdout.splitlines():
-        line = line.strip()
-        if line.startswith("inet "):
-            ip = line.split()[1].split("/")[0]
+    max_attempts = 3
+    for attempt in range(1, max_attempts + 1):
+        exit_code, stdout, stderr = run_adb(["shell", "ip", "addr", "show", "wlan0"])
+        for line in stdout.splitlines():
+            line = line.strip()
+            if line.startswith("inet "):
+                ip = line.split()[1].split("/")[0]
+                break
+        if ip is not None:
             break
+        if attempt < max_attempts:
+            print(f"tentativa {attempt}/{max_attempts} falhou, tentando de novo...")
+            time.sleep(2)
     if ip is None:
         print("ERRO: não consegui descobrir o IP WiFi da máquina.")
         print(f"Saída de 'ip addr show wlan0':\n{stdout}{stderr}")
