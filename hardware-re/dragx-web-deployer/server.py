@@ -42,7 +42,7 @@ def run_adb(args):
 def read_remote_bytes(lib_path, offset, count):
     """Reads `count` bytes at `offset` from `lib_path` on the connected device.
     Returns (bytes_or_None, stdout, stderr)."""
-    remote_command = f"dd if={lib_path} bs=1 skip={offset} count={count} 2>/dev/null | od -An -tx1"
+    remote_command = f"dd if={lib_path} bs=1 skip={offset} count={count} | od -An -tx1"
     exit_code, stdout, stderr = run_adb(["shell", remote_command])
     hex_tokens = stdout.split()
     if len(hex_tokens) != count:

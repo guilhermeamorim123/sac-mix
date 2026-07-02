@@ -231,6 +231,32 @@ check("truncated dd step count", len(report["steps"]), 5)
 check("truncated dd step 4 (index 3) mentions JNI_OnLoad", "JNI_OnLoad crash bypass" in report["steps"][3]["message"], True)
 check("truncated dd step 5 (index 4) is success", report["steps"][4]["status"], "success")
 
+
+def _malformed_hex_fake(args):
+    if args == ["connect", "192.168.15.13:5555"]:
+        return 0, "connected to 192.168.15.13:5555\n", ""
+    if args == ["install", "-r", server.APK_PATH]:
+        return 0, "Performing Streamed Install\nSuccess\n", ""
+    if args == ["shell", "am", "force-stop", server.TARGET_PACKAGE]:
+        return 0, "", ""
+    if args == ["shell", "pm", "path", server.TARGET_PACKAGE]:
+        return 0, f"package:{FAKE_PACKAGE_DIR}/base.apk\n", ""
+    if len(args) == 2 and args[0] == "shell" and "skip=90350" in args[1]:
+        return 0, "00 gg\n", ""  # right token count (2), but "gg" isn't valid hex
+    if len(args) == 2 and args[0] == "shell" and "skip=75988" in args[1]:
+        return 0, "00 20 00 bf\n", ""
+    return 1, "", f"unexpected call: {args}"
+
+
+original_run_adb = _install_fake_run_adb(_malformed_hex_fake)
+report = server.deploy("192.168.15.13:5555")
+server.run_adb = original_run_adb
+
+check("malformed hex overall_success", report["overall_success"], False)
+check("malformed hex step count", len(report["steps"]), 5)
+check("malformed hex step 4 (index 3) is failure", report["steps"][3]["status"], "failure")
+check("malformed hex step 5 (index 4) is success", report["steps"][4]["status"], "success")
+
 if failures:
     print(f"\n{failures} check(s) FAILED")
     sys.exit(1)
