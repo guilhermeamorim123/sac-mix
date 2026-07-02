@@ -94,6 +94,30 @@ check_true(
 )
 check_true("find_entry returns None for missing name", boot_patch.find_entry(cpio_entries, "nonexistent.rc") is None)
 
+# --- patch_init_usb_rc (fresh, unpatched entries) ---
+patched_entries, already_patched = boot_patch.patch_init_usb_rc(list(cpio_entries))
+check("patch_init_usb_rc already_patched (fresh)", already_patched, False)
+patched_init_usb_rc = boot_patch.find_entry(patched_entries, "init.usb.rc")
+check(
+    "patched init.usb.rc size",
+    patched_init_usb_rc["filesize"],
+    5715 + len(boot_patch.ADB_TCP_TRIGGER),
+)
+check_true(
+    "patched init.usb.rc contains trigger",
+    boot_patch.ADB_TCP_TRIGGER in patched_init_usb_rc["filedata"],
+)
+
+# --- idempotency: patching already-patched entries is a safe no-op ---
+patched_again, already_patched_2 = boot_patch.patch_init_usb_rc(list(patched_entries))
+check("patch_init_usb_rc already_patched (second time)", already_patched_2, True)
+patched_again_init_usb_rc = boot_patch.find_entry(patched_again, "init.usb.rc")
+check(
+    "second patch does not duplicate the trigger",
+    patched_again_init_usb_rc["filesize"],
+    5715 + len(boot_patch.ADB_TCP_TRIGGER),
+)
+
 if failures:
     print(f"\n{failures} check(s) FAILED")
     sys.exit(1)

@@ -135,3 +135,20 @@ def find_entry(entries, name):
         if e["name"] == name:
             return e
     return None
+
+
+def patch_init_usb_rc(entries):
+    """Returns (patched_entries, already_patched: bool). If init.usb.rc
+    already contains ADB_TCP_TRIGGER, returns the entries unmodified and
+    already_patched=True -- idempotent, safe to call on an
+    already-fixed machine without creating a duplicate trigger block.
+    Raises ValueError if no init.usb.rc entry exists at all."""
+    entry = find_entry(entries, "init.usb.rc")
+    if entry is None:
+        raise ValueError("init.usb.rc not found in ramdisk")
+    if ADB_TCP_TRIGGER in entry["filedata"]:
+        return entries, True
+    new_content = entry["filedata"] + ADB_TCP_TRIGGER
+    entry["filedata"] = new_content
+    entry["filesize"] = len(new_content)
+    return entries, False
