@@ -7,6 +7,7 @@ Then open http://<this-pc-ip>:8000/ from a browser on the same WiFi network
 (including an iPhone's Safari).
 """
 import os
+import subprocess
 
 ADB_PATH = r"C:\Users\Dvilh\platform-tools\adb.exe"
 APK_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "DragX-signed.apk")
@@ -26,6 +27,16 @@ PATCHES = [
         "expected": bytes.fromhex("002000bf"),
     },
 ]
+
+
+def run_adb(args):
+    """Run the local adb with the given args. Returns (exit_code, stdout, stderr)."""
+    result = subprocess.run(
+        [ADB_PATH] + args,
+        capture_output=True,
+        text=True,
+    )
+    return result.returncode, result.stdout, result.stderr
 
 
 def parse_connect_result(stdout):
