@@ -32,7 +32,13 @@ PATCHES = [
 
 
 def run_adb(args):
-    """Run the local adb with the given args. Returns (exit_code, stdout, stderr)."""
+    """Run the local adb with the given args. Returns (exit_code, stdout, stderr).
+
+    Assumes exactly one device is reachable via adb (no `-s <serial>` target
+    is ever passed). If a machine is connected via both USB and WiFi ADB at
+    once, adb refuses every command with "more than one device/emulator" --
+    disconnect one before deploying. See VALIDATION.md's "Known limitation"
+    section for the real-hardware case that surfaced this."""
     result = subprocess.run(
         [ADB_PATH] + args,
         capture_output=True,
@@ -167,6 +173,10 @@ def main():
         print(f"ERRO: DragX-signed.apk não encontrado em {APK_PATH}")
         return
 
+    # Binds on all interfaces with no authentication, by design -- this is a
+    # single-operator tool meant only for a trusted home/small-office WiFi
+    # network. Anyone on that same network can trigger a deploy against any
+    # ip:port they choose. Do not expose this port beyond a trusted LAN.
     server_instance = http.server.ThreadingHTTPServer(("0.0.0.0", PORT), DeployerHandler)
     print("DragX Web Deployer rodando.")
     print(f"Abra no navegador: http://localhost:{PORT}/")
