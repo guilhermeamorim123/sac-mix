@@ -6,6 +6,8 @@ Run: python server.py
 Then open http://<this-pc-ip>:8000/ from a browser on the same WiFi network
 (including an iPhone's Safari).
 """
+import http.server
+import json
 import os
 import subprocess
 
@@ -105,6 +107,69 @@ def deploy(ip_port):
     return {"overall_success": all_patches_ok, "steps": steps}
 
 
+STATIC_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static")
+
+
+class DeployerHandler(http.server.BaseHTTPRequestHandler):
+    def do_GET(self):
+        if self.path == "/":
+            self._serve_file(os.path.join(STATIC_DIR, "index.html"), "text/html; charset=utf-8")
+        else:
+            self.send_response(404)
+            self.end_headers()
+
+    def do_POST(self):
+        if self.path == "/deploy":
+            content_length = int(self.headers.get("Content-Length", 0))
+            body = self.rfile.read(content_length)
+            data = json.loads(body)
+            ip_port = data.get("ip_port", "").strip()
+            if not ip_port:
+                self._send_json(400, {"overall_success": False, "steps": [{"status": "failure", "message": "IP:porta vazio"}]})
+                return
+            report = deploy(ip_port)
+            self._send_json(200, report)
+        else:
+            self.send_response(404)
+            self.end_headers()
+
+    def _serve_file(self, path, content_type):
+        with open(path, "rb") as f:
+            content = f.read()
+        self.send_response(200)
+        self.send_header("Content-Type", content_type)
+        self.send_header("Content-Length", str(len(content)))
+        self.end_headers()
+        self.wfile.write(content)
+
+    def _send_json(self, status, data):
+        body = json.dumps(data).encode("utf-8")
+        self.send_response(status)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def log_message(self, format, *args):
+        # Keep console output focused on deploy activity, not every request.
+        pass
+
+
+def main():
+    if not os.path.exists(ADB_PATH):
+        print(f"ERRO: adb não encontrado em {ADB_PATH}")
+        return
+    if not os.path.exists(APK_PATH):
+        print(f"ERRO: DragX-signed.apk não encontrado em {APK_PATH}")
+        return
+
+    server_instance = http.server.ThreadingHTTPServer(("0.0.0.0", PORT), DeployerHandler)
+    print("DragX Web Deployer rodando.")
+    print(f"Abra no navegador: http://localhost:{PORT}/")
+    print(f"Ou de outro aparelho na mesma rede WiFi (ex: iPhone): http://<IP deste PC>:{PORT}/")
+    server_instance.serve_forever()
+
+
 def parse_connect_result(stdout):
     """'adb connect' prints 'connected to <ip>:<port>' on success, and
     'already connected to <ip>:<port>' if already open -- both contain
@@ -136,3 +201,7 @@ def verify_patch(patch, actual_bytes):
     expected_hex = patch["expected"].hex(" ")
     actual_hex = actual_bytes.hex(" ")
     return passed, expected_hex, actual_hex
+
+
+if __name__ == "__main__":
+    main()
