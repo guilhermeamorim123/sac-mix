@@ -225,17 +225,21 @@ def phase3_patch_and_write(ip_port, check_result):
         return False
     print("Transferência verificada por md5.")
 
+    local_backup_path = os.path.join(local_dir, f"boot_backup_{safe_ip}.img")
+
     block_count = check_result["partition_size"] // 4096
     exit_code, stdout, stderr = run_adb([
         "-s", ip_port, "shell",
         f"dd if={remote_modified_path} of={check_result['device_path']} bs=4096 count={block_count}",
     ])
     if "records out" not in stdout and "records out" not in stderr:
-        print(f"ERRO ao gravar na partição: {stdout}{stderr}")
+        print(f"ERRO CRÍTICO ao gravar na partição: {stdout}{stderr}")
+        print("A gravação pode ter ficado corrompida/incompleta. NÃO reinicie a máquina -- restaure o backup primeiro:")
+        print(f"  adb push {local_backup_path} /data/restore.img")
+        print(f"  adb shell dd if=/data/restore.img of={check_result['device_path']} bs=4096")
         return False
     print("Gravado na partição de boot.")
 
-    local_backup_path = os.path.join(local_dir, f"boot_backup_{safe_ip}.img")
     exit_code, stdout, stderr = run_adb([
         "-s", ip_port, "shell",
         f"dd if={check_result['device_path']} bs=4096 count={block_count} | md5sum",
