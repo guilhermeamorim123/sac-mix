@@ -56,8 +56,22 @@ def find_partition_device(mtdparts_entries, name):
     for the named partition, assuming partitions are numbered 1..N in the
     order they appear in mtdparts (confirmed true for this device family by
     cross-checking against /proc/partitions block counts on the original
-    machine). Returns None if not found."""
+    machine). Returns None if not found.
+
+    Raises ValueError if the matched entry's size_sectors is the -1 sentinel
+    (see parse_mtdparts docstring) -- this means the mtdparts string used
+    "-" for this partition's size ("rest of the device"), so its real byte
+    size is not knowable from mtdparts alone. Callers needing this
+    partition's size must obtain it some other way (e.g. device block
+    count); this function will not silently return a bogus negative size.
+    """
     for i, (part_name, offset_sectors, size_sectors) in enumerate(mtdparts_entries, start=1):
         if part_name == name:
+            if size_sectors == -1:
+                raise ValueError(
+                    f"partition {name!r} has no known size in mtdparts "
+                    f"(size was '-', meaning 'rest of the device'); "
+                    f"cannot compute size_bytes"
+                )
             return i, size_sectors * 512
     return None

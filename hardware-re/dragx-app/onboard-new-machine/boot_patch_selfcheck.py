@@ -61,6 +61,13 @@ result = boot_patch.find_partition_device(entries, "boot")
 check("find_partition_device boot number", result[0], 6)
 check("find_partition_device boot size bytes", result[1], 12582912)
 
+try:
+    boot_patch.find_partition_device(entries, "userdata")
+    raised = False
+except ValueError:
+    raised = True
+check_true("find_partition_device raises ValueError for unresolvable ('-') size", raised)
+
 if failures:
     print(f"\n{failures} check(s) FAILED")
     sys.exit(1)
