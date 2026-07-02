@@ -94,6 +94,34 @@ check_true(
 )
 check_true("find_entry returns None for missing name", boot_patch.find_entry(cpio_entries, "nonexistent.rc") is None)
 
+# --- parse_cpio_entries rejects a corrupted header with a negative namesize
+# instead of risking an infinite loop (see boot_patch.py docstring: a literal
+# '-' in a hex field parses fine via int(s, 16) but breaks the offset-always-
+# advances invariant) ---
+_malformed_header = (
+    b"070701"       # magic
+    + b"00000000"   # c_ino
+    + b"00000000"   # c_mode
+    + b"00000000"   # c_uid
+    + b"00000000"   # c_gid
+    + b"00000000"   # c_nlink
+    + b"00000000"   # c_mtime
+    + b"00000000"   # c_filesize
+    + b"00000000"   # c_devmajor
+    + b"00000000"   # c_devminor
+    + b"00000000"   # c_rdevmajor
+    + b"00000000"   # c_rdevminor
+    + b"-0000001"   # c_namesize -- decodes to -1 via int("-0000001", 16)
+    + b"00000000"   # c_check
+)
+assert len(_malformed_header) == 110, f"malformed test header is {len(_malformed_header)} bytes, expected 110"
+try:
+    boot_patch.parse_cpio_entries(_malformed_header)
+    malformed_raised = False
+except ValueError:
+    malformed_raised = True
+check_true("parse_cpio_entries raises ValueError promptly on negative namesize (no hang)", malformed_raised)
+
 # --- patch_init_usb_rc (fresh, unpatched entries) ---
 patched_entries, already_patched = boot_patch.patch_init_usb_rc(list(cpio_entries))
 check("patch_init_usb_rc already_patched (fresh)", already_patched, False)
@@ -150,6 +178,30 @@ try:
     check("reassemble_boot_image raises when oversized", "no exception", "ValueError")
 except ValueError:
     check("reassemble_boot_image raises when oversized", "ValueError", "ValueError")
+
+
+# --- verify_roundtrip on a freshly-patched image (built in this test run) ---
+ok, message = boot_patch.verify_roundtrip(new_image, expected_kernel_tail=kernel_tail, must_contain_trigger=True)
+check_true(f"verify_roundtrip accepts freshly-patched image: {message}", ok)
+
+# --- verify_roundtrip against today's REAL modified image (already reboot-tested on hardware) ---
+modified_bytes = open(MODIFIED_PATH, "rb").read()
+_, real_kernel_tail = boot_patch.parse_boot_image(original_bytes)
+ok2, message2 = boot_patch.verify_roundtrip(modified_bytes, expected_kernel_tail=real_kernel_tail, must_contain_trigger=True)
+check_true(f"verify_roundtrip accepts today's real modified image: {message2}", ok2)
+
+# --- verify_roundtrip correctly REJECTS an unpatched image when a trigger is required ---
+ok3, message3 = boot_patch.verify_roundtrip(original_bytes, expected_kernel_tail=real_kernel_tail, must_contain_trigger=True)
+check("verify_roundtrip rejects unpatched original image", ok3, False)
+
+# --- verify_roundtrip correctly rejects a kernel-tail mismatch ---
+wrong_kernel_tail = b"\x00" * len(real_kernel_tail)
+ok4, message4 = boot_patch.verify_roundtrip(modified_bytes, expected_kernel_tail=wrong_kernel_tail, must_contain_trigger=True)
+check("verify_roundtrip rejects kernel tail mismatch", ok4, False)
+
+# --- verify_roundtrip correctly rejects garbage input without raising ---
+ok5, message5 = boot_patch.verify_roundtrip(b"not a real boot image", expected_kernel_tail=real_kernel_tail, must_contain_trigger=True)
+check("verify_roundtrip rejects garbage input", ok5, False)
 
 if failures:
     print(f"\n{failures} check(s) FAILED")

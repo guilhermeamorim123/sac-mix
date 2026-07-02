@@ -102,7 +102,14 @@ def decompress_ramdisk(compressed_ramdisk):
 def parse_cpio_entries(ramdisk_bytes):
     """Parses a newc-format cpio archive into a list of dicts, each with
     header/name/namesize/filesize/filedata keys. Stops after TRAILER!!!.
-    Raises ValueError on a bad magic (corrupt or non-cpio data)."""
+    Raises ValueError on a bad magic (corrupt or non-cpio data), or on a
+    namesize/filesize field that decodes to a negative value (a corrupted
+    header containing a literal '-' in what should be a positive hex field
+    parses fine via int(s, 16), since Python allows a leading minus sign in
+    hex literals -- without this check, a negative namesize/filesize breaks
+    the loop's forward-progress invariant and can cause data_end < data_start,
+    silently wrapping via negative-index slicing and risking a genuine
+    infinite loop on corrupted-but-hex-parseable input)."""
     offset = 0
     entries = []
     while offset < len(ramdisk_bytes):
@@ -111,6 +118,12 @@ def parse_cpio_entries(ramdisk_bytes):
         hdr = ramdisk_bytes[offset:offset + 110]
         namesize = int(hdr[94:102].decode(), 16)
         filesize = int(hdr[54:62].decode(), 16)
+        if namesize < 0 or filesize < 0:
+            raise ValueError(
+                f"corrupt cpio header at offset {offset}: expected non-negative "
+                f"namesize/filesize hex fields, got namesize={namesize}, "
+                f"filesize={filesize}"
+            )
         name_start = offset + 110
         name = ramdisk_bytes[name_start:name_start + namesize - 1].decode(errors="replace")
         name_end = name_start + namesize
@@ -216,3 +229,41 @@ def reassemble_boot_image(compressed_ramdisk, kernel_tail, partition_size):
     if len(image) < partition_size:
         image = image + b"\x00" * (partition_size - len(image))
     return image
+
+
+def verify_roundtrip(image_bytes, expected_kernel_tail, must_contain_trigger=True):
+    """Fully re-parses image_bytes the same way the bootloader effectively
+    would, and confirms: KRNL magic, clean gzip decompress, valid cpio
+    structure with a TRAILER!!! entry, init.usb.rc contains the trigger (if
+    must_contain_trigger), and the kernel tail bytes are byte-identical to
+    expected_kernel_tail. Never raises -- always returns (ok: bool,
+    message: str), so a malformed image is reported, not crashed on."""
+    try:
+        compressed_ramdisk, kernel_tail = parse_boot_image(image_bytes)
+    except ValueError as e:
+        return False, f"boot image parse failed: {e}"
+
+    try:
+        ramdisk = decompress_ramdisk(compressed_ramdisk)
+    except Exception as e:
+        return False, f"ramdisk decompress failed: {e}"
+
+    try:
+        entries = parse_cpio_entries(ramdisk)
+    except ValueError as e:
+        return False, f"cpio parse failed: {e}"
+
+    if not entries or entries[-1]["name"] != "TRAILER!!!":
+        return False, "cpio archive missing TRAILER!!! entry"
+
+    init_usb_rc = find_entry(entries, "init.usb.rc")
+    if init_usb_rc is None:
+        return False, "init.usb.rc missing from archive"
+
+    if must_contain_trigger and ADB_TCP_TRIGGER not in init_usb_rc["filedata"]:
+        return False, "init.usb.rc does not contain the expected ADB TCP trigger"
+
+    if kernel_tail[:len(expected_kernel_tail)] != expected_kernel_tail:
+        return False, "kernel tail bytes do not match the expected original kernel"
+
+    return True, f"OK: {len(entries)} cpio entries, init.usb.rc verified, kernel bytes match"
