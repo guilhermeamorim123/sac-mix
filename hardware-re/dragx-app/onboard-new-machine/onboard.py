@@ -102,7 +102,7 @@ def phase2_backup_and_check(ip_port):
     exit_code, stdout, stderr = run_adb(["-s", ip_port, "shell", "cat", "/proc/cmdline"])
     mtdparts = boot_patch.parse_mtdparts(stdout)
     if not mtdparts:
-        return None, "Não consegui ler mtdparts= de /proc/cmdline -- layout de partição desconhecido."
+        return None, f"Não consegui ler mtdparts= de /proc/cmdline -- layout de partição desconhecido. Saída: {stdout}{stderr}"
 
     result = boot_patch.find_partition_device(mtdparts, BOOT_PARTITION_NAME)
     if result is None:
