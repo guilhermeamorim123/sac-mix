@@ -185,9 +185,14 @@ def phase3_patch_and_write(ip_port, check_result):
         print("Não escrevi nada. A máquina continua exatamente como estava.")
         return False
 
-    new_image = boot_patch.reassemble_boot_image(
-        compressed, check_result["kernel_tail"], check_result["partition_size"]
-    )
+    try:
+        new_image = boot_patch.reassemble_boot_image(
+            compressed, check_result["kernel_tail"], check_result["partition_size"]
+        )
+    except ValueError as e:
+        print(f"ERRO: {e}")
+        print("Não escrevi nada. A máquina continua exatamente como estava.")
+        return False
 
     ok, message = boot_patch.verify_roundtrip(
         new_image, expected_kernel_tail=check_result["kernel_tail"], must_contain_trigger=True
@@ -230,6 +235,20 @@ def phase3_patch_and_write(ip_port, check_result):
         return False
     print("Gravado na partição de boot.")
 
+    local_backup_path = os.path.join(local_dir, f"boot_backup_{safe_ip}.img")
+    exit_code, stdout, stderr = run_adb([
+        "-s", ip_port, "shell",
+        f"dd if={check_result['device_path']} bs=4096 count={block_count} | md5sum",
+    ])
+    onpartition_md5 = stdout.strip().split()[0] if stdout.strip() else None
+    if onpartition_md5 != expected_md5:
+        print(f"ERRO CRÍTICO: md5 da partição após a gravação não bateu ({onpartition_md5} != {expected_md5}).")
+        print("A gravação pode ter ficado corrompida. NÃO reinicie a máquina -- restaure o backup primeiro:")
+        print(f"  adb push {local_backup_path} /data/restore.img")
+        print(f"  adb shell dd if=/data/restore.img of={check_result['device_path']} bs=4096")
+        return False
+    print("Verificação pós-gravação: md5 da partição bate com o esperado.")
+
     print("FASE 3: OK\n")
     return True
 
@@ -250,6 +269,7 @@ def main():
     success = phase3_patch_and_write(ip_port, check_result)
     if not success:
         print("\nFASE 3 não completou com sucesso. Veja as mensagens acima.")
+        print("O backup da partição de boot, se algum foi feito, está em ./backups/")
         sys.exit(1)
 
     print("=" * 60)
@@ -258,6 +278,10 @@ def main():
     print(f"  1. A máquina liga normalmente")
     print(f"  2. 'adb connect {ip_port}' funciona sozinho, sem cabo USB")
     print(f"  3. O app DragX abre normalmente")
+    print("Se a máquina não ligar corretamente: restaure o backup em")
+    print(f"./backups/boot_backup_{ip_port.replace(':', '_')}.img via adb shell dd")
+    print("(veja hardware-re/dragx-app/boot-partition-mod/README.md, seção")
+    print("'If this ever needs to be undone').")
     print("=" * 60)
 
 
