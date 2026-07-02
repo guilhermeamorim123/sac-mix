@@ -118,6 +118,39 @@ check(
     5715 + len(boot_patch.ADB_TCP_TRIGGER),
 )
 
+
+# --- rebuild_cpio + full round trip against the fresh patch ---
+new_ramdisk = boot_patch.rebuild_cpio(patched_entries)
+reparsed = boot_patch.parse_cpio_entries(new_ramdisk)
+check("rebuilt cpio entry count", len(reparsed), 57)
+check("rebuilt cpio last entry is TRAILER", reparsed[-1]["name"], "TRAILER!!!")
+reparsed_init = boot_patch.find_entry(reparsed, "init.usb.rc")
+check_true("rebuilt init.usb.rc contains trigger", boot_patch.ADB_TCP_TRIGGER in reparsed_init["filedata"])
+
+# --- compress_ramdisk_to_fit ---
+compressed = boot_patch.compress_ramdisk_to_fit(new_ramdisk, max_compressed_size=1474288 + 10000)
+check_true("compress_ramdisk_to_fit produces valid gzip", compressed[:2] == b"\x1f\x8b")
+check_true("compress_ramdisk_to_fit result fits the budget", len(compressed) <= 1474288 + 10000)
+
+# compress_ramdisk_to_fit should raise if nothing fits, even at max compression
+try:
+    boot_patch.compress_ramdisk_to_fit(new_ramdisk, max_compressed_size=100)
+    check("compress_ramdisk_to_fit raises when nothing fits", "no exception", "ValueError")
+except ValueError:
+    check("compress_ramdisk_to_fit raises when nothing fits", "ValueError", "ValueError")
+
+# --- reassemble_boot_image ---
+new_image = boot_patch.reassemble_boot_image(compressed, kernel_tail, partition_size=12582912)
+check("reassembled image size", len(new_image), 12582912)
+check("reassembled image starts with KRNL", new_image[:4], b"KRNL")
+
+# reassemble_boot_image should raise if the pieces don't fit
+try:
+    boot_patch.reassemble_boot_image(compressed, kernel_tail, partition_size=100)
+    check("reassemble_boot_image raises when oversized", "no exception", "ValueError")
+except ValueError:
+    check("reassemble_boot_image raises when oversized", "ValueError", "ValueError")
+
 if failures:
     print(f"\n{failures} check(s) FAILED")
     sys.exit(1)

@@ -155,3 +155,59 @@ def patch_init_usb_rc(entries):
     entry["filedata"] = new_content
     entry["filesize"] = len(new_content)
     return entries, False
+
+
+def build_header(orig_header, new_filesize):
+    h = bytearray(orig_header)
+    h[54:62] = f"{new_filesize:08X}".encode()
+    return bytes(h)
+
+
+def _pad4(n):
+    return (4 - (n % 4)) % 4
+
+
+def rebuild_cpio(entries):
+    """Serializes a list of entry dicts back into a valid newc cpio archive,
+    padded to a 512-byte boundary at the end."""
+    out = bytearray()
+    for e in entries:
+        header = build_header(e["header"], e["filesize"])
+        name_bytes = e["name"].encode() + b"\x00"
+        assert len(name_bytes) == e["namesize"]
+        out += header
+        out += name_bytes
+        out += b"\x00" * _pad4(len(header) + len(name_bytes))
+        out += e["filedata"]
+        out += b"\x00" * _pad4(len(e["filedata"]))
+    out += b"\x00" * _pad4(len(out))
+    while len(out) % 512 != 0:
+        out += b"\x00"
+    return bytes(out)
+
+
+def compress_ramdisk_to_fit(ramdisk_bytes, max_compressed_size):
+    """Tries gzip compression levels from 9 down to 1, returning the first
+    result that fits within max_compressed_size. Raises ValueError if none
+    fit -- this should never silently produce an oversized result."""
+    compressed = None
+    for level in range(9, 0, -1):
+        compressed = gzip.compress(ramdisk_bytes, compresslevel=level, mtime=0)
+        if len(compressed) <= max_compressed_size:
+            return compressed
+    raise ValueError(
+        f"could not compress ramdisk to fit within {max_compressed_size} bytes "
+        f"(smallest attempt: {len(compressed)} bytes at level 1)"
+    )
+
+
+def reassemble_boot_image(compressed_ramdisk, kernel_tail, partition_size):
+    """Builds the final boot partition image: KRNL header + compressed
+    ramdisk + kernel tail, zero-padded to exactly partition_size bytes.
+    Raises ValueError if the pieces don't fit -- never truncates silently."""
+    image = KRNL_MAGIC + struct.pack("<I", len(compressed_ramdisk)) + compressed_ramdisk + kernel_tail
+    if len(image) > partition_size:
+        raise ValueError(f"assembled image ({len(image)} bytes) exceeds partition size ({partition_size} bytes)")
+    if len(image) < partition_size:
+        image = image + b"\x00" * (partition_size - len(image))
+    return image
