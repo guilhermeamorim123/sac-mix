@@ -120,10 +120,14 @@ class DeployerHandler(http.server.BaseHTTPRequestHandler):
 
     def do_POST(self):
         if self.path == "/deploy":
-            content_length = int(self.headers.get("Content-Length", 0))
-            body = self.rfile.read(content_length)
-            data = json.loads(body)
-            ip_port = data.get("ip_port", "").strip()
+            try:
+                content_length = int(self.headers.get("Content-Length", 0))
+                body = self.rfile.read(content_length)
+                data = json.loads(body)
+                ip_port = data.get("ip_port", "").strip()
+            except (ValueError, TypeError, AttributeError, json.JSONDecodeError):
+                self._send_json(400, {"overall_success": False, "steps": [{"status": "failure", "message": "Requisição inválida"}]})
+                return
             if not ip_port:
                 self._send_json(400, {"overall_success": False, "steps": [{"status": "failure", "message": "IP:porta vazio"}]})
                 return
