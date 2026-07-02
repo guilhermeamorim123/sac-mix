@@ -97,3 +97,41 @@ def decompress_ramdisk(compressed_ramdisk):
     d = zlib.decompressobj(zlib.MAX_WBITS | 16)
     ramdisk = d.decompress(compressed_ramdisk)
     return ramdisk
+
+
+def parse_cpio_entries(ramdisk_bytes):
+    """Parses a newc-format cpio archive into a list of dicts, each with
+    header/name/namesize/filesize/filedata keys. Stops after TRAILER!!!.
+    Raises ValueError on a bad magic (corrupt or non-cpio data)."""
+    offset = 0
+    entries = []
+    while offset < len(ramdisk_bytes):
+        if ramdisk_bytes[offset:offset + 6] != b"070701":
+            raise ValueError(f"bad cpio magic at offset {offset}")
+        hdr = ramdisk_bytes[offset:offset + 110]
+        namesize = int(hdr[94:102].decode(), 16)
+        filesize = int(hdr[54:62].decode(), 16)
+        name_start = offset + 110
+        name = ramdisk_bytes[name_start:name_start + namesize - 1].decode(errors="replace")
+        name_end = name_start + namesize
+        data_start = (name_end + 3) & ~3
+        data_end = data_start + filesize
+        entries.append({
+            "header": hdr,
+            "name": name,
+            "namesize": namesize,
+            "filesize": filesize,
+            "filedata": ramdisk_bytes[data_start:data_end],
+        })
+        if name == "TRAILER!!!":
+            break
+        offset = (data_end + 3) & ~3
+    return entries
+
+
+def find_entry(entries, name):
+    """Returns the entry dict with the given name, or None."""
+    for e in entries:
+        if e["name"] == name:
+            return e
+    return None

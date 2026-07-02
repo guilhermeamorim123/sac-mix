@@ -79,6 +79,21 @@ ramdisk = boot_patch.decompress_ramdisk(compressed_ramdisk)
 check("decompress_ramdisk length", len(ramdisk), 2868736)
 check("decompress_ramdisk starts with cpio magic", ramdisk[:6], b"070701")
 
+
+# --- parse_cpio_entries ---
+cpio_entries = boot_patch.parse_cpio_entries(ramdisk)
+check("parse_cpio_entries count", len(cpio_entries), 57)
+check("parse_cpio_entries last is TRAILER", cpio_entries[-1]["name"], "TRAILER!!!")
+
+init_usb_rc = boot_patch.find_entry(cpio_entries, "init.usb.rc")
+check_true("find_entry locates init.usb.rc", init_usb_rc is not None)
+check("original init.usb.rc size", init_usb_rc["filesize"], 5715)
+check_true(
+    "original init.usb.rc has no trigger yet",
+    boot_patch.ADB_TCP_TRIGGER not in init_usb_rc["filedata"],
+)
+check_true("find_entry returns None for missing name", boot_patch.find_entry(cpio_entries, "nonexistent.rc") is None)
+
 if failures:
     print(f"\n{failures} check(s) FAILED")
     sys.exit(1)
