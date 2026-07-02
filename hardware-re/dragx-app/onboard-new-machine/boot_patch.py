@@ -75,3 +75,25 @@ def find_partition_device(mtdparts_entries, name):
                 )
             return i, size_sectors * 512
     return None
+
+
+def parse_boot_image(image_bytes):
+    """Splits a raw boot partition dump into (compressed_ramdisk, kernel_tail).
+    Raises ValueError if the KRNL magic is missing."""
+    if image_bytes[:4] != KRNL_MAGIC:
+        raise ValueError(f"expected KRNL magic, got {image_bytes[:4]!r}")
+    size_field = struct.unpack("<I", image_bytes[4:8])[0]
+    compressed_ramdisk = image_bytes[8:8 + size_field]
+    kernel_tail = image_bytes[8 + size_field:]
+    return compressed_ramdisk, kernel_tail
+
+
+def decompress_ramdisk(compressed_ramdisk):
+    """Decompresses the gzip-compressed cpio ramdisk. Uses a raw
+    decompressobj (not gzip.decompress()) because in some callers this gets
+    handed a compressed_ramdisk slice that was computed from a size field
+    that might not be perfectly exact -- this tolerates minor trailing
+    slop rather than raising on it."""
+    d = zlib.decompressobj(zlib.MAX_WBITS | 16)
+    ramdisk = d.decompress(compressed_ramdisk)
+    return ramdisk

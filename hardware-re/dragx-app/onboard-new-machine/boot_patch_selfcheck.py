@@ -68,6 +68,17 @@ except ValueError:
     raised = True
 check_true("find_partition_device raises ValueError for unresolvable ('-') size", raised)
 
+
+# --- parse_boot_image (against the real original-machine fixture) ---
+compressed_ramdisk, kernel_tail = boot_patch.parse_boot_image(original_bytes)
+check("parse_boot_image kernel_tail length", len(kernel_tail), 11108616)
+check("parse_boot_image compressed_ramdisk starts with gzip magic", compressed_ramdisk[:2], b"\x1f\x8b")
+
+# --- decompress_ramdisk ---
+ramdisk = boot_patch.decompress_ramdisk(compressed_ramdisk)
+check("decompress_ramdisk length", len(ramdisk), 2868736)
+check("decompress_ramdisk starts with cpio magic", ramdisk[:6], b"070701")
+
 if failures:
     print(f"\n{failures} check(s) FAILED")
     sys.exit(1)
