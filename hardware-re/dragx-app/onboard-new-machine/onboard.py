@@ -80,6 +80,92 @@ def phase1_setup_wifi_and_deploy():
     return ip_port
 
 
+import subprocess
+
+BOOT_PARTITION_NAME = "boot"
+
+
+def phase2_backup_and_check(ip_port):
+    print("=== FASE 2: Backup e checagem de segurança ===")
+
+    # /proc/cmdline and the raw boot block device are root:radio, mode 0640
+    # -- unreadable by the default "shell" adb user. Phase 1's `adb tcpip
+    # 5555` restarts adbd and drops any prior root elevation, so we need to
+    # re-elevate here. This is the same step documented as safe and
+    # instantaneous on this exact hardware in
+    # hardware-re/dragx-app/boot-partition-mod/README.md ("adb root worked
+    # instantly once any ADB connection was already established").
+    exit_code, stdout, stderr = run_adb(["-s", ip_port, "root"])
+    print(f"adb root: {stdout}{stderr}".strip())
+    time.sleep(2)
+
+    exit_code, stdout, stderr = run_adb(["-s", ip_port, "shell", "cat", "/proc/cmdline"])
+    mtdparts = boot_patch.parse_mtdparts(stdout)
+    if not mtdparts:
+        return None, "Não consegui ler mtdparts= de /proc/cmdline -- layout de partição desconhecido."
+
+    result = boot_patch.find_partition_device(mtdparts, BOOT_PARTITION_NAME)
+    if result is None:
+        return None, f"Não achei uma partição chamada '{BOOT_PARTITION_NAME}' em mtdparts."
+    partition_number, partition_size = result
+    device_path = f"/dev/block/mmcblk0p{partition_number}"
+    print(f"Partição de boot: {device_path} ({partition_size} bytes)")
+
+    block_count = partition_size // 4096
+    remote_backup_path = "/data/onboard_boot_backup.img"
+    exit_code, stdout, stderr = run_adb([
+        "-s", ip_port, "shell",
+        f"dd if={device_path} of={remote_backup_path} bs=4096 count={block_count}",
+    ])
+    if "records out" not in stdout and "records out" not in stderr:
+        return None, f"Backup da partição falhou: {stdout}{stderr}"
+    print("Backup bruto da partição concluído (no próprio dispositivo).")
+
+    local_backup_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "backups")
+    os.makedirs(local_backup_dir, exist_ok=True)
+    safe_ip = ip_port.replace(":", "_")
+    local_backup_path = os.path.join(local_backup_dir, f"boot_backup_{safe_ip}.img")
+    pull_result = subprocess.run(
+        [web_deployer.ADB_PATH, "-s", ip_port, "pull", remote_backup_path, local_backup_path],
+        capture_output=True, text=True,
+    )
+    if pull_result.returncode != 0:
+        return None, f"Falha ao copiar o backup pro PC: {pull_result.stderr}"
+    print(f"Backup também copiado pro PC: {local_backup_path}")
+
+    image_bytes = open(local_backup_path, "rb").read()
+    if len(image_bytes) != partition_size:
+        return None, f"Backup tem {len(image_bytes)} bytes, esperado {partition_size}."
+
+    try:
+        compressed_ramdisk, kernel_tail = boot_patch.parse_boot_image(image_bytes)
+        ramdisk = boot_patch.decompress_ramdisk(compressed_ramdisk)
+        entries = boot_patch.parse_cpio_entries(ramdisk)
+    except ValueError as e:
+        return None, f"Formato da imagem de boot não bateu com o esperado: {e}"
+
+    init_usb_rc = boot_patch.find_entry(entries, "init.usb.rc")
+    if init_usb_rc is None:
+        return None, "init.usb.rc não encontrado dentro do ramdisk."
+
+    print(f"Checagem: {len(entries)} arquivos no ramdisk, init.usb.rc presente ({init_usb_rc['filesize']} bytes).")
+    print("FASE 2: checagens bateram.\n")
+
+    return {
+        "image_bytes": image_bytes,
+        "compressed_ramdisk": compressed_ramdisk,
+        "kernel_tail": kernel_tail,
+        "entries": entries,
+        "partition_size": partition_size,
+        "device_path": device_path,
+    }, None
+
+
 if __name__ == "__main__":
     ip_port = phase1_setup_wifi_and_deploy()
-    print(f"(fim do teste da Fase 1 -- ip_port = {ip_port})")
+    check_result, error = phase2_backup_and_check(ip_port)
+    if check_result is None:
+        print(f"\nFASE 2 FALHOU: {error}")
+        sys.exit(1)
+    print(f"(fim do teste da Fase 2 -- partição: {check_result['device_path']}, "
+          f"{len(check_result['entries'])} entradas no cpio)")

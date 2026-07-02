@@ -1,0 +1,4 @@
+# Real boot-partition backups pulled from live devices by onboard.py's
+# Phase 2 -- these are per-machine artifacts, not source, and can be large
+# binary files. Never commit them.
+/backups/
