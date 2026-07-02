@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DragX Web Deployer</title>
+<style>
+  body {
+    font-family: -apple-system, system-ui, sans-serif;
+    max-width: 480px;
+    margin: 24px auto;
+    padding: 0 16px;
+  }
+  input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 10px;
+    font-size: 16px;
+    margin-bottom: 12px;
+  }
+  button {
+    width: 100%;
+    padding: 12px;
+    font-size: 16px;
+    background: #1FAA4A;
+    color: white;
+    border: none;
+    border-radius: 6px;
+  }
+  button:disabled {
+    background: #999;
+  }
+  #result {
+    margin-top: 20px;
+    white-space: pre-wrap;
+    font-family: monospace;
+    font-size: 14px;
+  }
+  .header-success { color: #1FAA4A; font-weight: bold; }
+  .header-failure { color: #c0392b; font-weight: bold; }
+  .step-ok { color: #1FAA4A; }
+  .step-erro { color: #c0392b; }
+</style>
+</head>
+<body>
+  <h2>DragX Web Deployer</h2>
+  <input id="ipPort" type="text" placeholder="192.168.15.13:5555">
+  <button id="deployButton" onclick="deploy()">Deploy</button>
+  <div id="result"></div>
+
+<script>
+async function deploy() {
+  const ipPort = document.getElementById('ipPort').value.trim();
+  const button = document.getElementById('deployButton');
+  const result = document.getElementById('result');
+
+  if (!ipPort) {
+    result.textContent = 'Digite o IP:porta da máquina (ex: 192.168.15.13:5555)';
+    return;
+  }
+
+  button.disabled = true;
+  result.textContent = `Conectando em ${ipPort}...`;
+
+  try {
+    const response = await fetch('/deploy', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ip_port: ipPort })
+    });
+    const report = await response.json();
+    renderReport(report);
+  } catch (err) {
+    result.textContent = 'Erro de rede: ' + err;
+  } finally {
+    button.disabled = false;
+  }
+}
+
+function renderReport(report) {
+  const result = document.getElementById('result');
+  result.innerHTML = '';
+
+  const header = document.createElement('div');
+  header.className = report.overall_success ? 'header-success' : 'header-failure';
+  header.textContent = report.overall_success ? 'SUCESSO' : 'FALHOU';
+  result.appendChild(header);
+  result.appendChild(document.createElement('br'));
+
+  for (const step of report.steps) {
+    const line = document.createElement('div');
+    line.className = step.status === 'success' ? 'step-ok' : 'step-erro';
+    line.textContent = (step.status === 'success' ? 'OK   - ' : 'ERRO - ') + step.message;
+    result.appendChild(line);
+  }
+}
+</script>
+</body>
+</html>
