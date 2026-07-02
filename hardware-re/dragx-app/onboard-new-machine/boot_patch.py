@@ -142,7 +142,10 @@ def patch_init_usb_rc(entries):
     already contains ADB_TCP_TRIGGER, returns the entries unmodified and
     already_patched=True -- idempotent, safe to call on an
     already-fixed machine without creating a duplicate trigger block.
-    Raises ValueError if no init.usb.rc entry exists at all."""
+    Raises ValueError if no init.usb.rc entry exists at all.
+    Mutates the matched entry dict in place and returns the same list --
+    copying the outer list (e.g. list(entries)) does not protect the
+    original entries from modification."""
     entry = find_entry(entries, "init.usb.rc")
     if entry is None:
         raise ValueError("init.usb.rc not found in ramdisk")
