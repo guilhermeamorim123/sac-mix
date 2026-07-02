@@ -26,3 +26,28 @@ PATCHES = [
         "expected": bytes.fromhex("002000bf"),
     },
 ]
+
+
+def parse_connect_result(stdout):
+    """'adb connect' prints 'connected to <ip>:<port>' on success, and
+    'already connected to <ip>:<port>' if already open -- both contain
+    'connected to' as a substring."""
+    return "connected to" in stdout
+
+
+def parse_install_result(stdout):
+    """'adb install' prints a final line 'Success' on success."""
+    return any(line.strip() == "Success" for line in stdout.strip().splitlines())
+
+
+def parse_package_dir(pm_path_output):
+    """'adb shell pm path <pkg>' prints one line:
+    'package:/data/app/<pkg>-N/base.apk'"""
+    for line in pm_path_output.strip().splitlines():
+        if line.startswith("package:"):
+            apk_path = line[len("package:"):].strip()
+            last_slash = apk_path.rfind("/")
+            if last_slash <= 0:
+                return None
+            return apk_path[:last_slash]
+    return None
