@@ -174,7 +174,12 @@ def rebuild_cpio(entries):
     for e in entries:
         header = build_header(e["header"], e["filesize"])
         name_bytes = e["name"].encode() + b"\x00"
-        assert len(name_bytes) == e["namesize"]
+        if len(name_bytes) != e["namesize"]:
+            raise ValueError(
+                f"entry {e['name']!r}: name re-encodes to {len(name_bytes)} bytes, "
+                f"expected namesize {e['namesize']} (namesize/name-bytes mismatch, "
+                f"likely a non-UTF-8 name that round-tripped incorrectly)"
+            )
         out += header
         out += name_bytes
         out += b"\x00" * _pad4(len(header) + len(name_bytes))
