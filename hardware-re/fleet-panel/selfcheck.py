@@ -114,6 +114,9 @@ import main  # noqa: E402
 
 client = TestClient(main.app)
 
+resp = client.get("/")
+check("GET / redirects to /login", str(resp.url).endswith("/login"), True)
+
 resp = client.get("/login")
 check("GET /login returns 200", resp.status_code, 200)
 

@@ -59,6 +59,16 @@ def not_logged_in_handler(request: Request, exc: NotLoggedIn):
     return RedirectResponse("/login", status_code=303)
 
 
+@app.get("/")
+def root():
+    # No real content lives at the bare root -- this exists so a bare GET /
+    # (which is what Render's own health check, and anyone who visits the
+    # domain without a path, sends) gets a clean redirect instead of a 404.
+    # A 404 here was making Render's health check consider the service
+    # unhealthy and repeatedly cycle the instance.
+    return RedirectResponse("/login", status_code=303)
+
+
 @app.get("/login", response_class=HTMLResponse)
 def login_form(request: Request):
     return templates.TemplateResponse(request, "login.html", {"error": None})
