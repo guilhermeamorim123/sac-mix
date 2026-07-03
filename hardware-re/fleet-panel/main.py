@@ -5,12 +5,14 @@ Jinja2). See docs/superpowers/specs/2026-07-02-fleet-panel-design.md.
 
 Run locally: uvicorn main:app --reload
 """
+import hmac
 import os
 
 from fastapi import Depends, FastAPI, Request, Form, Header, HTTPException
 from fastapi.responses import RedirectResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from starlette.middleware.sessions import SessionMiddleware
 
@@ -143,14 +145,21 @@ def add_machine_submit(
     return RedirectResponse("/machines", status_code=303)
 
 
+class CheckinPayload(BaseModel):
+    serial: str
+    dragx_version: str | None = None
+
+
 @app.post("/api/machines/checkin")
-def api_checkin(payload: dict, db_session: Session = Depends(get_db), x_api_key: str = Header(None)):
+def api_checkin(payload: CheckinPayload, db_session: Session = Depends(get_db), x_api_key: str = Header(None)):
     expected_key = os.environ.get("CHECKIN_API_KEY")
-    if not expected_key or x_api_key != expected_key:
+    if not expected_key or not hmac.compare_digest(x_api_key or "", expected_key):
         raise HTTPException(status_code=401, detail="chave de API inválida ou ausente")
-    serial = payload.get("serial")
-    dragx_version = payload.get("dragx_version")
-    if not serial:
+    # Pydantic's `serial: str` (no default) already rejects a request
+    # where 'serial' is missing entirely (422, before we get here) -- but
+    # it does NOT reject an empty string, since "" is a valid str. Keep
+    # this check for that case, matching the pre-Pydantic behavior.
+    if not payload.serial:
         raise HTTPException(status_code=400, detail="'serial' é obrigatório")
-    checkin_machine(db_session, serial, dragx_version)
+    checkin_machine(db_session, payload.serial, payload.dragx_version)
     return {"ok": True}

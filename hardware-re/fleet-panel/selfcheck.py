@@ -213,7 +213,7 @@ resp = client.post(
     json={"dragx_version": "V7.0.3.005"},
     headers={"X-Api-Key": "test-api-key-xyz"},
 )
-check("POST /api/machines/checkin without 'serial' returns 400", resp.status_code, 400)
+check("POST /api/machines/checkin without 'serial' returns 422 (Pydantic validation)", resp.status_code, 422)
 
 if failures:
     print(f"\n{failures} check(s) FAILED")
