@@ -21,9 +21,11 @@ Usage: python onboard.py
 Assumes exactly one device is reachable via `adb devices`, connected over
 USB (same single-device assumption as hardware-re/dragx-web-deployer/server.py).
 """
+import json
 import os
 import sys
 import time
+import urllib.request
 
 _DEPLOYER_DIR = os.path.join(
     os.path.dirname(os.path.abspath(__file__)), "..", "..", "dragx-web-deployer"
@@ -257,6 +259,61 @@ def phase3_patch_and_write(ip_port, check_result):
     return True
 
 
+def _post_json(url, payload_dict, headers, timeout=10):
+    """Thin wrapper around urlopen, extracted into its own function so
+    tests can monkeypatch it (same pattern as web_deployer.run_adb being
+    monkeypatched in hardware-re/dragx-web-deployer/selfcheck.py) instead
+    of needing a real network connection."""
+    data = json.dumps(payload_dict).encode()
+    req = urllib.request.Request(url, data=data, headers=headers, method="POST")
+    with urllib.request.urlopen(req, timeout=timeout) as resp:
+        return resp.status
+
+
+def checkin_with_panel(serial, dragx_version):
+    """Best-effort registration with the fleet panel. Never raises --
+    always returns (ok: bool, message: str), so a panel outage can never
+    fail an onboarding run. Reads PANEL_URL and PANEL_API_KEY from
+    environment variables; if either is unset, the integration is
+    considered disabled and this returns False immediately."""
+    panel_url = os.environ.get("PANEL_URL")
+    api_key = os.environ.get("PANEL_API_KEY")
+    if not panel_url or not api_key:
+        return False, "PANEL_URL ou PANEL_API_KEY não configurados (integração com painel desativada)"
+
+    url = f"{panel_url.rstrip('/')}/api/machines/checkin"
+    headers = {"Content-Type": "application/json", "X-Api-Key": api_key}
+    payload = {"serial": serial, "dragx_version": dragx_version}
+    try:
+        status = _post_json(url, payload, headers)
+    except Exception as e:
+        return False, f"não consegui contatar o painel: {e}"
+    if status == 200:
+        return True, "registrado no painel com sucesso"
+    return False, f"painel respondeu com status {status}"
+
+
+def get_device_serial(ip_port):
+    """Returns the device's real ADB serial number (e.g. '6S9OZFRLDN'),
+    not the ip:port transport address -- this is the stable identifier
+    the fleet panel keys machine records on."""
+    exit_code, stdout, stderr = run_adb(["-s", ip_port, "get-serialno"])
+    return stdout.strip()
+
+
+def get_dragx_version(ip_port):
+    """Returns the installed DragX app's versionName (e.g. 'V7.0.3.005'),
+    or None if it couldn't be determined."""
+    exit_code, stdout, stderr = run_adb([
+        "-s", ip_port, "shell", "dumpsys", "package", web_deployer.TARGET_PACKAGE,
+    ])
+    for line in stdout.splitlines():
+        line = line.strip()
+        if line.startswith("versionName="):
+            return line[len("versionName="):]
+    return None
+
+
 def main():
     exit_code, stdout, stderr = run_adb(["devices"])
     print(stdout)
@@ -275,6 +332,12 @@ def main():
         print("\nFASE 3 não completou com sucesso. Veja as mensagens acima.")
         print("O backup da partição de boot, se algum foi feito, está em ./backups/")
         sys.exit(1)
+
+    serial = get_device_serial(ip_port)
+    dragx_version = get_dragx_version(ip_port)
+    panel_ok, panel_message = checkin_with_panel(serial, dragx_version)
+    marker = "OK  " if panel_ok else "AVISO"
+    print(f"{marker} - Painel: {panel_message}")
 
     print("=" * 60)
     print("PRONTO. Agora teste com um desliga-religa REAL (não adb reboot,")
