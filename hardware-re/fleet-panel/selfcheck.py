@@ -112,7 +112,12 @@ check("verify_login fails closed when PANEL_PASSWORD_HASH is unset", auth.verify
 from fastapi.testclient import TestClient  # noqa: E402
 import main  # noqa: E402
 
-client = TestClient(main.app)
+# base_url must be https:// -- main.py's SessionMiddleware now sets
+# https_only=True (Secure cookie flag), and httpx's cookie jar (used
+# internally by TestClient) won't send a Secure-flagged cookie back on a
+# plain http:// request, which would otherwise silently break every
+# login-session check below.
+client = TestClient(main.app, base_url="https://testserver")
 
 resp = client.get("/")
 check("GET / redirects to /login", str(resp.url).endswith("/login"), True)
@@ -134,7 +139,7 @@ check("GET /logout redirects to /login", str(resp.url).endswith("/login"), True)
 
 
 # --- main.py: /machines dashboard + rename ---
-anon_client = TestClient(main.app)
+anon_client = TestClient(main.app, base_url="https://testserver")
 resp = anon_client.get("/machines")
 check("GET /machines without login redirects to /login", str(resp.url).endswith("/login"), True)
 
@@ -217,6 +222,50 @@ resp = client.post(
     headers={"X-Api-Key": "test-api-key-xyz"},
 )
 check("POST /api/machines/checkin without 'serial' returns 422 (Pydantic validation)", resp.status_code, 422)
+
+
+# --- main.py: friendly error page when the DB is unreachable ---
+# Design spec (docs/superpowers/specs/2026-07-02-fleet-panel-design.md,
+# "Error handling"): dashboard pages must show a clear message instead of a
+# raw stack trace/500 if the DB is unreachable. Simulating a real DB outage
+# would mean intentionally breaking the SQLite connection this whole test
+# run depends on -- instead, monkeypatch the DB-reading function each route
+# calls to raise sqlalchemy.exc.SQLAlchemyError directly, which exercises
+# the actual registered exception handler (main.db_error_handler) through
+# FastAPI's real dispatch mechanics, not just a direct unit call.
+from sqlalchemy.exc import SQLAlchemyError  # noqa: E402
+
+real_list_machines = main.list_machines
+main.list_machines = lambda db_session: (_ for _ in ()).throw(SQLAlchemyError("simulated DB outage"))
+resp = client.get("/machines")
+check("GET /machines returns 503 when the DB raises SQLAlchemyError", resp.status_code, 503)
+check_true(
+    "GET /machines shows the spec's friendly error message on DB failure",
+    "não consegui carregar os dados agora, tente de novo" in resp.text,
+)
+main.list_machines = real_list_machines
+
+# Confirm the dashboard is healthy again once the DB is "back" -- guards
+# against the monkeypatch leaking into later checks.
+resp = client.get("/machines")
+check("GET /machines returns 200 again after the DB recovers", resp.status_code, 200)
+
+real_checkin_machine = main.checkin_machine
+main.checkin_machine = lambda db_session, serial, dragx_version: (_ for _ in ()).throw(
+    SQLAlchemyError("simulated DB outage")
+)
+resp = client.post(
+    "/api/machines/checkin",
+    json={"serial": "API-002", "dragx_version": "V7.0.3.005"},
+    headers={"X-Api-Key": "test-api-key-xyz"},
+)
+check("POST /api/machines/checkin returns 503 when the DB raises SQLAlchemyError", resp.status_code, 503)
+check_true(
+    "POST /api/machines/checkin returns JSON (not the HTML error page) on DB failure",
+    resp.headers["content-type"].startswith("application/json") and "<html" not in resp.text.lower(),
+)
+check_true("POST /api/machines/checkin's JSON error body has a 'detail' field", bool(resp.json().get("detail")))
+main.checkin_machine = real_checkin_machine
 
 if failures:
     print(f"\n{failures} check(s) FAILED")

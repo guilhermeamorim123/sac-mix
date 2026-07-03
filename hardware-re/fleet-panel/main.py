@@ -9,10 +9,11 @@ import hmac
 import os
 
 from fastapi import Depends, FastAPI, Request, Form, Header, HTTPException
-from fastapi.responses import RedirectResponse, HTMLResponse
+from fastapi.responses import RedirectResponse, HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 from starlette.middleware.sessions import SessionMiddleware
 
@@ -25,7 +26,11 @@ _HERE = os.path.dirname(os.path.abspath(__file__))
 SESSION_SECRET = os.environ["SESSION_SECRET"]
 
 app = FastAPI()
-app.add_middleware(SessionMiddleware, secret_key=SESSION_SECRET)
+# https_only=True is required for the `Secure` cookie flag -- Starlette's
+# SessionMiddleware does not set it by default even though this app is only
+# ever served over HTTPS on Render. Without it, the session cookie could in
+# principle be sent over a plaintext connection.
+app.add_middleware(SessionMiddleware, secret_key=SESSION_SECRET, https_only=True)
 app.mount("/static", StaticFiles(directory=os.path.join(_HERE, "static")), name="static")
 templates = Jinja2Templates(directory=os.path.join(_HERE, "templates"))
 
@@ -57,6 +62,27 @@ def require_login(request: Request):
 @app.exception_handler(NotLoggedIn)
 def not_logged_in_handler(request: Request, exc: NotLoggedIn):
     return RedirectResponse("/login", status_code=303)
+
+
+# Design spec (docs/superpowers/specs/2026-07-02-fleet-panel-design.md,
+# "Error handling"): if the panel's own database is unreachable, dashboard
+# pages must show a clear message instead of a raw stack trace/500. This
+# catches SQLAlchemyError -- the base class covering connection failures
+# and most other DB-layer errors -- wherever it's raised from a route.
+# `/api/*` is a JSON API, not a dashboard page, so it gets a clean JSON
+# error instead of the HTML page.
+DB_ERROR_MESSAGE = "não consegui carregar os dados agora, tente de novo"
+
+
+@app.exception_handler(SQLAlchemyError)
+def db_error_handler(request: Request, exc: SQLAlchemyError):
+    if request.url.path.startswith("/api/"):
+        return JSONResponse({"detail": DB_ERROR_MESSAGE}, status_code=503)
+    return HTMLResponse(
+        f"<!DOCTYPE html><html><head><meta charset='utf-8'><title>Erro</title></head>"
+        f"<body><p>{DB_ERROR_MESSAGE}</p></body></html>",
+        status_code=503,
+    )
 
 
 @app.get("/")
