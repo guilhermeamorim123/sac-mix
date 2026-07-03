@@ -103,6 +103,28 @@ check("verify_login rejects a wrong password", auth.verify_login("wrong password
 del os.environ["PANEL_PASSWORD_HASH"]
 check("verify_login fails closed when PANEL_PASSWORD_HASH is unset", auth.verify_login("anything"), False)
 
+
+# --- main.py: FastAPI app, login/logout ---
+from fastapi.testclient import TestClient  # noqa: E402
+import main  # noqa: E402
+
+client = TestClient(main.app)
+
+resp = client.get("/login")
+check("GET /login returns 200", resp.status_code, 200)
+
+os.environ["PANEL_PASSWORD_HASH"] = auth.hash_password("test-password-123")
+
+resp = client.post("/login", data={"password": "wrong-password"})
+check("POST /login with wrong password returns 401", resp.status_code, 401)
+
+resp = client.post("/login", data={"password": "test-password-123"})
+check_true("POST /login with correct password redirects", resp.history and resp.history[0].status_code == 303)
+check("POST /login with correct password ends up at /machines", str(resp.url).endswith("/machines"), True)
+
+resp = client.get("/logout")
+check("GET /logout redirects to /login", str(resp.url).endswith("/login"), True)
+
 if failures:
     print(f"\n{failures} check(s) FAILED")
     sys.exit(1)

@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8">
+  <title>{% block title %}Painel DragX{% endblock %}</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header class="topbar">
+    <img src="/static/logo.png" alt="DragX" class="logo">
+    <span class="brand">Painel DragX</span>
+    {% if request.session.get("logged_in") %}
+    <nav class="topnav">
+      <a href="/machines">Máquinas</a>
+      <a href="/machines/em-uso">Máquinas em uso</a>
+      <a href="/machines/add">+ Adicionar</a>
+      <a href="/logout">Sair</a>
+    </nav>
+    {% endif %}
+  </header>
+  <main>
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>
