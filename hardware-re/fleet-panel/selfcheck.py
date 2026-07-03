@@ -86,6 +86,23 @@ all_now = models.list_machines(session)
 check("list_machines returns every machine", len(all_now), 2)
 check_true("list_machines most-recently-seen first", all_now[0].last_seen_at >= all_now[1].last_seen_at)
 
+
+# --- auth.py: hash_password / verify_password / verify_login ---
+import auth  # noqa: E402
+
+stored = auth.hash_password("correct horse battery staple")
+check_true("hash_password produces a 'salt$hash' string", "$" in stored)
+check_true("verify_password accepts the correct password", auth.verify_password("correct horse battery staple", stored))
+check("verify_password rejects a wrong password", auth.verify_password("wrong password", stored), False)
+check("verify_password rejects a malformed stored hash", auth.verify_password("anything", "not-a-valid-hash"), False)
+
+os.environ["PANEL_PASSWORD_HASH"] = stored
+check_true("verify_login accepts the correct password when PANEL_PASSWORD_HASH is set", auth.verify_login("correct horse battery staple"))
+check("verify_login rejects a wrong password", auth.verify_login("wrong password"), False)
+
+del os.environ["PANEL_PASSWORD_HASH"]
+check("verify_login fails closed when PANEL_PASSWORD_HASH is unset", auth.verify_login("anything"), False)
+
 if failures:
     print(f"\n{failures} check(s) FAILED")
     sys.exit(1)
