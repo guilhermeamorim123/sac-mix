@@ -7,10 +7,11 @@ Run locally: uvicorn main:app --reload
 """
 import os
 
-from fastapi import FastAPI, Request, Form
+from fastapi import Depends, FastAPI, Request, Form
 from fastapi.responses import RedirectResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from sqlalchemy.orm import Session
 from starlette.middleware.sessions import SessionMiddleware
 
 from auth import verify_login
@@ -28,6 +29,32 @@ templates = Jinja2Templates(directory=os.path.join(_HERE, "templates"))
 
 engine = get_engine()
 SessionLocal = get_session_factory(engine)
+
+
+def get_db():
+    """Yield-based DB session dependency: opens a session per request and
+    guarantees it's closed afterward, regardless of route outcome."""
+    db_session = SessionLocal()
+    try:
+        yield db_session
+    finally:
+        db_session.close()
+
+
+class NotLoggedIn(Exception):
+    """Raised by require_login when there's no active session. Converted
+    into a redirect to /login by the exception handler below, so routes
+    that depend on require_login don't need to handle it themselves."""
+
+
+def require_login(request: Request):
+    if not request.session.get("logged_in"):
+        raise NotLoggedIn()
+
+
+@app.exception_handler(NotLoggedIn)
+def not_logged_in_handler(request: Request, exc: NotLoggedIn):
+    return RedirectResponse("/login", status_code=303)
 
 
 @app.get("/login", response_class=HTMLResponse)
@@ -52,27 +79,24 @@ def logout(request: Request):
 
 
 @app.get("/machines", response_class=HTMLResponse)
-def machines_list(request: Request):
-    if not request.session.get("logged_in"):
-        return RedirectResponse("/login", status_code=303)
-    db_session = SessionLocal()
-    try:
-        machines = list_machines(db_session)
-    finally:
-        db_session.close()
+def machines_list(
+    request: Request,
+    db_session: Session = Depends(get_db),
+    _: None = Depends(require_login),
+):
+    machines = list_machines(db_session)
     return templates.TemplateResponse(request, "machines.html", {"machines": machines})
 
 
 @app.post("/machines/rename")
-def machines_rename(request: Request, serial: str = Form(...), name: str = Form(...)):
-    if not request.session.get("logged_in"):
-        return RedirectResponse("/login", status_code=303)
-    db_session = SessionLocal()
-    try:
-        # rename_machine returns None if serial doesn't exist -- a harmless
-        # no-op by design, since this form always submits a serial that was
-        # just rendered from a real row on the dashboard.
-        rename_machine(db_session, serial, name)
-    finally:
-        db_session.close()
+def machines_rename(
+    serial: str = Form(...),
+    name: str = Form(...),
+    db_session: Session = Depends(get_db),
+    _: None = Depends(require_login),
+):
+    # rename_machine returns None if serial doesn't exist -- a harmless
+    # no-op by design, since this form always submits a serial that was
+    # just rendered from a real row on the dashboard.
+    rename_machine(db_session, serial, name)
     return RedirectResponse("/machines", status_code=303)

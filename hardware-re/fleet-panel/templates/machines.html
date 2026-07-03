@@ -10,7 +10,6 @@
       <th>Versão DragX</th>
       <th>Primeiro onboard</th>
       <th>Última vez vista</th>
-      <th></th>
     </tr>
   </thead>
   <tbody>
@@ -27,10 +26,9 @@
       <td>{{ m.dragx_version or '-' }}</td>
       <td>{{ m.first_onboarded_at }}</td>
       <td>{{ m.last_seen_at }}</td>
-      <td></td>
     </tr>
     {% else %}
-    <tr><td colspan="6">Nenhuma máquina cadastrada ainda.</td></tr>
+    <tr><td colspan="5">Nenhuma máquina cadastrada ainda.</td></tr>
     {% endfor %}
   </tbody>
 </table>
