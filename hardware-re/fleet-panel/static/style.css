@@ -6,6 +6,7 @@
   --text: #e8fff0;
   --text-dim: #9fc9ae;
   --border: #1f3d2a;
+  --error: #ff6b6b;
 }
 
 * { box-sizing: border-box; }
@@ -20,6 +21,7 @@ body {
 .topbar {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 16px;
   background: var(--bg-panel);
   padding: 12px 24px;
@@ -88,7 +90,13 @@ button {
 
 button:hover { background: var(--green); }
 
-.error { color: #ff6b6b; }
+.error { color: var(--error); }
+
+.table-scroll {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
 
 .machines-table {
   width: 100%;
