@@ -12,6 +12,7 @@ engine so all reads/writes in a test run share the same in-memory data.
 import os
 
 from sqlalchemy import create_engine
+from sqlalchemy.engine import make_url
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
@@ -20,7 +21,9 @@ from models import Base
 
 def get_engine(db_url=None):
     db_url = db_url or os.environ.get("DATABASE_URL", "sqlite:///./fleet_panel.db")
-    if db_url == "sqlite:///:memory:":
+    url = make_url(db_url)
+    is_memory_sqlite = url.get_backend_name() == "sqlite" and url.database in (None, "", ":memory:")
+    if is_memory_sqlite:
         engine = create_engine(
             db_url,
             connect_args={"check_same_thread": False},

@@ -19,6 +19,6 @@ class Machine(Base):
     serial = Column(String, unique=True, nullable=False)
     name = Column(String, nullable=True)
     dragx_version = Column(String, nullable=True)
-    first_onboarded_at = Column(DateTime, nullable=False)
-    last_seen_at = Column(DateTime, nullable=False)
+    first_onboarded_at = Column(DateTime(timezone=True), nullable=False)
+    last_seen_at = Column(DateTime(timezone=True), nullable=False)
     notes = Column(String, nullable=True)
