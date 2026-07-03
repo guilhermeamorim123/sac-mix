@@ -62,6 +62,30 @@ check_true("checkin_machine updates last_seen_at on repeat call", m2.last_seen_a
 all_machines = session.query(models.Machine).filter_by(serial="ABC123").all()
 check("checkin_machine never creates a duplicate row for the same serial", len(all_machines), 1)
 
+
+# --- add_machine_manual ---
+m3 = models.add_machine_manual(session, serial="XYZ789", name="Loja 2")
+check("add_machine_manual creates a new machine", m3.serial, "XYZ789")
+check("add_machine_manual sets name", m3.name, "Loja 2")
+
+m3_again = models.add_machine_manual(session, serial="XYZ789", name="Loja 2 Renomeada")
+check("add_machine_manual updates name on repeat call (upsert, not duplicate)", m3_again.name, "Loja 2 Renomeada")
+xyz_rows = session.query(models.Machine).filter_by(serial="XYZ789").all()
+check("add_machine_manual never creates a duplicate row", len(xyz_rows), 1)
+
+# --- rename_machine ---
+renamed = models.rename_machine(session, serial="ABC123", new_name="Loja 1")
+check("rename_machine updates name", renamed.name, "Loja 1")
+check("rename_machine does not touch dragx_version", renamed.dragx_version, "V7.0.4.000")
+
+missing = models.rename_machine(session, serial="DOES-NOT-EXIST", new_name="whatever")
+check("rename_machine returns None for unknown serial", missing, None)
+
+# --- list_machines ---
+all_now = models.list_machines(session)
+check("list_machines returns every machine", len(all_now), 2)
+check_true("list_machines most-recently-seen first", all_now[0].last_seen_at >= all_now[1].last_seen_at)
+
 if failures:
     print(f"\n{failures} check(s) FAILED")
     sys.exit(1)

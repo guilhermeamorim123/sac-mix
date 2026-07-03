@@ -52,3 +52,39 @@ def checkin_machine(session, serial, dragx_version):
         machine.dragx_version = dragx_version
     session.commit()
     return machine
+
+
+def add_machine_manual(session, serial, name):
+    """Adds a machine that was onboarded before this panel existed, or
+    updates its name if it already exists (upsert, same as
+    checkin_machine, but only ever touches `name`)."""
+    now = datetime.datetime.now(datetime.timezone.utc)
+    machine = session.query(Machine).filter_by(serial=serial).one_or_none()
+    if machine is None:
+        machine = Machine(
+            serial=serial,
+            name=name,
+            first_onboarded_at=now,
+            last_seen_at=now,
+        )
+        session.add(machine)
+    else:
+        machine.name = name
+    session.commit()
+    return machine
+
+
+def rename_machine(session, serial, new_name):
+    """Updates only the `name` field for an existing machine. Returns the
+    Machine row, or None if no machine with this serial exists."""
+    machine = session.query(Machine).filter_by(serial=serial).one_or_none()
+    if machine is None:
+        return None
+    machine.name = new_name
+    session.commit()
+    return machine
+
+
+def list_machines(session):
+    """Returns all machines, most-recently-seen first."""
+    return session.query(Machine).order_by(Machine.last_seen_at.desc()).all()
