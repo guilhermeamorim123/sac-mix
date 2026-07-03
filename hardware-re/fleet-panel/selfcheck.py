@@ -15,6 +15,10 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 # var at call time.
 os.environ["DATABASE_URL"] = "sqlite:///:memory:"
 
+# main.py requires SESSION_SECRET to be set (no insecure default) -- must
+# be set before main.py is imported anywhere in this file.
+os.environ["SESSION_SECRET"] = "test-secret-for-selfcheck-only"
+
 from sqlalchemy import inspect  # noqa: E402
 
 import db  # noqa: E402

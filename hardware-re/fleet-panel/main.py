@@ -18,8 +18,10 @@ from db import get_engine, get_session_factory
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
 
+SESSION_SECRET = os.environ["SESSION_SECRET"]
+
 app = FastAPI()
-app.add_middleware(SessionMiddleware, secret_key=os.environ.get("SESSION_SECRET", "dev-only-secret-change-me"))
+app.add_middleware(SessionMiddleware, secret_key=SESSION_SECRET)
 app.mount("/static", StaticFiles(directory=os.path.join(_HERE, "static")), name="static")
 templates = Jinja2Templates(directory=os.path.join(_HERE, "templates"))
 
