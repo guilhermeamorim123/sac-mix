@@ -21,6 +21,13 @@ class Machine(Base):
     serial = Column(String, unique=True, nullable=False)
     name = Column(String, nullable=True)
     dragx_version = Column(String, nullable=True)
+    # Timezone-aware, but on SQLite (local dev/selfcheck) values read back
+    # from the DB come back naive (tzinfo stripped) even though tz-aware
+    # values are written -- SQLite has no native tz-aware storage type.
+    # Postgres (production) preserves tzinfo correctly. Don't compare a
+    # freshly-created datetime.now(timezone.utc) directly against a value
+    # read back from this column without normalizing tzinfo first, or a
+    # naive-vs-aware TypeError may only surface against SQLite, not Postgres.
     first_onboarded_at = Column(DateTime(timezone=True), nullable=False)
     last_seen_at = Column(DateTime(timezone=True), nullable=False)
     notes = Column(String, nullable=True)
