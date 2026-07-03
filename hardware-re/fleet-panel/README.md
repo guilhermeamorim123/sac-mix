@@ -4,6 +4,28 @@ Hosted dashboard listing every CUTTER_E326 machine onboarded via
 `onboard.py`. See `docs/superpowers/specs/2026-07-02-fleet-panel-design.md`
 for the full design.
 
+## Live deployment — read this before changing anything
+
+- **Live URL:** https://dragx-fleet-panel.onrender.com
+- **Deployed from:** https://github.com/guilhermeamorim123/dragx-fleet-panel (private)
+
+**This folder and that GitHub repo are NOT git-linked** — no submodule, no
+shared remote, no shared history. They're two separate git repositories
+that happen to contain the same panel code, kept in sync manually (copy
+files, commit, push) whenever a change needs to reach production.
+
+Why: this vault (where this folder lives) also contains unrelated
+sensitive personal/business content that must never be pushed to GitHub.
+A separate, isolated repo containing *only* the panel code
+(`dragx-fleet-panel`) was created so the panel could be deployed to
+Render/GitHub without exposing anything else in the vault.
+
+**If you change `main.py` (or any other file here) and need it live**:
+copy the changed file(s) into a checkout of the `dragx-fleet-panel` repo,
+commit, and `git push` there. Render auto-deploys on push to that repo's
+default branch. A commit here, in the vault, does **not** reach
+production by itself.
+
 ## Running locally
 
 ```bash

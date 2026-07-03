@@ -40,3 +40,24 @@ python onboard.py
 
 Assumes exactly one device is reachable via `adb devices`, connected over
 USB (same single-device assumption as `hardware-re/dragx-web-deployer/server.py`).
+
+## Fleet panel check-in (optional)
+
+At the end of a successful run, `onboard.py` makes a best-effort call to
+register the machine with the Fleet Control Panel
+(`hardware-re/fleet-panel/`, live at
+https://dragx-fleet-panel.onrender.com) so it shows up on the dashboard
+automatically. This is controlled by two environment variables:
+
+```bash
+export PANEL_URL="https://dragx-fleet-panel.onrender.com"
+export PANEL_API_KEY="<same value as the panel's CHECKIN_API_KEY>"
+```
+
+If either is unset, the check-in is silently skipped (printed as a
+one-line `AVISO`, not a failure) — the rest of `onboard.py` doesn't depend
+on the panel in any way. The call also uses a 60-second timeout (longer
+than a typical request) because the panel is hosted on Render's free
+tier, which sleeps after ~15 minutes of inactivity and can take 30-50s to
+wake up; since `onboard.py` runs are infrequent, the panel is often asleep
+when this call happens.
