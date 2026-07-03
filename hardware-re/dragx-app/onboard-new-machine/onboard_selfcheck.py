@@ -1,7 +1,8 @@
 """
-Self-check for onboard.py's checkin_with_panel() -- the one part of
-onboard.py that's pure enough (given a fake HTTP layer) to test without a
-real device or a real network call. The three real phases
+Self-check for the parts of onboard.py that are pure enough (given a fake
+HTTP layer / a monkeypatched run_adb) to test without a real device or a
+real network call: checkin_with_panel(), _parse_version_name(), and the
+ADB command arguments built by get_device_serial(). The three real phases
 (phase1/phase2/phase3) are validated by real hardware runs instead, per
 docs/superpowers/plans/2026-07-02-onboard-new-machine.md's own approach.
 
@@ -105,6 +106,35 @@ check(
     onboard._parse_version_name(two_versions_output),
     "V7.0.3.005",
 )
+
+# --- get_device_serial: uses `getprop ro.serialno`, NOT `get-serialno` ---
+# Regression test for a confirmed real-device bug: for a TCP/IP-connected
+# device, `adb get-serialno` returns the ip:port transport address itself
+# (e.g. "192.168.15.13:5555"), not the hardware serial -- confirmed against
+# a real device, where `adb -s <ip>:5555 shell getprop ro.serialno`
+# correctly returned "6S9OZFRLDN" while `adb -s <ip>:5555 get-serialno`
+# incorrectly returned the ip:port string back. There's no parsing logic to
+# unit-test in isolation here (the whole function is "run one ADB command,
+# strip the output"), so this just locks in the command arguments via a
+# monkeypatched run_adb, the same pattern used for _post_json above.
+captured_adb_args = {}
+
+
+def fake_run_adb_for_serial(args):
+    captured_adb_args["args"] = args
+    return 0, "6S9OZFRLDN\n", ""
+
+
+real_run_adb = onboard.run_adb
+onboard.run_adb = fake_run_adb_for_serial
+serial = onboard.get_device_serial("192.168.15.13:5555")
+onboard.run_adb = real_run_adb
+check(
+    "get_device_serial calls `shell getprop ro.serialno`, not `get-serialno`",
+    captured_adb_args["args"],
+    ["-s", "192.168.15.13:5555", "shell", "getprop", "ro.serialno"],
+)
+check("get_device_serial returns the stripped hardware serial", serial, "6S9OZFRLDN")
 
 if failures:
     print(f"\n{failures} check(s) FAILED")

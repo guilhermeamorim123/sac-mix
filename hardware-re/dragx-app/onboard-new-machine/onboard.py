@@ -296,8 +296,13 @@ def checkin_with_panel(serial, dragx_version):
 def get_device_serial(ip_port):
     """Returns the device's real ADB serial number (e.g. '6S9OZFRLDN'),
     not the ip:port transport address -- this is the stable identifier
-    the fleet panel keys machine records on."""
-    exit_code, stdout, stderr = run_adb(["-s", ip_port, "get-serialno"])
+    the fleet panel keys machine records on. Uses `getprop ro.serialno`
+    rather than `adb get-serialno`, because for a device connected over
+    TCP/IP (which is always the case at this point in onboard.py's flow),
+    `adb get-serialno` returns the ip:port transport address itself, not
+    the underlying hardware serial -- confirmed by testing both against a
+    real device."""
+    exit_code, stdout, stderr = run_adb(["-s", ip_port, "shell", "getprop", "ro.serialno"])
     return stdout.strip()
 
 
