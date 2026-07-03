@@ -16,7 +16,7 @@ from starlette.middleware.sessions import SessionMiddleware
 
 from auth import verify_login
 from db import get_engine, get_session_factory
-from models import list_machines, rename_machine
+from models import add_machine_manual, list_machines, rename_machine
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
 
@@ -105,3 +105,23 @@ def machines_rename(
 @app.get("/machines/em-uso", response_class=HTMLResponse)
 def machines_em_uso(request: Request, _: None = Depends(require_login)):
     return templates.TemplateResponse(request, "machines_em_uso.html", {})
+
+
+@app.get("/machines/add", response_class=HTMLResponse)
+def add_machine_form(request: Request, _: None = Depends(require_login)):
+    return templates.TemplateResponse(request, "add_machine.html", {})
+
+
+@app.post("/machines/add")
+def add_machine_submit(
+    serial: str = Form(...),
+    name: str = Form(None),
+    db_session: Session = Depends(get_db),
+    _: None = Depends(require_login),
+):
+    # If this serial already exists and `name` is submitted blank, this
+    # intentionally clears the existing name (latest submission wins) --
+    # this form is a manual, deliberate operator action, not an automated
+    # process, so overwriting on resubmission is acceptable/expected.
+    add_machine_manual(db_session, serial, name)
+    return RedirectResponse("/machines", status_code=303)

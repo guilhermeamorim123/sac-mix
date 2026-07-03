@@ -158,6 +158,18 @@ resp = client.get("/machines/em-uso")
 check("GET /machines/em-uso with login returns 200", resp.status_code, 200)
 check_true("GET /machines/em-uso shows the 'em breve' message", "em breve" in resp.text.lower())
 
+
+# --- main.py: /machines/add ---
+resp = anon_client.get("/machines/add")
+check("GET /machines/add without login redirects to /login", str(resp.url).endswith("/login"), True)
+
+resp = client.get("/machines/add")
+check("GET /machines/add with login returns 200", resp.status_code, 200)
+
+resp = client.post("/machines/add", data={"serial": "MANUAL-001", "name": "Máquina Antiga"})
+check("POST /machines/add redirects to /machines", str(resp.url).endswith("/machines"), True)
+check_true("manually-added machine shows up on the dashboard", "MANUAL-001" in resp.text and "Máquina Antiga" in resp.text)
+
 if failures:
     print(f"\n{failures} check(s) FAILED")
     sys.exit(1)
