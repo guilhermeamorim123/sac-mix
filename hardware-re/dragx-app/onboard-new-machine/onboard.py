@@ -284,8 +284,16 @@ def checkin_with_panel(serial, dragx_version):
     url = f"{panel_url.rstrip('/')}/api/machines/checkin"
     headers = {"Content-Type": "application/json", "X-Api-Key": api_key}
     payload = {"serial": serial, "dragx_version": dragx_version}
+    # 60s (not _post_json's default 10s): the panel is hosted on Render's
+    # free tier, which sleeps after ~15 minutes of inactivity and can take
+    # 30-50s to wake on the next request. onboard.py runs are infrequent
+    # (once per new machine), so the panel will very plausibly be asleep
+    # when this call happens -- a 10s timeout would spuriously report this
+    # best-effort check-in as failed even though the panel would have
+    # succeeded given more time. Scoped to just this call, not a change to
+    # _post_json's default, since nothing else in this script needs it.
     try:
-        status = _post_json(url, payload, headers)
+        status = _post_json(url, payload, headers, timeout=60)
     except Exception as e:
         return False, f"não consegui contatar o painel: {e}"
     if status == 200:

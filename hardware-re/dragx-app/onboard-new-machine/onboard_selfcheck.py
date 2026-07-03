@@ -43,6 +43,7 @@ def fake_post_json_success(url, payload_dict, headers, timeout=10):
     captured["url"] = url
     captured["payload"] = payload_dict
     captured["headers"] = headers
+    captured["timeout"] = timeout
     return 200
 
 
@@ -53,6 +54,11 @@ check("checkin_with_panel posts to the /api/machines/checkin path", captured["ur
 check("checkin_with_panel sends the serial in the payload", captured["payload"]["serial"], "SERIAL123")
 check("checkin_with_panel sends the dragx_version in the payload", captured["payload"]["dragx_version"], "V7.0.3.005")
 check("checkin_with_panel sends the API key header", captured["headers"]["X-Api-Key"], "fake-key")
+# Regression test: checkin_with_panel must pass a cold-start-tolerant
+# timeout (60s), not _post_json's own 10s default -- Render's free tier
+# can take 30-50s to wake from sleep, and onboard.py runs are infrequent
+# enough that the panel will very plausibly be asleep on a real run.
+check("checkin_with_panel passes a 60s timeout to _post_json (tolerates a Render free-tier cold start)", captured["timeout"], 60)
 
 # --- checkin_with_panel: non-200 response ---
 def fake_post_json_failure(url, payload_dict, headers, timeout=10):
