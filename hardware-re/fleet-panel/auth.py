@@ -10,12 +10,14 @@ import hmac
 import os
 import secrets
 
+PBKDF2_ITERATIONS = 600_000
+
 
 def hash_password(password, salt=None):
     """Returns 'salt$hash' (both hex-encoded). Generates a fresh salt if
     none is given -- used once, offline, to generate PANEL_PASSWORD_HASH."""
     salt = salt or secrets.token_hex(16)
-    digest = hashlib.pbkdf2_hmac("sha256", password.encode(), bytes.fromhex(salt), 100_000)
+    digest = hashlib.pbkdf2_hmac("sha256", password.encode(), bytes.fromhex(salt), PBKDF2_ITERATIONS)
     return f"{salt}${digest.hex()}"
 
 
@@ -27,7 +29,7 @@ def verify_password(password, stored_hash):
         salt, expected_hex = stored_hash.split("$", 1)
     except ValueError:
         return False
-    digest = hashlib.pbkdf2_hmac("sha256", password.encode(), bytes.fromhex(salt), 100_000)
+    digest = hashlib.pbkdf2_hmac("sha256", password.encode(), bytes.fromhex(salt), PBKDF2_ITERATIONS)
     return hmac.compare_digest(digest.hex(), expected_hex)
 
 
