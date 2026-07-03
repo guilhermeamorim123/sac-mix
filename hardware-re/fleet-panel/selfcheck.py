@@ -175,6 +175,46 @@ check("POST /machines/add with whitespace-padded serial redirects to /machines",
 padded_rows = session.query(models.Machine).filter_by(serial="PADDED-001").all()
 check("whitespace-padded serial is normalized before storage (no surrounding whitespace)", len(padded_rows), 1)
 
+
+# --- main.py: /api/machines/checkin ---
+resp = client.post("/api/machines/checkin", json={"serial": "API-001", "dragx_version": "V7.0.3.005"})
+check("POST /api/machines/checkin without API key returns 401", resp.status_code, 401)
+
+os.environ["CHECKIN_API_KEY"] = "test-api-key-xyz"
+resp = client.post(
+    "/api/machines/checkin",
+    json={"serial": "API-001", "dragx_version": "V7.0.3.005"},
+    headers={"X-Api-Key": "wrong-key"},
+)
+check("POST /api/machines/checkin with wrong API key returns 401", resp.status_code, 401)
+
+resp = client.post(
+    "/api/machines/checkin",
+    json={"serial": "API-001", "dragx_version": "V7.0.3.005"},
+    headers={"X-Api-Key": "test-api-key-xyz"},
+)
+check("POST /api/machines/checkin with correct API key returns 200", resp.status_code, 200)
+check("POST /api/machines/checkin response body", resp.json(), {"ok": True})
+
+resp = client.get("/machines")
+check_true("machine registered via checkin API shows up on the dashboard", "API-001" in resp.text)
+
+resp = client.post(
+    "/api/machines/checkin",
+    json={"serial": "API-001", "dragx_version": "V7.0.4.000"},
+    headers={"X-Api-Key": "test-api-key-xyz"},
+)
+check("repeat checkin for the same serial still returns 200", resp.status_code, 200)
+resp = client.get("/machines")
+check_true("repeat checkin updates dragx_version on the dashboard", "V7.0.4.000" in resp.text)
+
+resp = client.post(
+    "/api/machines/checkin",
+    json={"dragx_version": "V7.0.3.005"},
+    headers={"X-Api-Key": "test-api-key-xyz"},
+)
+check("POST /api/machines/checkin without 'serial' returns 400", resp.status_code, 400)
+
 if failures:
     print(f"\n{failures} check(s) FAILED")
     sys.exit(1)

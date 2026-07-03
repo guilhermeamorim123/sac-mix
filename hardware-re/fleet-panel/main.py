@@ -7,7 +7,7 @@ Run locally: uvicorn main:app --reload
 """
 import os
 
-from fastapi import Depends, FastAPI, Request, Form
+from fastapi import Depends, FastAPI, Request, Form, Header, HTTPException
 from fastapi.responses import RedirectResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -16,7 +16,7 @@ from starlette.middleware.sessions import SessionMiddleware
 
 from auth import verify_login
 from db import get_engine, get_session_factory
-from models import add_machine_manual, list_machines, rename_machine
+from models import add_machine_manual, checkin_machine, list_machines, rename_machine
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
 
@@ -141,3 +141,16 @@ def add_machine_submit(
     # column's nullable=True intent.
     add_machine_manual(db_session, serial, name or None)
     return RedirectResponse("/machines", status_code=303)
+
+
+@app.post("/api/machines/checkin")
+def api_checkin(payload: dict, db_session: Session = Depends(get_db), x_api_key: str = Header(None)):
+    expected_key = os.environ.get("CHECKIN_API_KEY")
+    if not expected_key or x_api_key != expected_key:
+        raise HTTPException(status_code=401, detail="chave de API inválida ou ausente")
+    serial = payload.get("serial")
+    dragx_version = payload.get("dragx_version")
+    if not serial:
+        raise HTTPException(status_code=400, detail="'serial' é obrigatório")
+    checkin_machine(db_session, serial, dragx_version)
+    return {"ok": True}
