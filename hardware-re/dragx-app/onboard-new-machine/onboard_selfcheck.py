@@ -71,6 +71,41 @@ onboard._post_json = fake_post_json_raises
 ok, message = onboard.checkin_with_panel("SERIAL123", "V7.0.3.005")
 check("checkin_with_panel returns False (not raises) on a network error", ok, False)
 
+# --- _parse_version_name: realistic multi-line dumpsys output ---
+dumpsys_output = """
+Packages:
+  Package [com.dragx.app] (abcdef):
+    userId=10123
+    pkg=Package{1234567 com.dragx.app}
+    versionCode=705 minSdk=21 targetSdk=29
+    versionName=V7.0.3.005
+    splits=[base]
+    apkSigningVersion=2
+"""
+check(
+    "_parse_version_name finds versionName= among other dumpsys lines",
+    onboard._parse_version_name(dumpsys_output),
+    "V7.0.3.005",
+)
+
+# --- _parse_version_name: no versionName= line at all ---
+check(
+    "_parse_version_name returns None when there's no versionName= line",
+    onboard._parse_version_name("Packages:\n  Package [com.dragx.app] (abcdef):\n    userId=10123\n"),
+    None,
+)
+
+# --- _parse_version_name: first match wins (documented, intentional behavior) ---
+two_versions_output = """
+    versionName=V7.0.3.005
+    versionName=V9.9.9.999
+"""
+check(
+    "_parse_version_name returns the FIRST versionName= match when multiple are present",
+    onboard._parse_version_name(two_versions_output),
+    "V7.0.3.005",
+)
+
 if failures:
     print(f"\n{failures} check(s) FAILED")
     sys.exit(1)

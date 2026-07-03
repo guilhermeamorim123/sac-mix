@@ -301,17 +301,25 @@ def get_device_serial(ip_port):
     return stdout.strip()
 
 
+def _parse_version_name(dumpsys_output):
+    """Parses 'adb shell dumpsys package <pkg>' output and returns the
+    versionName value (e.g. 'V7.0.3.005'), or None if no versionName= line
+    is present. If more than one versionName= line is present, the first
+    match wins -- this is the current, intentional behavior."""
+    for line in dumpsys_output.splitlines():
+        line = line.strip()
+        if line.startswith("versionName="):
+            return line[len("versionName="):]
+    return None
+
+
 def get_dragx_version(ip_port):
     """Returns the installed DragX app's versionName (e.g. 'V7.0.3.005'),
     or None if it couldn't be determined."""
     exit_code, stdout, stderr = run_adb([
         "-s", ip_port, "shell", "dumpsys", "package", web_deployer.TARGET_PACKAGE,
     ])
-    for line in stdout.splitlines():
-        line = line.strip()
-        if line.startswith("versionName="):
-            return line[len("versionName="):]
-    return None
+    return _parse_version_name(stdout)
 
 
 def main():
