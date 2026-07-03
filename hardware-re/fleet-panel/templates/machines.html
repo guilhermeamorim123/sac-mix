@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}Máquinas - Painel DragX{% endblock %}
+{% block content %}
+<h1>Máquinas</h1>
+<table class="machines-table">
+  <thead>
+    <tr>
+      <th>Nome</th>
+      <th>Serial</th>
+      <th>Versão DragX</th>
+      <th>Primeiro onboard</th>
+      <th>Última vez vista</th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for m in machines %}
+    <tr>
+      <td>
+        <form method="post" action="/machines/rename" class="rename-form">
+          <input type="hidden" name="serial" value="{{ m.serial }}">
+          <input type="text" name="name" value="{{ m.name or '' }}" placeholder="(sem nome)">
+          <button type="submit">Salvar</button>
+        </form>
+      </td>
+      <td>{{ m.serial }}</td>
+      <td>{{ m.dragx_version or '-' }}</td>
+      <td>{{ m.first_onboarded_at }}</td>
+      <td>{{ m.last_seen_at }}</td>
+      <td></td>
+    </tr>
+    {% else %}
+    <tr><td colspan="6">Nenhuma máquina cadastrada ainda.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

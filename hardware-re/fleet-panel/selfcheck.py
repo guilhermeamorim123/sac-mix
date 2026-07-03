@@ -129,6 +129,26 @@ check("POST /login with correct password ends up at /machines", str(resp.url).en
 resp = client.get("/logout")
 check("GET /logout redirects to /login", str(resp.url).endswith("/login"), True)
 
+
+# --- main.py: /machines dashboard + rename ---
+anon_client = TestClient(main.app)
+resp = anon_client.get("/machines")
+check("GET /machines without login redirects to /login", str(resp.url).endswith("/login"), True)
+
+# `client` was logged out by the "GET /logout redirects to /login" check
+# above -- log back in so the following requests carry a valid session.
+client.post("/login", data={"password": "test-password-123"})
+
+resp = client.get("/machines")
+check("GET /machines with login returns 200", resp.status_code, 200)
+check_true("GET /machines lists a known machine's serial", "ABC123" in resp.text)
+check_true("GET /machines lists a known machine's name", "Loja 1" in resp.text)
+
+resp = client.post("/machines/rename", data={"serial": "XYZ789", "name": "Loja 2 Final"})
+check("POST /machines/rename redirects to /machines", str(resp.url).endswith("/machines"), True)
+resp = client.get("/machines")
+check_true("renamed machine's new name shows up on the dashboard", "Loja 2 Final" in resp.text)
+
 if failures:
     print(f"\n{failures} check(s) FAILED")
     sys.exit(1)

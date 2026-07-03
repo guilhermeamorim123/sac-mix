@@ -15,6 +15,7 @@ from starlette.middleware.sessions import SessionMiddleware
 
 from auth import verify_login
 from db import get_engine, get_session_factory
+from models import list_machines, rename_machine
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
 
@@ -48,3 +49,30 @@ def login_submit(request: Request, password: str = Form(...)):
 def logout(request: Request):
     request.session.clear()
     return RedirectResponse("/login", status_code=303)
+
+
+@app.get("/machines", response_class=HTMLResponse)
+def machines_list(request: Request):
+    if not request.session.get("logged_in"):
+        return RedirectResponse("/login", status_code=303)
+    db_session = SessionLocal()
+    try:
+        machines = list_machines(db_session)
+    finally:
+        db_session.close()
+    return templates.TemplateResponse(request, "machines.html", {"machines": machines})
+
+
+@app.post("/machines/rename")
+def machines_rename(request: Request, serial: str = Form(...), name: str = Form(...)):
+    if not request.session.get("logged_in"):
+        return RedirectResponse("/login", status_code=303)
+    db_session = SessionLocal()
+    try:
+        # rename_machine returns None if serial doesn't exist -- a harmless
+        # no-op by design, since this form always submits a serial that was
+        # just rendered from a real row on the dashboard.
+        rename_machine(db_session, serial, name)
+    finally:
+        db_session.close()
+    return RedirectResponse("/machines", status_code=303)
