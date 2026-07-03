@@ -149,6 +149,15 @@ check("POST /machines/rename redirects to /machines", str(resp.url).endswith("/m
 resp = client.get("/machines")
 check_true("renamed machine's new name shows up on the dashboard", "Loja 2 Final" in resp.text)
 
+
+# --- main.py: /machines/em-uso placeholder ---
+resp = anon_client.get("/machines/em-uso")
+check("GET /machines/em-uso without login redirects to /login", str(resp.url).endswith("/login"), True)
+
+resp = client.get("/machines/em-uso")
+check("GET /machines/em-uso with login returns 200", resp.status_code, 200)
+check_true("GET /machines/em-uso shows the 'em breve' message", "em breve" in resp.text.lower())
+
 if failures:
     print(f"\n{failures} check(s) FAILED")
     sys.exit(1)

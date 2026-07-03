@@ -100,3 +100,8 @@ def machines_rename(
     # just rendered from a real row on the dashboard.
     rename_machine(db_session, serial, name)
     return RedirectResponse("/machines", status_code=303)
+
+
+@app.get("/machines/em-uso", response_class=HTMLResponse)
+def machines_em_uso(request: Request, _: None = Depends(require_login)):
+    return templates.TemplateResponse(request, "machines_em_uso.html", {})
