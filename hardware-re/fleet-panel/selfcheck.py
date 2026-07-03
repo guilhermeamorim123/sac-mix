@@ -170,6 +170,11 @@ resp = client.post("/machines/add", data={"serial": "MANUAL-001", "name": "Máqu
 check("POST /machines/add redirects to /machines", str(resp.url).endswith("/machines"), True)
 check_true("manually-added machine shows up on the dashboard", "MANUAL-001" in resp.text and "Máquina Antiga" in resp.text)
 
+resp = client.post("/machines/add", data={"serial": "  PADDED-001  ", "name": "Loja Nova"})
+check("POST /machines/add with whitespace-padded serial redirects to /machines", str(resp.url).endswith("/machines"), True)
+padded_rows = session.query(models.Machine).filter_by(serial="PADDED-001").all()
+check("whitespace-padded serial is normalized before storage (no surrounding whitespace)", len(padded_rows), 1)
+
 if failures:
     print(f"\n{failures} check(s) FAILED")
     sys.exit(1)

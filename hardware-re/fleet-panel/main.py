@@ -119,9 +119,25 @@ def add_machine_submit(
     db_session: Session = Depends(get_db),
     _: None = Depends(require_login),
 ):
+    # Strip stray whitespace (e.g. from copy-pasting a serial out of a
+    # terminal) before it can ever reach the DB -- a future real device
+    # check-in matches on an exact `filter_by(serial=serial)`, so an
+    # untrimmed serial here would silently create an orphaned duplicate
+    # row that never receives that device's future updates.
+    serial = serial.strip()
+    name = name.strip() if name else name
+    if not serial:
+        # Whitespace-only (or otherwise empty-after-strip) serial is a
+        # clearly-invalid submission from the single operator who uses
+        # this form -- silently decline rather than adding a full
+        # error-display system for a one-user internal tool.
+        return RedirectResponse("/machines/add", status_code=303)
+
     # If this serial already exists and `name` is submitted blank, this
     # intentionally clears the existing name (latest submission wins) --
     # this form is a manual, deliberate operator action, not an automated
-    # process, so overwriting on resubmission is acceptable/expected.
-    add_machine_manual(db_session, serial, name)
+    # process, so overwriting on resubmission is acceptable/expected. We
+    # pass None (not "") so the DB stores a real NULL, matching the
+    # column's nullable=True intent.
+    add_machine_manual(db_session, serial, name or None)
     return RedirectResponse("/machines", status_code=303)
