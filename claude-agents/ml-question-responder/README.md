@@ -17,6 +17,9 @@ Agente de atendimento e conversão de vendas para vendedores do Mercado Livre. B
 - Log diário de respostas em `logs/YYYY-MM-DD.md`
 - Busca web como fallback quando anúncio não tem o dado (antes de escalar)
 - Resposta genérica humanizada para casos sem dado em nenhuma fonte
+- **SAC Mix IA (opcional)** — base de conhecimento por produto (consultada com
+  prioridade máxima antes da busca web) + histórico de todas as respostas
+  visível na tela "SAC Mix IA" do app mixfoco.com.br. Ver seção abaixo.
 
 ## Architecture
 
@@ -93,6 +96,32 @@ Copie a pasta `claude-agents/ml-question-responder/` para o projeto onde você q
 claude  # e depois /answer-questions
 ```
 
+### 6. (Opcional) Integração SAC Mix IA — histórico + base de conhecimento por produto
+
+O `auto_responder.py` (o script que roda no GitHub Actions, ver `scripts/auto_responder.py`)
+pode reportar cada resposta dada e consultar uma base de conhecimento por produto
+gerenciada na tela **SAC Mix IA** do app `mixfoco.com.br`. Sem essas variáveis, o
+agente funciona exatamente como antes — só não reporta histórico nem consulta a KB.
+
+```bash
+export MIXFOCO_API_URL="https://mixfoco.com.br"
+export MIXFOCO_ML_IA_SECRET="mesmo_valor_do_ML_IA_INGEST_SECRET_configurado_na_API"
+```
+
+No GitHub Actions, configure os secrets `MIXFOCO_API_URL` e `MIXFOCO_ML_IA_SECRET`
+no repositório (Settings → Secrets and variables → Actions) — já estão referenciados
+em `.github/workflows/ml-responder.yml`.
+
+Fluxo:
+1. Antes de gerar a resposta, o script busca `GET /mixfoco/ml-ia/kb-produto/{item_id}`
+   — entradas cadastradas na tela SAC Mix IA para aquele MLB específico
+2. Se houver entradas, elas viram contexto de **prioridade máxima** no prompt do Claude
+   (fonte reportada como `KB` no log e no histórico)
+3. Depois de responder (ou escalar/errar), o script reporta via
+   `POST /mixfoco/ml-ia/ingest` — a resposta aparece na sub-aba "Respostas da IA"
+4. A base de conhecimento por produto é gerenciada direto na sub-aba
+   "Base de Conhecimento por Produto" (criar/editar/remover por item_id/SKU)
+
 ## Usage
 
 ```
@@ -108,6 +137,7 @@ O agente busca todas as perguntas pendentes, processa cada uma e mostra um resum
 | `CLAUDE.md` | Instruções completas do agente |
 | `.claude/settings.json` | Permissões necessárias |
 | `.claude/skills/answer-questions/SKILL.md` | Skill `/answer-questions` |
+| `scripts/auto_responder.py` | Script standalone rodado pelo GitHub Actions — busca, responde, posta, reporta ao SAC Mix IA |
 | `scripts/ml_auth.py` | Autenticação OAuth2, refresh de tokens |
 | `scripts/get_questions.py` | Busca perguntas UNANSWERED por conta |
 | `scripts/get_item.py` | Busca título, atributos e descrição do anúncio |
@@ -116,4 +146,6 @@ O agente busca todas as perguntas pendentes, processa cada uma e mostra um resum
 
 ## Changelog
 
+- 2026-07-04: Integração opcional com SAC Mix IA (mixfoco.com.br) — histórico de
+  respostas + base de conhecimento por produto consultada antes da busca web
 - 2026-05-28: Initial creation

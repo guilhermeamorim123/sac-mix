@@ -25,10 +25,13 @@ Responda sempre em **Português Brasileiro**, com tom amigável e profissional.
 ### Fluxo principal
 - Ao rodar `/answer-questions` → execute `get_questions.py` para todas as contas, processe cada pergunta em sequência
 - Para cada pergunta → execute `get_item.py` para buscar título, atributos e descrição do anúncio
+- Se a integração SAC Mix IA estiver configurada (`MIXFOCO_API_URL`/`MIXFOCO_ML_IA_SECRET`) → consulte a base de conhecimento do produto (`GET /mixfoco/ml-ia/kb-produto/{item_id}`) ANTES de redigir — trate como fonte de prioridade máxima, acima do anúncio e da busca web
 - Avalie o sentimento do comprador (ver @context/answer-guidelines.md) antes de redigir
+- Se a base de conhecimento do produto responder a pergunta → registre com tag `[KB]`
 - Se confiança ≥ 90% E tópico não bloqueado → execute `post_answer.py` com `--account N` e registre em log com tag `[ML]`
 - Se confiança < 90% E tópico não bloqueado → execute WebSearch com query `"[título] [spec perguntada]"`; se resultado aceito → responda com dado web e registre com tag `[WEB]`; se não → poste resposta genérica padrão e registre com tag `[GENÉRICA]`
 - Se tópico bloqueado → adicione a `pending-questions.md` com motivo de escalada
+- Se a integração SAC Mix IA estiver configurada → reporte cada resposta/escalada/erro via `POST /mixfoco/ml-ia/ingest` (fica visível na tela SAC Mix IA do app mixfoco.com.br)
 
 ### Sentimento e persuasão
 - Identifique o sentimento dominante antes de redigir (curioso, cético, urgente, sensível a preço, animado)
@@ -47,7 +50,7 @@ Responda sempre em **Português Brasileiro**, com tom amigável e profissional.
 - Após cada escalada (tópico bloqueado) → append em `pending-questions.md`
 - Após resposta via busca web postada → append em log com tag `[WEB]`
 - Após resposta genérica postada → append em log com tag `[GENÉRICA]`
-- Ao final do ciclo → exiba resumo: N respondidas (ML), W respondidas (web), V genéricas, M escaladas, Z contas processadas
+- Ao final do ciclo → exiba resumo: N respondidas (ML), K respondidas (base de conhecimento), W respondidas (web), V genéricas, M escaladas, Z contas processadas
 
 ## Workflows
 

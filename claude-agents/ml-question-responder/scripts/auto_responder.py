@@ -11,6 +11,12 @@ Environment variables per account (N = 1, 2, 3…):
   ML_CLIENT_SECRET_N         ML app secret key
   ML_REFRESH_TOKEN_N         ML refresh token (primary credential for GitHub Actions)
   ML_ACCESS_TOKEN_N          ML access token (optional — refreshed automatically on 401)
+
+Optional — SAC Mix IA integration (history + per-product knowledge base in the
+Mixfoco app at mixfoco.com.br). When unset, the responder works exactly as before,
+just without reporting history or consulting the product knowledge base:
+  MIXFOCO_API_URL            Base URL of the Mixfoco API (e.g. https://mixfoco.com.br)
+  MIXFOCO_ML_IA_SECRET       Shared secret for /mixfoco/ml-ia/ingest and /kb-produto
 """
 
 from __future__ import annotations
@@ -42,6 +48,9 @@ ESCALATION_KEYWORDS = [
 SCRIPTS_DIR = os.path.dirname(os.path.abspath(__file__))
 AGENT_DIR = os.path.dirname(SCRIPTS_DIR)
 IN_CI = os.environ.get("GITHUB_ACTIONS") == "true"
+
+MIXFOCO_API_URL = os.environ.get("MIXFOCO_API_URL", "").rstrip("/")
+MIXFOCO_ML_IA_SECRET = os.environ.get("MIXFOCO_ML_IA_SECRET", "")
 
 
 # ── Auth ─────────────────────────────────────────────────────────────────────
@@ -224,6 +233,69 @@ def is_escalation(text: str) -> bool:
     return any(kw in low for kw in ESCALATION_KEYWORDS)
 
 
+# ── SAC Mix IA integration (history + per-product knowledge base) ────────────
+# Best-effort only: network/config issues here must never break the core
+# answer-and-post flow, so every call is wrapped and failures are swallowed
+# after logging a warning.
+
+def fetch_product_kb(item_id: str) -> str:
+    """Fetch active knowledge-base entries for this product from the Mixfoco app.
+    Returns an empty string if the integration isn't configured or the call fails."""
+    if not (MIXFOCO_API_URL and MIXFOCO_ML_IA_SECRET and item_id):
+        return ""
+    try:
+        resp = requests.get(
+            f"{MIXFOCO_API_URL}/mixfoco/ml-ia/kb-produto/{item_id}",
+            headers={"X-ML-IA-Secret": MIXFOCO_ML_IA_SECRET},
+            timeout=10,
+        )
+        if not resp.ok:
+            return ""
+        entradas = resp.json().get("entradas", [])
+    except Exception as e:
+        print(f"  [WARN] Falha ao buscar KB do produto {item_id}: {e}", file=sys.stderr)
+        return ""
+    if not entradas:
+        return ""
+    return "\n".join(f"- {e.get('conteudo', '')}" for e in entradas if e.get("conteudo"))
+
+
+def report_resposta(
+    account_n: int,
+    question_id,
+    item_id: str,
+    titulo_produto: str,
+    pergunta: str,
+    resposta: str,
+    fonte: str,
+    sentimento: str,
+    status: str,
+) -> None:
+    """Report an answered/escalated/errored question to the Mixfoco app so it shows
+    up in the SAC Mix IA history screen. No-op if the integration isn't configured."""
+    if not (MIXFOCO_API_URL and MIXFOCO_ML_IA_SECRET):
+        return
+    try:
+        requests.post(
+            f"{MIXFOCO_API_URL}/mixfoco/ml-ia/ingest",
+            json={
+                "conta": account_n,
+                "question_id": question_id,
+                "item_id": item_id,
+                "titulo_produto": titulo_produto,
+                "pergunta": pergunta,
+                "resposta": resposta,
+                "fonte": fonte,
+                "sentimento": sentimento,
+                "status": status,
+            },
+            headers={"X-ML-IA-Secret": MIXFOCO_ML_IA_SECRET},
+            timeout=10,
+        )
+    except Exception as e:
+        print(f"  [WARN] Falha ao reportar resposta Q#{question_id} ao Mixfoco: {e}", file=sys.stderr)
+
+
 # ── Claude ────────────────────────────────────────────────────────────────────
 
 def call_claude(
@@ -231,27 +303,36 @@ def call_claude(
     question_text: str,
     item_text: str,
     guidelines: str,
+    product_kb: str = "",
 ) -> dict:
     """
     Generate a buyer response via Claude with web search fallback.
-    Returns {"response_text": str, "source": "ML"|"WEB"|"GENÉRICA", "sentiment": str}
+    Returns {"response_text": str, "source": "ML"|"WEB"|"GENÉRICA"|"KB", "sentiment": str}
     """
+    kb_block = f"""
+
+---
+Base de conhecimento específica deste produto (PRIORIDADE MÁXIMA — use antes de decidir ir para busca web ou resposta genérica; se a resposta vier daqui, informe FONTE: KB):
+{product_kb}""" if product_kb else ""
+
     system = f"""Você é um especialista em atendimento ao cliente de um vendedor no Mercado Livre Brasil.
 Missão: responder perguntas de compradores de forma humanizada, precisa e persuasiva para converter a venda.
 
 {guidelines}
+{kb_block}
 
 ---
 Formato OBRIGATÓRIO da resposta — use exatamente esses rótulos:
 
 SENTIMENTO: [curioso|cético|urgente|sensível_a_preço|animado]
-FONTE: [ML|WEB|GENÉRICA]
+FONTE: [ML|WEB|GENÉRICA|KB]
 RESPOSTA: [texto final da resposta ao comprador]
 
 Regras de FONTE:
+- KB  → informação veio da base de conhecimento específica do produto (ver acima) — sempre prefira esta fonte quando ela responder à pergunta
 - ML  → informação encontrada explicitamente nos atributos ou descrição do anúncio
 - WEB → use a ferramenta de busca web disponível quando a confiança nos dados do anúncio for < 90%; se encontrar o dado, use-o e informe FONTE: WEB
-- GENÉRICA → somente se nem o anúncio nem a busca web tiverem o dado; nesse caso use EXATAMENTE o texto:
+- GENÉRICA → somente se nem a base de conhecimento, nem o anúncio, nem a busca web tiverem o dado; nesse caso use EXATAMENTE o texto:
   "Olá! Para mais detalhes sobre essa especificação, recomendo entrar em contato pelo chat do Mercado Livre — assim consigo te ajudar com mais precisão. 😊"
 
 NUNCA invente especificações técnicas. NUNCA ultrapasse 2000 caracteres na RESPOSTA."""
@@ -304,7 +385,7 @@ Dados do anúncio:
 
     sentiment = sentiment_m.group(1).lower() if sentiment_m else "curioso"
     source_raw = fonte_m.group(1).upper() if fonte_m else ("WEB" if web_used else "ML")
-    source = source_raw if source_raw in ("ML", "WEB", "GENÉRICA") else ("WEB" if web_used else "ML")
+    source = source_raw if source_raw in ("ML", "WEB", "GENÉRICA", "KB") else ("WEB" if web_used else "ML")
     response_text = resp_m.group(1).strip() if resp_m else final_text.strip()
 
     if not response_text or len(response_text) < 5:
@@ -361,7 +442,7 @@ def main():
     guidelines = load_guidelines()
     date_str = datetime.now().strftime("%Y-%m-%d")
 
-    counts = {"ml": 0, "web": 0, "generica": 0, "escaladas": 0, "erros": 0, "contas": 0}
+    counts = {"ml": 0, "web": 0, "kb": 0, "generica": 0, "escaladas": 0, "erros": 0, "contas": 0}
     log_entries: list[str] = []
 
     n = 1
@@ -406,6 +487,7 @@ def main():
                     f"- [{t}] Q#{q_id} — Item {item_id} — [ESCALADA] — tópico bloqueado"
                 )
                 print(f"  Q#{q_id} → ESCALADA (tópico bloqueado)")
+                report_resposta(n, q_id, item_id, "", q_text, "", None, None, "escalada")
                 continue
 
             item = fetch_item(item_id, token)
@@ -415,9 +497,12 @@ def main():
                     f"- [{t}] Q#{q_id} — Item {item_id} — [ERRO] — item não encontrado"
                 )
                 print(f"  Q#{q_id} → ERRO (item não encontrado)", file=sys.stderr)
+                report_resposta(n, q_id, item_id, "", q_text, "", None, None, "erro")
                 continue
 
-            result = call_claude(claude, q_text, item_to_text(item), guidelines)
+            titulo_produto = item.get("title", "")
+            product_kb = fetch_product_kb(item_id)
+            result = call_claude(claude, q_text, item_to_text(item), guidelines, product_kb)
             response_text = result["response_text"]
             source = result["source"]
             sentiment = result["sentiment"]
@@ -430,10 +515,18 @@ def main():
                     f"- [{t}] Q#{q_id} — Item {item_id} — {tag} — [{sentiment}] — resposta postada"
                 )
                 print(f"  Q#{q_id} → {tag} ({sentiment})")
+                report_resposta(
+                    n, q_id, item_id, titulo_produto, q_text, response_text,
+                    source, sentiment, "respondida",
+                )
             else:
                 counts["erros"] += 1
                 log_entries.append(
                     f"- [{t}] Q#{q_id} — Item {item_id} — [ERRO] — falha ao postar"
+                )
+                report_resposta(
+                    n, q_id, item_id, titulo_produto, q_text, response_text,
+                    source, sentiment, "erro",
                 )
 
         n += 1
@@ -443,6 +536,7 @@ def main():
 
     print(f"""
 ✅ Respondidas (anúncio ML): {counts['ml']}
+📚 Respondidas (base de conhecimento): {counts['kb']}
 🔍 Respondidas (busca web): {counts['web']}
 💬 Resposta genérica postada: {counts['generica']}
 ⏳ Escaladas para revisão humana: {counts['escaladas']}

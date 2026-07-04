@@ -11,6 +11,10 @@
 #
 # Optional (to auto-update ML_ACCESS_TOKEN_1 secret after token refresh):
 #   GH_PAT                 → Personal Access Token with 'repo' scope
+#
+# Optional (SAC Mix IA — history + per-product knowledge base in mixfoco.com.br):
+#   MIXFOCO_API_URL         → e.g. https://mixfoco.com.br
+#   MIXFOCO_ML_IA_SECRET    → shared secret, must match ML_IA_INGEST_SECRET on the Mixfoco API
 
 name: ML Question Responder
 
@@ -51,6 +55,9 @@ jobs:
           ML_CLIENT_SECRET_2:   ${{ secrets.ML_CLIENT_SECRET_2 }}
           ML_ACCESS_TOKEN_2:    ${{ secrets.ML_ACCESS_TOKEN_2 }}
           ML_REFRESH_TOKEN_2:   ${{ secrets.ML_REFRESH_TOKEN_2 }}
+          # SAC Mix IA — histórico de respostas + base de conhecimento por produto
+          MIXFOCO_API_URL:      ${{ secrets.MIXFOCO_API_URL }}
+          MIXFOCO_ML_IA_SECRET: ${{ secrets.MIXFOCO_ML_IA_SECRET }}
         run: python claude-agents/ml-question-responder/scripts/auto_responder.py
 
       # Auto-update ML_ACCESS_TOKEN secret after token refresh.
