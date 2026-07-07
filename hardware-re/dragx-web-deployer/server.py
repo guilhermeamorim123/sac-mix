@@ -32,13 +32,7 @@ PATCHES = [
 
 
 def run_adb(args):
-    """Run the local adb with the given args. Returns (exit_code, stdout, stderr).
-
-    Assumes exactly one device is reachable via adb (no `-s <serial>` target
-    is ever passed). If a machine is connected via both USB and WiFi ADB at
-    once, adb refuses every command with "more than one device/emulator" --
-    disconnect one before deploying. See VALIDATION.md's "Known limitation"
-    section for the real-hardware case that surfaced this."""
+    """Run the local adb with the given args. Returns (exit_code, stdout, stderr)."""
     result = subprocess.run(
         [ADB_PATH] + args,
         capture_output=True,
@@ -47,11 +41,11 @@ def run_adb(args):
     return result.returncode, result.stdout, result.stderr
 
 
-def read_remote_bytes(lib_path, offset, count):
-    """Reads `count` bytes at `offset` from `lib_path` on the connected device.
-    Returns (bytes_or_None, stdout, stderr)."""
+def read_remote_bytes(ip_port, lib_path, offset, count):
+    """Reads `count` bytes at `offset` from `lib_path` on the device at
+    ip_port. Returns (bytes_or_None, stdout, stderr)."""
     remote_command = f"dd if={lib_path} bs=1 skip={offset} count={count} | od -An -tx1"
-    exit_code, stdout, stderr = run_adb(["shell", remote_command])
+    exit_code, stdout, stderr = run_adb(["-s", ip_port, "shell", remote_command])
     hex_tokens = stdout.split()
     if len(hex_tokens) != count:
         return None, stdout, stderr
@@ -62,7 +56,17 @@ def read_remote_bytes(lib_path, offset, count):
 
 
 def deploy(ip_port):
-    """Runs the full deploy flow. Returns {"overall_success": bool, "steps": [...]}."""
+    """Runs the full deploy flow. Returns {"overall_success": bool, "steps": [...]}.
+
+    Every adb call after the initial `connect` is explicitly targeted at
+    `ip_port` via `-s` -- this works correctly even when a USB cable is
+    connected to the same device at the same time (as onboard.py now
+    requires, so it can recover from a mid-run reboot without a human
+    reconnecting the cable). Before this, `deploy()` relied on "exactly
+    one device reachable via adb" and would fail with "more than one
+    device/emulator" whenever USB and WiFi were both live -- see
+    VALIDATION.md's former "Known limitation" section for the real-hardware
+    case that first surfaced this."""
     steps = []
 
     exit_code, stdout, stderr = run_adb(["connect", ip_port])
@@ -71,16 +75,16 @@ def deploy(ip_port):
         return {"overall_success": False, "steps": steps}
     steps.append({"status": "success", "message": f"Conectado a {ip_port}"})
 
-    exit_code, stdout, stderr = run_adb(["install", "-r", APK_PATH])
+    exit_code, stdout, stderr = run_adb(["-s", ip_port, "install", "-r", APK_PATH])
     if not parse_install_result(stdout):
         steps.append({"status": "failure", "message": f"Falha ao instalar: {stdout}{stderr}"})
         return {"overall_success": False, "steps": steps}
     steps.append({"status": "success", "message": "DragX instalado"})
 
-    run_adb(["shell", "am", "force-stop", TARGET_PACKAGE])
+    run_adb(["-s", ip_port, "shell", "am", "force-stop", TARGET_PACKAGE])
     steps.append({"status": "success", "message": "Processo antigo finalizado"})
 
-    exit_code, stdout, stderr = run_adb(["shell", "pm", "path", TARGET_PACKAGE])
+    exit_code, stdout, stderr = run_adb(["-s", ip_port, "shell", "pm", "path", TARGET_PACKAGE])
     package_dir = parse_package_dir(stdout)
     if package_dir is None:
         steps.append({"status": "failure", "message": f"Não achei o caminho do pacote instalado: {stdout}{stderr}"})
@@ -92,7 +96,7 @@ def deploy(ip_port):
     # after one fails, or a partially-patched device could be misreported
     # as fully working (the exact historical bug this tool exists to catch).
     for patch in PATCHES:
-        actual_bytes, dd_stdout, dd_stderr = read_remote_bytes(lib_path, patch["offset"], len(patch["expected"]))
+        actual_bytes, dd_stdout, dd_stderr = read_remote_bytes(ip_port, lib_path, patch["offset"], len(patch["expected"]))
         if actual_bytes is None:
             steps.append({
                 "status": "failure",

@@ -4,7 +4,13 @@ onboard.py -- one-time setup for a genuinely new CUTTER_E326 machine.
 Run this ONCE per new machine, immediately after the physical root step
 (RECOVERY pins shorted, USB cable connected). It:
   1. Enables WiFi ADB and installs+verifies DragX (reusing the same logic
-     as the routine DragX Web Deployer).
+     as the routine DragX Web Deployer). If the pre-installed system
+     Upprinting conflicts with DragX-signed.apk (INSTALL_FAILED_VERSION_
+     DOWNGRADE / INSTALL_FAILED_UPDATE_INCOMPATIBLE -- common on a
+     never-touched machine), this is now detected and fixed automatically:
+     replace the /system/app baseline, reboot, clear any leftover /data/app
+     update layer, and retry the install. No engineer needs to run manual
+     ADB commands for this anymore.
   2. Backs up the boot partition and checks its format matches what's
      already been validated on the original machine.
   3. If the checks pass, patches the boot partition so WiFi ADB starts
@@ -18,8 +24,11 @@ again against an already-onboarded machine is safe (Phase 3 detects
 repeat it.
 
 Usage: python onboard.py
-Assumes exactly one device is reachable via `adb devices`, connected over
-USB (same single-device assumption as hardware-re/dragx-web-deployer/server.py).
+IMPORTANT: keep the USB cable connected for the ENTIRE run, not just at the
+start. The version-conflict recovery (see above) may need to reboot the
+machine partway through, and WiFi ADB isn't persistent until Phase 3 runs
+later in this same script -- without the USB cable still connected, there
+would be no way to reconnect automatically after that reboot.
 """
 import json
 import os
@@ -40,17 +49,169 @@ def run_adb(args):
     return web_deployer.run_adb(args)
 
 
-def phase1_setup_wifi_and_deploy():
+def get_usb_serial():
+    """Returns the ADB serial of a device connected via USB (adb devices
+    shows a bare serial like '6S9OZFRLDN', never an ip:port pair), or None
+    if none is found. If more than one USB device is present, the first
+    one wins -- this script is designed for one machine at a time."""
+    exit_code, stdout, stderr = run_adb(["devices"])
+    for line in stdout.strip().splitlines()[1:]:
+        line = line.strip()
+        if not line or "\t" not in line:
+            continue
+        serial, status = line.split("\t", 1)
+        if status.strip() == "device" and ":" not in serial:
+            return serial
+    return None
+
+
+def _wait_until_responsive(ip_port, timeout_seconds=20, poll_interval=1):
+    """Polls the device at ip_port (reconnecting via `adb connect` on each
+    attempt, since a TCP transport's socket can drop entirely, not just go
+    briefly unresponsive) until a trivial shell command succeeds, or times
+    out. Returns True if the device responded within timeout_seconds."""
+    deadline = time.time() + timeout_seconds
+    while time.time() < deadline:
+        run_adb(["connect", ip_port])
+        exit_code, stdout, stderr = run_adb(["-s", ip_port, "shell", "echo", "ok"])
+        if stdout.strip() == "ok":
+            return True
+        time.sleep(poll_interval)
+    return False
+
+
+def wait_for_boot(serial, timeout_seconds=600, poll_interval=5):
+    """Polls `getprop sys.boot_completed` via the given adb serial until it
+    reads "1", or times out. This hardware is known to take several minutes
+    to finish package-manager re-optimization after a /system/app change --
+    see hardware-re/dragx-app/README.md's "Android is starting..." note.
+    Returns True if boot completed within timeout_seconds."""
+    deadline = time.time() + timeout_seconds
+    while time.time() < deadline:
+        exit_code, stdout, stderr = run_adb(["-s", serial, "shell", "getprop", "sys.boot_completed"])
+        if stdout.strip() == "1":
+            return True
+        time.sleep(poll_interval)
+    return False
+
+
+def _install_failure_is_version_conflict(report):
+    """True if deploy()'s failure was specifically the recurring
+    INSTALL_FAILED_VERSION_DOWNGRADE / INSTALL_FAILED_UPDATE_INCOMPATIBLE
+    conflict (pre-installed system Upprinting newer or differently-signed
+    than DragX-signed.apk) -- as opposed to some other unrelated failure
+    (network, missing file, etc.) that a reboot-and-retry wouldn't fix."""
+    for step in report["steps"]:
+        if step["status"] == "failure" and (
+            "VERSION_DOWNGRADE" in step["message"] or "UPDATE_INCOMPATIBLE" in step["message"]
+        ):
+            return True
+    return False
+
+
+SYSTEM_APK_PATH = "/system/app/Upprinting/Upprinting.apk"
+
+
+def recover_from_version_conflict(usb_serial, ip_port):
+    """Handles the recurring version/signature conflict seen when a
+    machine's pre-installed system Upprinting is newer or differently
+    signed than DragX-signed.apk -- the exact manual procedure validated by
+    hand on real machines, automated here so an employee doesn't need an
+    engineer on the line for it:
+      1. Root + remount /system, back up (if present) and replace the
+         /system/app baseline APK with our own signed build.
+      2. Reboot -- unavoidable, there's no rescan-without-reboot path on
+         this old Android version for the package manager to adopt the new
+         baseline.
+      3. WiFi ADB isn't persistent until Phase 3 runs later in this same
+         script, so the reboot drops the WiFi connection. Re-establish it
+         over the USB cable -- which is why the cable must stay physically
+         connected for the whole run, not just at the start.
+      4. If a newer /data/app "update" layer is still shadowing the now-
+         matching system baseline, uninstall it so the system version
+         (ours) becomes active again.
+    Returns (ok: bool, message: str)."""
+    print("Detectei conflito de versão/assinatura -- tentando corrigir automaticamente...")
+
+    if usb_serial is None:
+        return False, (
+            "Esse conflito precisa reiniciar a máquina pra corrigir, mas não "
+            "detectei nenhum cabo USB conectado. Conecte o cabo USB (ele precisa "
+            "ficar conectado durante todo o processo) e rode o script de novo."
+        )
+
+    run_adb(["-s", ip_port, "root"])
+    time.sleep(2)
+    exit_code, stdout, stderr = run_adb(["-s", ip_port, "remount"])
+    if "succeeded" not in stdout.lower() and "already" not in stdout.lower():
+        return False, f"Falha ao remontar /system: {stdout}{stderr}"
+
+    run_adb(["-s", ip_port, "shell", "am", "force-stop", web_deployer.TARGET_PACKAGE])
+
+    exit_code, stdout, stderr = run_adb(["-s", ip_port, "shell", "ls", SYSTEM_APK_PATH])
+    combined = (stdout + stderr).lower()
+    system_apk_exists = "no such file" not in combined
+
+    if system_apk_exists:
+        local_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "backups")
+        os.makedirs(local_dir, exist_ok=True)
+        serial = get_device_serial(ip_port)
+        backup_path = os.path.join(local_dir, f"system_apk_backup_{serial}.apk")
+        pull_result = subprocess.run(
+            [web_deployer.ADB_PATH, "-s", ip_port, "pull", SYSTEM_APK_PATH, backup_path],
+            capture_output=True, text=True,
+        )
+        if pull_result.returncode == 0:
+            print(f"Backup do app original do sistema salvo em {backup_path}")
+        run_adb(["-s", ip_port, "shell", "rm", SYSTEM_APK_PATH])
+    else:
+        print("Arquivo original do sistema já não existe (ok, seguindo em frente).")
+
+    push_result = subprocess.run(
+        [web_deployer.ADB_PATH, "-s", ip_port, "push", web_deployer.APK_PATH, SYSTEM_APK_PATH],
+        capture_output=True, text=True,
+    )
+    if push_result.returncode != 0:
+        return False, f"Falha ao enviar o DragX para o caminho de sistema: {push_result.stderr}"
+    run_adb(["-s", ip_port, "shell", "chmod", "644", SYSTEM_APK_PATH])
+
+    print("Reiniciando a máquina para o sistema reconhecer a nova versão como padrão...")
+    run_adb(["-s", ip_port, "reboot"])
+
+    print("Aguardando o boot (pode levar vários minutos nesse hardware)...")
+    if not wait_for_boot(usb_serial, timeout_seconds=600):
+        return False, (
+            "A máquina não terminou de reiniciar em 10 minutos. Veja a tela dela; "
+            "se estiver travada em 'Android is starting...', desligue e ligue na "
+            "tomada e rode este script de novo (o cabo USB precisa continuar "
+            "conectado)."
+        )
+
+    run_adb(["-s", usb_serial, "tcpip", "5555"])
+    time.sleep(2)
+    run_adb(["connect", ip_port])
+    time.sleep(2)
+
+    exit_code, stdout, stderr = run_adb(["-s", ip_port, "shell", "pm", "path", web_deployer.TARGET_PACKAGE])
+    package_dir = web_deployer.parse_package_dir(stdout)
+    if package_dir and package_dir.startswith("/data/app"):
+        print("Ainda existe uma versão antiga sobreposta em /data/app -- removendo...")
+        run_adb(["-s", ip_port, "shell", "pm", "uninstall", web_deployer.TARGET_PACKAGE])
+
+    return True, "Correção aplicada -- tentando instalar de novo"
+
+
+def phase1_setup_wifi_and_deploy(usb_serial):
     print("=== FASE 1: WiFi ADB + Deploy do DragX ===")
 
-    exit_code, stdout, stderr = run_adb(["tcpip", "5555"])
+    exit_code, stdout, stderr = run_adb(["-s", usb_serial, "tcpip", "5555"])
     print(f"adb tcpip 5555: {stdout}{stderr}".strip())
     time.sleep(2)
 
     ip = None
     max_attempts = 3
     for attempt in range(1, max_attempts + 1):
-        exit_code, stdout, stderr = run_adb(["shell", "ip", "addr", "show", "wlan0"])
+        exit_code, stdout, stderr = run_adb(["-s", usb_serial, "shell", "ip", "addr", "show", "wlan0"])
         for line in stdout.splitlines():
             line = line.strip()
             if line.startswith("inet "):
@@ -72,6 +233,15 @@ def phase1_setup_wifi_and_deploy():
     for step in report["steps"]:
         marker = "OK  " if step["status"] == "success" else "ERRO"
         print(f"{marker} - {step['message']}")
+
+    if not report["overall_success"] and _install_failure_is_version_conflict(report):
+        ok, message = recover_from_version_conflict(usb_serial, ip_port)
+        print(f"{'OK  ' if ok else 'ERRO'} - {message}")
+        if ok:
+            report = web_deployer.deploy(ip_port)
+            for step in report["steps"]:
+                marker = "OK  " if step["status"] == "success" else "ERRO"
+                print(f"{marker} - {step['message']}")
 
     if not report["overall_success"]:
         print("\nFASE 1 FALHOU. Parando aqui -- não vou mexer na partição de boot")
@@ -96,10 +266,15 @@ def phase2_backup_and_check(ip_port):
     # re-elevate here. This is the same step documented as safe and
     # instantaneous on this exact hardware in
     # hardware-re/dragx-app/boot-partition-mod/README.md ("adb root worked
-    # instantly once any ADB connection was already established").
+    # instantly once any ADB connection was already established") -- but
+    # over a WiFi/TCP transport specifically, `adb root` restarting adbd
+    # also drops the TCP socket, and a fixed sleep(2) isn't always long
+    # enough for it to come back (confirmed once as "device offline" on a
+    # real onboarding run). Poll instead of guessing a fixed delay.
     exit_code, stdout, stderr = run_adb(["-s", ip_port, "root"])
     print(f"adb root: {stdout}{stderr}".strip())
-    time.sleep(2)
+    if not _wait_until_responsive(ip_port, timeout_seconds=20):
+        return None, "O dispositivo não respondeu depois de 'adb root' (ficou offline). Tente rodar de novo."
 
     exit_code, stdout, stderr = run_adb(["-s", ip_port, "shell", "cat", "/proc/cmdline"])
     mtdparts = boot_patch.parse_mtdparts(stdout)
@@ -336,10 +511,17 @@ def get_dragx_version(ip_port):
 
 
 def main():
-    exit_code, stdout, stderr = run_adb(["devices"])
-    print(stdout)
+    usb_serial = get_usb_serial()
+    if usb_serial is None:
+        print("ERRO: não detectei nenhum dispositivo conectado por USB.")
+        print("Conecte o cabo USB e rode este script de novo -- e deixe o cabo")
+        print("conectado durante todo o processo, não só no começo (pode ser")
+        print("necessário reiniciar a máquina no meio do processo, e sem o cabo")
+        print("não tem como reconectar sozinho depois de um reboot).")
+        sys.exit(1)
+    print(f"Dispositivo USB detectado: {usb_serial}")
 
-    ip_port = phase1_setup_wifi_and_deploy()
+    ip_port = phase1_setup_wifi_and_deploy(usb_serial)
     check_result, error = phase2_backup_and_check(ip_port)
 
     if check_result is None:

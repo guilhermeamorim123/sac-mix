@@ -104,18 +104,21 @@ def _install_fake_run_adb(fake_fn):
     return original
 
 
+IP_PORT = "192.168.15.13:5555"
+
+
 def _happy_path_fake(args):
-    if args == ["connect", "192.168.15.13:5555"]:
+    if args == ["connect", IP_PORT]:
         return 0, "connected to 192.168.15.13:5555\n", ""
-    if args == ["install", "-r", server.APK_PATH]:
+    if args == ["-s", IP_PORT, "install", "-r", server.APK_PATH]:
         return 0, "Performing Streamed Install\nSuccess\n", ""
-    if args == ["shell", "am", "force-stop", server.TARGET_PACKAGE]:
+    if args == ["-s", IP_PORT, "shell", "am", "force-stop", server.TARGET_PACKAGE]:
         return 0, "", ""
-    if args == ["shell", "pm", "path", server.TARGET_PACKAGE]:
+    if args == ["-s", IP_PORT, "shell", "pm", "path", server.TARGET_PACKAGE]:
         return 0, f"package:{FAKE_PACKAGE_DIR}/base.apk\n", ""
-    if len(args) == 2 and args[0] == "shell" and "skip=90350" in args[1]:
+    if len(args) == 4 and args[:2] == ["-s", IP_PORT] and args[2] == "shell" and "skip=90350" in args[3]:
         return 0, "00 bf\n", ""
-    if len(args) == 2 and args[0] == "shell" and "skip=75988" in args[1]:
+    if len(args) == 4 and args[:2] == ["-s", IP_PORT] and args[2] == "shell" and "skip=75988" in args[3]:
         return 0, "00 20 00 bf\n", ""
     return 1, "", f"unexpected call: {args}"
 
@@ -130,7 +133,7 @@ check("deploy happy path all steps success", all(s["status"] == "success" for s 
 
 
 def _connect_failure_fake(args):
-    if args == ["connect", "192.168.15.13:5555"]:
+    if args == ["connect", IP_PORT]:
         return 1, "", "unable to connect to 192.168.15.13:5555: Connection refused\n"
     return 1, "", f"should not be called: {args}"
 
@@ -145,9 +148,9 @@ check("connect failure last step is failure", report["steps"][-1]["status"], "fa
 
 
 def _install_failure_fake(args):
-    if args == ["connect", "192.168.15.13:5555"]:
+    if args == ["connect", IP_PORT]:
         return 0, "connected to 192.168.15.13:5555\n", ""
-    if args == ["install", "-r", server.APK_PATH]:
+    if args == ["-s", IP_PORT, "install", "-r", server.APK_PATH]:
         return 1, "", "adb: failed to install: INSTALL_FAILED_INSUFFICIENT_STORAGE\n"
     return 1, "", f"should not be called: {args}"
 
@@ -162,17 +165,17 @@ check("install failure last step is failure", report["steps"][-1]["status"], "fa
 
 
 def _cert_mismatch_fake(args):
-    if args == ["connect", "192.168.15.13:5555"]:
+    if args == ["connect", IP_PORT]:
         return 0, "connected to 192.168.15.13:5555\n", ""
-    if args == ["install", "-r", server.APK_PATH]:
+    if args == ["-s", IP_PORT, "install", "-r", server.APK_PATH]:
         return 0, "Performing Streamed Install\nSuccess\n", ""
-    if args == ["shell", "am", "force-stop", server.TARGET_PACKAGE]:
+    if args == ["-s", IP_PORT, "shell", "am", "force-stop", server.TARGET_PACKAGE]:
         return 0, "", ""
-    if args == ["shell", "pm", "path", server.TARGET_PACKAGE]:
+    if args == ["-s", IP_PORT, "shell", "pm", "path", server.TARGET_PACKAGE]:
         return 0, f"package:{FAKE_PACKAGE_DIR}/base.apk\n", ""
-    if len(args) == 2 and args[0] == "shell" and "skip=90350" in args[1]:
+    if len(args) == 4 and args[:2] == ["-s", IP_PORT] and args[2] == "shell" and "skip=90350" in args[3]:
         return 0, "00 bf\n", ""
-    if len(args) == 2 and args[0] == "shell" and "skip=75988" in args[1]:
+    if len(args) == 4 and args[:2] == ["-s", IP_PORT] and args[2] == "shell" and "skip=75988" in args[3]:
         return 0, "f9 f7 10 ea\n", ""  # original, unpatched bytes
     return 1, "", f"unexpected call: {args}"
 
@@ -186,13 +189,13 @@ check("cert mismatch last step mentions getHandshake", "getHandshake" in report[
 
 
 def _unparseable_pm_path_fake(args):
-    if args == ["connect", "192.168.15.13:5555"]:
+    if args == ["connect", IP_PORT]:
         return 0, "connected to 192.168.15.13:5555\n", ""
-    if args == ["install", "-r", server.APK_PATH]:
+    if args == ["-s", IP_PORT, "install", "-r", server.APK_PATH]:
         return 0, "Performing Streamed Install\nSuccess\n", ""
-    if args == ["shell", "am", "force-stop", server.TARGET_PACKAGE]:
+    if args == ["-s", IP_PORT, "shell", "am", "force-stop", server.TARGET_PACKAGE]:
         return 0, "", ""
-    if args == ["shell", "pm", "path", server.TARGET_PACKAGE]:
+    if args == ["-s", IP_PORT, "shell", "pm", "path", server.TARGET_PACKAGE]:
         return 0, "", ""  # no "package:" line -- unparseable
     return 1, "", f"should not be called: {args}"
 
@@ -207,17 +210,17 @@ check("unparseable pm path last step is failure", report["steps"][-1]["status"],
 
 
 def _truncated_dd_fake(args):
-    if args == ["connect", "192.168.15.13:5555"]:
+    if args == ["connect", IP_PORT]:
         return 0, "connected to 192.168.15.13:5555\n", ""
-    if args == ["install", "-r", server.APK_PATH]:
+    if args == ["-s", IP_PORT, "install", "-r", server.APK_PATH]:
         return 0, "Performing Streamed Install\nSuccess\n", ""
-    if args == ["shell", "am", "force-stop", server.TARGET_PACKAGE]:
+    if args == ["-s", IP_PORT, "shell", "am", "force-stop", server.TARGET_PACKAGE]:
         return 0, "", ""
-    if args == ["shell", "pm", "path", server.TARGET_PACKAGE]:
+    if args == ["-s", IP_PORT, "shell", "pm", "path", server.TARGET_PACKAGE]:
         return 0, f"package:{FAKE_PACKAGE_DIR}/base.apk\n", ""
-    if len(args) == 2 and args[0] == "shell" and "skip=90350" in args[1]:
+    if len(args) == 4 and args[:2] == ["-s", IP_PORT] and args[2] == "shell" and "skip=90350" in args[3]:
         return 0, "00\n", ""  # truncated -- expected 2 bytes, got 1
-    if len(args) == 2 and args[0] == "shell" and "skip=75988" in args[1]:
+    if len(args) == 4 and args[:2] == ["-s", IP_PORT] and args[2] == "shell" and "skip=75988" in args[3]:
         return 0, "00 20 00 bf\n", ""
     return 1, "", f"unexpected call: {args}"
 
@@ -233,17 +236,17 @@ check("truncated dd step 5 (index 4) is success", report["steps"][4]["status"], 
 
 
 def _malformed_hex_fake(args):
-    if args == ["connect", "192.168.15.13:5555"]:
+    if args == ["connect", IP_PORT]:
         return 0, "connected to 192.168.15.13:5555\n", ""
-    if args == ["install", "-r", server.APK_PATH]:
+    if args == ["-s", IP_PORT, "install", "-r", server.APK_PATH]:
         return 0, "Performing Streamed Install\nSuccess\n", ""
-    if args == ["shell", "am", "force-stop", server.TARGET_PACKAGE]:
+    if args == ["-s", IP_PORT, "shell", "am", "force-stop", server.TARGET_PACKAGE]:
         return 0, "", ""
-    if args == ["shell", "pm", "path", server.TARGET_PACKAGE]:
+    if args == ["-s", IP_PORT, "shell", "pm", "path", server.TARGET_PACKAGE]:
         return 0, f"package:{FAKE_PACKAGE_DIR}/base.apk\n", ""
-    if len(args) == 2 and args[0] == "shell" and "skip=90350" in args[1]:
+    if len(args) == 4 and args[:2] == ["-s", IP_PORT] and args[2] == "shell" and "skip=90350" in args[3]:
         return 0, "00 gg\n", ""  # right token count (2), but "gg" isn't valid hex
-    if len(args) == 2 and args[0] == "shell" and "skip=75988" in args[1]:
+    if len(args) == 4 and args[:2] == ["-s", IP_PORT] and args[2] == "shell" and "skip=75988" in args[3]:
         return 0, "00 20 00 bf\n", ""
     return 1, "", f"unexpected call: {args}"
 
