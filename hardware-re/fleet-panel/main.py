@@ -19,7 +19,7 @@ from starlette.middleware.sessions import SessionMiddleware
 
 from auth import verify_login
 from db import get_engine, get_session_factory
-from models import add_machine_manual, checkin_machine, list_machines, rename_machine
+from models import add_machine_manual, checkin_machine, get_latest_release, list_machines, rename_machine
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
 
@@ -199,3 +199,47 @@ def api_checkin(payload: CheckinPayload, db_session: Session = Depends(get_db), 
         raise HTTPException(status_code=400, detail="'serial' é obrigatório")
     checkin_machine(db_session, payload.serial, payload.dragx_version)
     return {"ok": True}
+
+
+@app.post("/v1/api/ver01/app_upgrade")
+def dragx_app_upgrade(appVersion: str = Form("0"), db_session: Session = Depends(get_db)):
+    # Malformed/missing appVersion is treated as 0 -- always "no update",
+    # never accidentally treated as "everyone should update" (see design
+    # doc's Error handling section).
+    try:
+        installed_version = int(appVersion)
+    except ValueError:
+        installed_version = 0
+
+    release = get_latest_release(db_session)
+    if release is None or release.version_code <= installed_version:
+        # Matches the exact shape captured from a real request against the
+        # live vendor server on 2026-07-07 -- no "bussData" key at all.
+        return {"code": 200, "status": "success", "data": {"sysDt": 0, "resultCode": 200}}
+
+    return {
+        "code": 200,
+        "status": "success",
+        "data": {
+            "bussData": [
+                {
+                    "appVersion": release.version_code,
+                    "appVersionName": release.version_name,
+                    "appFilePath": release.download_url,
+                    "appFileMd5": release.file_md5,
+                    "appFileName": "dragx.apk",
+                    "appContent": "",
+                    "binVersion": "",
+                    "binFilePath": "",
+                    "binFileMd5": "",
+                    "binFileName": "",
+                    "binContent": "",
+                    "title": "",
+                    "type": "",
+                }
+            ],
+            "errMsg": None,
+            "resultCode": 200,
+            "sysDt": 0,
+        },
+    }

@@ -248,6 +248,41 @@ resp = client.post(
 check("POST /api/machines/checkin without 'serial' returns 422 (Pydantic validation)", resp.status_code, 422)
 
 
+# Reset the singleton release row so app_upgrade's "no release published"
+# path can be genuinely exercised here -- the earlier DragxRelease section
+# left a real release (version_code=707) published, and that's a shared
+# row for the whole selfcheck.py run.
+session.query(models.DragxRelease).delete()
+session.commit()
+
+# --- main.py: POST /v1/api/ver01/app_upgrade ---
+resp = client.post("/v1/api/ver01/app_upgrade", data={"appVersion": "1"})
+check("app_upgrade with no release published returns code 200", resp.json()["code"], 200)
+check_true("app_upgrade with no release published has no bussData", "bussData" not in resp.json().get("data", {}))
+
+models.set_latest_release(
+    session, version_code=706, version_name="V7.0.3.006",
+    download_url="https://example.com/dragx-706.apk", file_md5="abc123",
+)
+
+resp = client.post("/v1/api/ver01/app_upgrade", data={"appVersion": "705"})
+body = resp.json()
+check("app_upgrade with an older installed version returns code 200", body["code"], 200)
+check("app_upgrade reports the new version_code as appVersion", body["data"]["bussData"][0]["appVersion"], 706)
+check("app_upgrade reports the new appVersionName", body["data"]["bussData"][0]["appVersionName"], "V7.0.3.006")
+check("app_upgrade reports the download URL as appFilePath", body["data"]["bussData"][0]["appFilePath"], "https://example.com/dragx-706.apk")
+check("app_upgrade reports the MD5 as appFileMd5", body["data"]["bussData"][0]["appFileMd5"], "abc123")
+
+resp = client.post("/v1/api/ver01/app_upgrade", data={"appVersion": "706"})
+check_true("app_upgrade with the current version already installed has no bussData", "bussData" not in resp.json().get("data", {}))
+
+resp = client.post("/v1/api/ver01/app_upgrade", data={"appVersion": "999"})
+check_true("app_upgrade with a NEWER-than-published version installed has no bussData", "bussData" not in resp.json().get("data", {}))
+
+resp = client.post("/v1/api/ver01/app_upgrade", data={})
+check_true("app_upgrade with a missing appVersion field does not error (treated as 0)", resp.status_code == 200)
+
+
 # --- main.py: friendly error page when the DB is unreachable ---
 # Design spec (docs/superpowers/specs/2026-07-02-fleet-panel-design.md,
 # "Error handling"): dashboard pages must show a clear message instead of a
