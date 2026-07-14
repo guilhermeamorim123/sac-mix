@@ -19,6 +19,7 @@ Example:
         706 V7.0.3.006 https://example.com/DragX-706-signed.apk ./DragX-706-signed.apk
 """
 import hashlib
+import os
 import sys
 
 from db import get_engine, get_session_factory
@@ -44,6 +45,16 @@ def main():
     local_apk_path = sys.argv[4]
 
     file_md5 = compute_md5(local_apk_path)
+
+    # get_engine() silently falls back to a local sqlite file if DATABASE_URL
+    # isn't set -- printing the target up front turns "forgot to export
+    # DATABASE_URL" from a silent no-op against the wrong database into
+    # something the operator immediately notices.
+    database_url = os.environ.get("DATABASE_URL")
+    if database_url:
+        print(f"Publishing to DATABASE_URL={database_url}")
+    else:
+        print("AVISO: DATABASE_URL não definida -- publicando no banco sqlite local (fleet_panel.db), não na produção!")
 
     engine = get_engine()
     session = get_session_factory(engine)()
