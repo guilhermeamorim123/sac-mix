@@ -91,6 +91,30 @@ check("list_machines returns every machine", len(all_now), 2)
 check_true("list_machines most-recently-seen first", all_now[0].last_seen_at >= all_now[1].last_seen_at)
 
 
+# --- DragxRelease: get_latest_release / set_latest_release ---
+check("get_latest_release returns None before any publish", models.get_latest_release(session), None)
+
+release1 = models.set_latest_release(
+    session, version_code=706, version_name="V7.0.3.006",
+    download_url="https://example.com/dragx-706.apk", file_md5="abc123",
+)
+check("set_latest_release returns the created row", release1.version_code, 706)
+check("set_latest_release sets version_name", release1.version_name, "V7.0.3.006")
+check("set_latest_release sets download_url", release1.download_url, "https://example.com/dragx-706.apk")
+check("set_latest_release sets file_md5", release1.file_md5, "abc123")
+
+fetched = models.get_latest_release(session)
+check("get_latest_release returns the published release", fetched.version_code, 706)
+
+release2 = models.set_latest_release(
+    session, version_code=707, version_name="V7.0.3.007",
+    download_url="https://example.com/dragx-707.apk", file_md5="def456",
+)
+check("set_latest_release on a repeat call updates version_code", release2.version_code, 707)
+all_releases = session.query(models.DragxRelease).all()
+check("set_latest_release never creates a second row", len(all_releases), 1)
+
+
 # --- auth.py: hash_password / verify_password / verify_login ---
 import auth  # noqa: E402
 

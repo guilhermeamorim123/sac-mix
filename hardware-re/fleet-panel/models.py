@@ -33,6 +33,20 @@ class Machine(Base):
     notes = Column(String, nullable=True)
 
 
+class DragxRelease(Base):
+    __tablename__ = "dragx_release"
+
+    # Single-row table (id is always 1) -- there is deliberately no history
+    # of past releases, only "what's current right now". See
+    # docs/superpowers/specs/2026-07-07-dragx-auto-update-design.md.
+    id = Column(Integer, primary_key=True)
+    version_code = Column(Integer, nullable=False)
+    version_name = Column(String, nullable=False)
+    download_url = Column(String, nullable=False)
+    file_md5 = Column(String, nullable=False)
+    published_at = Column(DateTime(timezone=True), nullable=False)
+
+
 def checkin_machine(session, serial, dragx_version):
     """Upserts a machine record: creates it (with first_onboarded_at = now)
     if serial is new, otherwise updates last_seen_at and dragx_version.
@@ -88,3 +102,33 @@ def rename_machine(session, serial, new_name):
 def list_machines(session):
     """Returns all machines, most-recently-seen first."""
     return session.query(Machine).order_by(Machine.last_seen_at.desc()).all()
+
+
+def get_latest_release(session):
+    """Returns the single DragxRelease row, or None if nothing has been
+    published yet."""
+    return session.query(DragxRelease).filter_by(id=1).one_or_none()
+
+
+def set_latest_release(session, version_code, version_name, download_url, file_md5):
+    """Upserts the single DragxRelease row (always id=1). Returns the row."""
+    now = datetime.datetime.now(datetime.timezone.utc)
+    release = session.query(DragxRelease).filter_by(id=1).one_or_none()
+    if release is None:
+        release = DragxRelease(
+            id=1,
+            version_code=version_code,
+            version_name=version_name,
+            download_url=download_url,
+            file_md5=file_md5,
+            published_at=now,
+        )
+        session.add(release)
+    else:
+        release.version_code = version_code
+        release.version_name = version_name
+        release.download_url = download_url
+        release.file_md5 = file_md5
+        release.published_at = now
+    session.commit()
+    return release
