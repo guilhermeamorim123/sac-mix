@@ -13,7 +13,13 @@ Run once against a freshly-decoded (never-patched) b.smali:
     python apply_auto_update_redirect_patch.py path/to/b.smali <fleet-panel-base-url>
 
 Example:
-    python apply_auto_update_redirect_patch.py decoded/smali/b/b/a/a/g/c/b.smali https://dragx-fleet-panel.onrender.com/v1
+    python apply_auto_update_redirect_patch.py decoded/smali/b/b/a/a/g/c/b.smali https://dragx-fleet-panel.onrender.com/v1/
+
+Note: the URL MUST end in a trailing slash. Retrofit.Builder.baseUrl()
+(Li/u$b;->a(Ljava/lang/String;)) throws IllegalArgumentException at
+runtime -- uncaught, on every cold start -- if the last path segment
+isn't empty. The vendor's own original constant
+("http://cutter.skycut.cn/v1/") follows this rule; match it.
 """
 import sys
 
