@@ -9,7 +9,8 @@ import hmac
 import os
 
 from fastapi import Depends, FastAPI, Request, Form, Header, HTTPException
-from fastapi.responses import RedirectResponse, HTMLResponse, JSONResponse
+from fastapi.responses import RedirectResponse, HTMLResponse, JSONResponse, Response
+import httpx
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
@@ -243,3 +244,36 @@ def dragx_app_upgrade(appVersion: str = Form("0"), db_session: Session = Depends
             "sysDt": 0,
         },
     }
+
+
+VENDOR_BASE_URL = "http://cutter.skycut.cn/v1"
+
+
+def make_upstream_request(method, url, **kwargs):
+    """Thin wrapper around httpx so tests can monkeypatch it (same pattern
+    as _post_json in onboard.py and run_adb in dragx-web-deployer/server.py
+    being monkeypatched in their respective selfchecks), instead of making a
+    real network call to the vendor's server in every test run."""
+    return httpx.request(method, url, **kwargs)
+
+
+@app.api_route("/v1/{path:path}", methods=["GET", "POST", "PUT", "DELETE"])
+async def dragx_vendor_proxy(path: str, request: Request):
+    # Transparent passthrough for every /v1/ path except app_upgrade (which
+    # has its own route registered above and never reaches this catch-all).
+    # This exists purely so find_all_data/user_themes keep working once the
+    # app's .b() client is redirected here -- see design doc.
+    upstream_url = f"{VENDOR_BASE_URL}/{path}"
+    body = await request.body()
+    upstream_response = make_upstream_request(
+        request.method,
+        upstream_url,
+        params=request.query_params,
+        content=body,
+        headers={k: v for k, v in request.headers.items() if k.lower() not in ("host", "content-length")},
+    )
+    return Response(
+        content=upstream_response.content,
+        status_code=upstream_response.status_code,
+        headers={"content-type": upstream_response.headers.get("content-type", "application/octet-stream")},
+    )

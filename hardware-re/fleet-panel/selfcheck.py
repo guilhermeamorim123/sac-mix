@@ -283,6 +283,36 @@ resp = client.post("/v1/api/ver01/app_upgrade", data={})
 check_true("app_upgrade with a missing appVersion field does not error (treated as 0)", resp.status_code == 200)
 
 
+# --- main.py: catch-all proxy for everything else under /v1/ ---
+# Uses a fake upstream (monkeypatched httpx call) instead of the real vendor
+# host, so this test is hermetic and doesn't depend on network access or on
+# cutter.skycut.cn being reachable during a test run.
+class FakeUpstreamResponse:
+    status_code = 200
+    headers = {"content-type": "application/json"}
+    content = b'{"fake": "upstream response"}'
+
+
+def fake_proxy_request(method, url, **kwargs):
+    fake_proxy_request.last_call = (method, url, kwargs)
+    return FakeUpstreamResponse()
+
+
+real_proxy_request = main.make_upstream_request
+main.make_upstream_request = fake_proxy_request
+
+resp = client.post("/v1/api/ver01/find_all_data", data={"type": "0"})
+check("proxy forwards an unrelated /v1/ path and returns the upstream body", resp.json(), {"fake": "upstream response"})
+check(
+    "proxy calls the real vendor host with the same path",
+    fake_proxy_request.last_call[1],
+    "http://cutter.skycut.cn/v1/api/ver01/find_all_data",
+)
+check("proxy forwards the original HTTP method", fake_proxy_request.last_call[0], "POST")
+
+main.make_upstream_request = real_proxy_request
+
+
 # --- main.py: friendly error page when the DB is unreachable ---
 # Design spec (docs/superpowers/specs/2026-07-02-fleet-panel-design.md,
 # "Error handling"): dashboard pages must show a clear message instead of a
