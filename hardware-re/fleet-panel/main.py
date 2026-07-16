@@ -237,6 +237,17 @@ def api_register(payload: RegisterPayload, db_session: Session = Depends(get_db)
     return {"ok": True}
 
 
+@app.get("/api/machines/{serial}/status")
+def api_machine_status(serial: str, db_session: Session = Depends(get_db), x_api_key: str = Header(None)):
+    expected_key = os.environ.get("CHECKIN_API_KEY")
+    if not expected_key or not hmac.compare_digest(x_api_key or "", expected_key):
+        raise HTTPException(status_code=401, detail="chave de API inválida ou ausente")
+    status = get_machine_status(db_session, serial)
+    if status is None:
+        raise HTTPException(status_code=404, detail="máquina não encontrada")
+    return {"status": status}
+
+
 @app.post("/v1/api/ver01/app_upgrade")
 def dragx_app_upgrade(appVersion: str = Form("0"), db_session: Session = Depends(get_db)):
     # Malformed/missing appVersion is treated as 0 -- always "no update",

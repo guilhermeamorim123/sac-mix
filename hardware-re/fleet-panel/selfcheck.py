@@ -425,6 +425,27 @@ resp = client.post(
 check("register endpoint requires all four contact fields (422 on missing ones)", resp.status_code, 422)
 
 
+# --- main.py: GET /api/machines/{serial}/status ---
+resp = client.get(
+    "/api/machines/REG-API-TEST-001/status",
+    headers={"X-Api-Key": os.environ["CHECKIN_API_KEY"]},
+)
+check("status endpoint returns 200 for a registered machine", resp.status_code, 200)
+check("status endpoint reports pending for a freshly-registered machine", resp.json(), {"status": "pending"})
+
+resp = client.get(
+    "/api/machines/REG-API-TEST-001/status",
+    headers={"X-Api-Key": "wrong-key"},
+)
+check("status endpoint rejects a wrong API key", resp.status_code, 401)
+
+resp = client.get(
+    "/api/machines/DOES-NOT-EXIST-AT-ALL/status",
+    headers={"X-Api-Key": os.environ["CHECKIN_API_KEY"]},
+)
+check("status endpoint returns 404 for an unknown serial", resp.status_code, 404)
+
+
 # --- main.py: friendly error page when the DB is unreachable ---
 # Design spec (docs/superpowers/specs/2026-07-02-fleet-panel-design.md,
 # "Error handling"): dashboard pages must show a clear message instead of a
