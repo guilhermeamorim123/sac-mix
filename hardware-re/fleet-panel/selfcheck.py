@@ -446,6 +446,27 @@ resp = client.get(
 check("status endpoint returns 404 for an unknown serial", resp.status_code, 404)
 
 
+# --- main.py: GET /approve/{approval_token} ---
+pending_row = session.query(models.Machine).filter_by(serial="REG-API-TEST-001").one()
+token = pending_row.approval_token
+
+resp = client.get(f"/approve/{token}")
+check("approve link returns 200 for a valid pending token", resp.status_code, 200)
+check_true("approve link response mentions the machine is now released", "liberada" in resp.text.lower())
+
+session.refresh(pending_row)
+check("approve link actually sets status to approved", pending_row.status, "approved")
+
+resp = client.get(f"/approve/{token}")
+check("revisiting an already-used approve link still returns 200", resp.status_code, 200)
+check_true("revisiting an already-used approve link says already approved, not an error",
+           "já" in resp.text.lower() or "already" in resp.text.lower())
+
+resp = client.get("/approve/this-token-does-not-exist-at-all")
+check("an unknown approve token returns 200 with an informational page, not a 500", resp.status_code, 200)
+check_true("an unknown approve token's page does not look like a raw error", "traceback" not in resp.text.lower())
+
+
 # --- main.py: friendly error page when the DB is unreachable ---
 # Design spec (docs/superpowers/specs/2026-07-02-fleet-panel-design.md,
 # "Error handling"): dashboard pages must show a clear message instead of a

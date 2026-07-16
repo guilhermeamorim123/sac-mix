@@ -248,6 +248,19 @@ def api_machine_status(serial: str, db_session: Session = Depends(get_db), x_api
     return {"status": status}
 
 
+@app.get("/approve/{approval_token}", response_class=HTMLResponse)
+def approve_machine(approval_token: str, request: Request, db_session: Session = Depends(get_db)):
+    result = approve_machine_by_token(db_session, approval_token)
+    if result is None:
+        return templates.TemplateResponse(request, "approve.html", {"result": "not_found", "serial": None})
+    machine, was_already_approved = result
+    return templates.TemplateResponse(
+        request,
+        "approve.html",
+        {"result": "already_approved" if was_already_approved else "approved", "serial": machine.serial},
+    )
+
+
 @app.post("/v1/api/ver01/app_upgrade")
 def dragx_app_upgrade(appVersion: str = Form("0"), db_session: Session = Depends(get_db)):
     # Malformed/missing appVersion is treated as 0 -- always "no update",

@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}Aprovação de máquina - Painel DragX{% endblock %}
+{% block content %}
+<h1>Aprovação de máquina</h1>
+{% if result == "approved" %}
+  <p>Máquina <strong>{{ serial }}</strong> liberada com sucesso.</p>
+{% elif result == "already_approved" %}
+  <p>Máquina <strong>{{ serial }}</strong> já estava liberada. Nenhuma ação necessária.</p>
+{% else %}
+  <p>Não encontramos nenhuma máquina com esse link de aprovação. Se você acha que isso é um erro, entre em contato com o suporte.</p>
+{% endif %}
+{% endblock %}
