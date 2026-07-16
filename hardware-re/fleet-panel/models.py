@@ -7,6 +7,7 @@ here takes a SQLAlchemy session and plain arguments, so it's testable
 with direct function calls (see selfcheck.py).
 """
 import datetime
+import secrets
 
 from sqlalchemy import Column, Integer, String, DateTime
 from sqlalchemy.orm import declarative_base
@@ -31,6 +32,20 @@ class Machine(Base):
     first_onboarded_at = Column(DateTime(timezone=True), nullable=False)
     last_seen_at = Column(DateTime(timezone=True), nullable=False)
     notes = Column(String, nullable=True)
+    # Registration & remote approval (see
+    # docs/superpowers/specs/2026-07-06-customer-registration-design.md).
+    # All four nullable -- existing machines and the manual-add path don't
+    # collect these. status defaults to "approved" for rows created by the
+    # two existing upsert paths (checkin_machine, add_machine_manual) so
+    # today's already-trusted machines aren't retroactively blocked by this
+    # column existing -- only register_machine (the new app-facing
+    # registration flow) ever creates a row with status="pending".
+    phone = Column(String, nullable=True)
+    company_name = Column(String, nullable=True)
+    email = Column(String, nullable=True)
+    contact_name = Column(String, nullable=True)
+    status = Column(String, nullable=False, default="approved")
+    approval_token = Column(String, unique=True, nullable=True)
 
 
 class DragxRelease(Base):
@@ -59,9 +74,13 @@ def checkin_machine(session, serial, dragx_version):
             dragx_version=dragx_version,
             first_onboarded_at=now,
             last_seen_at=now,
+            status="approved",
         )
         session.add(machine)
     else:
+        # Deliberately does NOT touch status -- a routine check-in from an
+        # already-registered machine must never silently re-approve a
+        # blocked machine, or overwrite a pending one mid-review.
         machine.last_seen_at = now
         machine.dragx_version = dragx_version
     session.commit()
@@ -80,9 +99,12 @@ def add_machine_manual(session, serial, name):
             name=name,
             first_onboarded_at=now,
             last_seen_at=now,
+            status="approved",
         )
         session.add(machine)
     else:
+        # Deliberately does NOT touch status -- see checkin_machine's
+        # comment above, same reasoning applies here.
         machine.name = name
     session.commit()
     return machine
@@ -132,3 +154,81 @@ def set_latest_release(session, version_code, version_name, download_url, file_m
         release.published_at = now
     session.commit()
     return release
+
+
+def register_machine(session, serial, phone, company_name, email, contact_name):
+    """Upserts a machine's registration/contact fields, always setting
+    status="pending" and generating a FRESH approval_token (even on
+    re-registration -- an old, possibly-already-emailed token must not
+    silently keep working once new contact details are submitted).
+    Returns the Machine row."""
+    now = datetime.datetime.now(datetime.timezone.utc)
+    machine = session.query(Machine).filter_by(serial=serial).one_or_none()
+    token = secrets.token_urlsafe(32)
+    if machine is None:
+        machine = Machine(
+            serial=serial,
+            phone=phone,
+            company_name=company_name,
+            email=email,
+            contact_name=contact_name,
+            status="pending",
+            approval_token=token,
+            first_onboarded_at=now,
+            last_seen_at=now,
+        )
+        session.add(machine)
+    else:
+        machine.phone = phone
+        machine.company_name = company_name
+        machine.email = email
+        machine.contact_name = contact_name
+        machine.status = "pending"
+        machine.approval_token = token
+        machine.last_seen_at = now
+    session.commit()
+    return machine
+
+
+def get_machine_status(session, serial):
+    """Returns the machine's current status string, or None if no machine
+    with this serial exists."""
+    machine = session.query(Machine).filter_by(serial=serial).one_or_none()
+    return machine.status if machine else None
+
+
+def approve_machine_by_token(session, approval_token):
+    """Looks up a machine by its approval_token and sets status="approved".
+    Returns (machine, was_already_approved) on success, or None if no
+    machine has this token. Idempotent -- approving an already-approved
+    machine again is not an error, matching the design's "visiting an
+    old/already-used link is harmless" requirement."""
+    machine = session.query(Machine).filter_by(approval_token=approval_token).one_or_none()
+    if machine is None:
+        return None
+    was_already_approved = machine.status == "approved"
+    machine.status = "approved"
+    session.commit()
+    return machine, was_already_approved
+
+
+def block_machine(session, machine_id):
+    """Sets status="blocked" for the machine with this primary key. Returns
+    the Machine row, or None if no machine with this id exists."""
+    machine = session.query(Machine).filter_by(id=machine_id).one_or_none()
+    if machine is None:
+        return None
+    machine.status = "blocked"
+    session.commit()
+    return machine
+
+
+def unblock_machine(session, machine_id):
+    """Sets status="approved" for the machine with this primary key.
+    Returns the Machine row, or None if no machine with this id exists."""
+    machine = session.query(Machine).filter_by(id=machine_id).one_or_none()
+    if machine is None:
+        return None
+    machine.status = "approved"
+    session.commit()
+    return machine

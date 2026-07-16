@@ -208,6 +208,78 @@ padded_rows = session.query(models.Machine).filter_by(serial="PADDED-001").all()
 check("whitespace-padded serial is normalized before storage (no surrounding whitespace)", len(padded_rows), 1)
 
 
+# --- models.py: registration/approval fields and helpers ---
+machine = models.checkin_machine(session, "REG-TEST-001", "V9.9.9.999")
+check("a machine created via checkin_machine defaults to status=approved", machine.status, "approved")
+
+machine = models.add_machine_manual(session, "REG-TEST-002", "Test Machine")
+check("a machine created via add_machine_manual defaults to status=approved", machine.status, "approved")
+
+registered = models.register_machine(
+    session, serial="REG-TEST-003",
+    phone="+55 11 99999-0000", company_name="Acme Corp",
+    email="owner@acme.example", contact_name="Jane Doe",
+)
+check("register_machine sets status=pending", registered.status, "pending")
+check("register_machine stores the phone", registered.phone, "+55 11 99999-0000")
+check("register_machine stores the company_name", registered.company_name, "Acme Corp")
+check("register_machine stores the email", registered.email, "owner@acme.example")
+check("register_machine stores the contact_name", registered.contact_name, "Jane Doe")
+check_true("register_machine generates a non-empty approval_token", bool(registered.approval_token))
+
+# Captured into a plain variable (not read off `registered` after the fact)
+# because SQLAlchemy's identity map returns the SAME Python object for both
+# register_machine calls below (same session, same serial) -- `registered`
+# and `reregistered` end up being the identical object, so comparing
+# `reregistered.approval_token != registered.approval_token` after the
+# second call would always be False regardless of whether a fresh token
+# was actually generated.
+original_token = registered.approval_token
+
+reregistered = models.register_machine(
+    session, serial="REG-TEST-003",
+    phone="+55 11 88888-0000", company_name="Acme Corp v2",
+    email="owner2@acme.example", contact_name="Jane Doe v2",
+)
+check("re-registering the same serial updates the row, not creates a second one",
+      session.query(models.Machine).filter_by(serial="REG-TEST-003").count(), 1)
+check("re-registering updates the phone", reregistered.phone, "+55 11 88888-0000")
+check_true("re-registering generates a fresh approval_token",
+           reregistered.approval_token != original_token)
+
+status = models.get_machine_status(session, "REG-TEST-003")
+check("get_machine_status returns the current status", status, "pending")
+
+missing_status = models.get_machine_status(session, "REG-TEST-DOES-NOT-EXIST")
+check("get_machine_status returns None for an unknown serial", missing_status, None)
+
+# checkin_machine on an ALREADY-registered machine must not touch status
+models.checkin_machine(session, "REG-TEST-003", "V9.9.9.999")
+after_checkin = session.query(models.Machine).filter_by(serial="REG-TEST-003").one()
+check("checkin_machine does not reset status back to approved on an existing pending machine",
+      after_checkin.status, "pending")
+
+approved_machine, was_already_approved = models.approve_machine_by_token(session, reregistered.approval_token)
+check("approve_machine_by_token approves the right machine", approved_machine.serial, "REG-TEST-003")
+check("approve_machine_by_token reports it was not already approved", was_already_approved, False)
+
+approved_again, was_already_approved_2 = models.approve_machine_by_token(session, reregistered.approval_token)
+check("approving an already-approved machine again is idempotent", approved_again.status, "approved")
+check("approving an already-approved machine reports was_already_approved=True", was_already_approved_2, True)
+
+bad_token_result = models.approve_machine_by_token(session, "this-token-does-not-exist")
+check("approve_machine_by_token returns None for an unknown token", bad_token_result, None)
+
+blocked = models.block_machine(session, approved_machine.id)
+check("block_machine sets status=blocked", blocked.status, "blocked")
+
+unblocked = models.unblock_machine(session, approved_machine.id)
+check("unblock_machine sets status=approved", unblocked.status, "approved")
+
+check("block_machine returns None for an unknown id", models.block_machine(session, 999999), None)
+check("unblock_machine returns None for an unknown id", models.unblock_machine(session, 999999), None)
+
+
 # --- main.py: /api/machines/checkin ---
 resp = client.post("/api/machines/checkin", json={"serial": "API-001", "dragx_version": "V7.0.3.005"})
 check("POST /api/machines/checkin without API key returns 401", resp.status_code, 401)
