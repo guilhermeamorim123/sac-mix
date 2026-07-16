@@ -46,6 +46,7 @@ check("machines table exists after get_engine()", "machines" in table_names, Tru
 
 # --- checkin_machine ---
 import datetime  # noqa: E402
+import email_sender  # noqa: E402
 import models  # noqa: E402
 
 SessionLocal = db.get_session_factory(engine)
@@ -465,6 +466,83 @@ check_true("revisiting an already-used approve link says already approved, not a
 resp = client.get("/approve/this-token-does-not-exist-at-all")
 check("an unknown approve token returns 200 with an informational page, not a 500", resp.status_code, 200)
 check_true("an unknown approve token's page does not look like a raw error", "traceback" not in resp.text.lower())
+
+
+os.environ["OWNER_EMAIL"] = "test-owner@example.com"
+
+# --- email_sender.py: send_approval_email ---
+sent_calls = []
+
+
+def fake_send_email(to_address, subject, body):
+    sent_calls.append((to_address, subject, body))
+
+
+real_send_email = email_sender.send_raw_email
+email_sender.send_raw_email = fake_send_email
+
+email_sender.send_approval_email(
+    to_address="notify-owner@acme.example",
+    machine_serial="REG-EMAIL-TEST-001",
+    customer_fields={
+        "phone": "+55 11 90000-9999", "company_name": "Acme Email Corp",
+        "email": "customer@acme.example", "contact_name": "Email Jane",
+    },
+    approval_token="fake-token-abc123",
+    panel_base_url="https://dragx-fleet-panel.onrender.com",
+)
+check("send_approval_email sends exactly one email", len(sent_calls), 1)
+check("send_approval_email sends to the right address", sent_calls[0][0], "notify-owner@acme.example")
+check_true("send_approval_email's subject mentions the machine serial", "REG-EMAIL-TEST-001" in sent_calls[0][1])
+check_true("send_approval_email's body includes the approval link",
+           "https://dragx-fleet-panel.onrender.com/approve/fake-token-abc123" in sent_calls[0][2])
+check_true("send_approval_email's body includes the company name", "Acme Email Corp" in sent_calls[0][2])
+
+email_sender.send_raw_email = real_send_email
+
+# --- main.py: register endpoint triggers the email, and survives failures ---
+sent_calls.clear()
+email_sender.send_raw_email = fake_send_email
+
+resp = client.post(
+    "/api/machines/register",
+    json={
+        "serial": "REG-EMAIL-TEST-002",
+        "phone": "+55 11 90000-8888",
+        "company_name": "Acme Email Corp 2",
+        "email": "customer2@acme.example",
+        "contact_name": "Email Jane 2",
+    },
+    headers={"X-Api-Key": os.environ["CHECKIN_API_KEY"]},
+)
+check("register endpoint still returns 200 when email succeeds", resp.status_code, 200)
+check("register endpoint triggers exactly one email send", len(sent_calls), 1)
+
+email_sender.send_raw_email = real_send_email
+
+
+def broken_send_email(to_address, subject, body):
+    raise RuntimeError("SMTP is down for this test")
+
+
+email_sender.send_raw_email = broken_send_email
+
+resp = client.post(
+    "/api/machines/register",
+    json={
+        "serial": "REG-EMAIL-TEST-003",
+        "phone": "+55 11 90000-7777",
+        "company_name": "Acme Email Corp 3",
+        "email": "customer3@acme.example",
+        "contact_name": "Email Jane 3",
+    },
+    headers={"X-Api-Key": os.environ["CHECKIN_API_KEY"]},
+)
+check("register endpoint returns 200 even when the email send raises", resp.status_code, 200)
+broken_row = session.query(models.Machine).filter_by(serial="REG-EMAIL-TEST-003").one()
+check("the machine is still created as pending even when the email send fails", broken_row.status, "pending")
+
+email_sender.send_raw_email = real_send_email
 
 
 # --- main.py: friendly error page when the DB is unreachable ---

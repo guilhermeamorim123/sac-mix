@@ -47,6 +47,12 @@ Open http://localhost:8000/login.
 | `PANEL_PASSWORD_HASH` | Login password (hashed, never plaintext) | `python generate_password_hash.py` |
 | `CHECKIN_API_KEY` | Shared secret onboard.py uses to register machines | `python -c "import secrets; print(secrets.token_hex(32))"` |
 | `SESSION_SECRET` | Signs the login session cookie | `python -c "import secrets; print(secrets.token_hex(32))"` |
+| `OWNER_EMAIL` | Where registration-approval notifications are sent | Your own email address |
+| `SMTP_HOST` | SMTP server hostname | e.g. `smtp.gmail.com` |
+| `SMTP_PORT` | SMTP server port | `587` (STARTTLS) |
+| `SMTP_USER` | SMTP login username | Your sending account's address |
+| `SMTP_PASSWORD` | SMTP login password | A Gmail **app password**, not your real password -- generate one at myaccount.google.com/apppasswords |
+| `SMTP_FROM` | `From:` header value | Usually the same as `SMTP_USER` |
 
 ## Deploying to Render
 

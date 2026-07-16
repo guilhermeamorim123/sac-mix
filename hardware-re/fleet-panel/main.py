@@ -18,6 +18,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 from starlette.middleware.sessions import SessionMiddleware
 
+import email_sender
 from auth import verify_login
 from db import get_engine, get_session_factory
 from models import (
@@ -222,11 +223,11 @@ class RegisterPayload(BaseModel):
 
 
 @app.post("/api/machines/register")
-def api_register(payload: RegisterPayload, db_session: Session = Depends(get_db), x_api_key: str = Header(None)):
+def api_register(payload: RegisterPayload, request: Request, db_session: Session = Depends(get_db), x_api_key: str = Header(None)):
     expected_key = os.environ.get("CHECKIN_API_KEY")
     if not expected_key or not hmac.compare_digest(x_api_key or "", expected_key):
         raise HTTPException(status_code=401, detail="chave de API inválida ou ausente")
-    register_machine(
+    machine = register_machine(
         db_session,
         serial=payload.serial,
         phone=payload.phone,
@@ -234,6 +235,27 @@ def api_register(payload: RegisterPayload, db_session: Session = Depends(get_db)
         email=payload.email,
         contact_name=payload.contact_name,
     )
+    owner_email = os.environ.get("OWNER_EMAIL")
+    if owner_email:
+        try:
+            email_sender.send_approval_email(
+                to_address=owner_email,
+                machine_serial=machine.serial,
+                customer_fields={
+                    "phone": payload.phone,
+                    "company_name": payload.company_name,
+                    "email": payload.email,
+                    "contact_name": payload.contact_name,
+                },
+                approval_token=machine.approval_token,
+                panel_base_url=str(request.base_url).rstrip("/"),
+            )
+        except Exception:
+            # Never let an SMTP hiccup fail the registration itself -- the
+            # machine is already saved as pending and shows up in the
+            # dashboard's list regardless (see design doc's Error handling
+            # section).
+            pass
     return {"ok": True}
 
 
