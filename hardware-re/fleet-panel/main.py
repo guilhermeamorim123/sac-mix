@@ -6,6 +6,7 @@ Jinja2). See docs/superpowers/specs/2026-07-02-fleet-panel-design.md.
 Run locally: uvicorn main:app --reload
 """
 import hmac
+import logging
 import os
 
 from fastapi import Depends, FastAPI, Request, Form, Header, HTTPException
@@ -35,6 +36,8 @@ from models import (
 )
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
+
+logger = logging.getLogger(__name__)
 
 SESSION_SECRET = os.environ["SESSION_SECRET"]
 
@@ -254,8 +257,10 @@ def api_register(payload: RegisterPayload, request: Request, db_session: Session
             # Never let an SMTP hiccup fail the registration itself -- the
             # machine is already saved as pending and shows up in the
             # dashboard's list regardless (see design doc's Error handling
-            # section).
-            pass
+            # section). Still log it (with traceback) so a real production
+            # SMTP failure is discoverable server-side instead of silently
+            # invisible.
+            logger.exception("failed to send registration approval email for %s", machine.serial)
     return {"ok": True}
 
 
