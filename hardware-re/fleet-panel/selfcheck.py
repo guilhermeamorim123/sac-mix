@@ -545,6 +545,35 @@ check("the machine is still created as pending even when the email send fails", 
 email_sender.send_raw_email = real_send_email
 
 
+# --- main.py: POST /machines/{id}/block and /machines/{id}/unblock ---
+# REG-EMAIL-TEST-002 was created above via POST /api/machines/register,
+# which (per models.register_machine) always sets status="pending", never
+# "approved" -- so it is NOT yet approved at this point. Approve it first
+# via the same helper the /approve/{token} route uses, giving us a
+# genuinely-approved machine to exercise block/unblock against.
+email_test_002 = session.query(models.Machine).filter_by(serial="REG-EMAIL-TEST-002").one()
+models.approve_machine_by_token(session, email_test_002.approval_token)
+
+approved_row = session.query(models.Machine).filter_by(serial="REG-EMAIL-TEST-002").one()
+check("machine starts approved before the block/unblock test", approved_row.status, "approved")
+
+resp = client.post(f"/machines/{approved_row.id}/block", follow_redirects=False)
+check("block redirects back to /machines", resp.status_code, 303)
+session.refresh(approved_row)
+check("block sets status to blocked", approved_row.status, "blocked")
+
+resp = client.post(f"/machines/{approved_row.id}/unblock", follow_redirects=False)
+check("unblock redirects back to /machines", resp.status_code, 303)
+session.refresh(approved_row)
+check("unblock sets status back to approved", approved_row.status, "approved")
+
+resp = client.post("/machines/999999/block", follow_redirects=False)
+check("blocking an unknown machine id still redirects harmlessly", resp.status_code, 303)
+
+resp = client.get("/machines")
+check_true("the machines dashboard renders the current status", "approved" in resp.text or "blocked" in resp.text)
+
+
 # --- main.py: friendly error page when the DB is unreachable ---
 # Design spec (docs/superpowers/specs/2026-07-02-fleet-panel-design.md,
 # "Error handling"): dashboard pages must show a clear message instead of a

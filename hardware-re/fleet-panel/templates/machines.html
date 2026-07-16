@@ -9,8 +9,12 @@
       <th>Nome</th>
       <th>Serial</th>
       <th>Versão DragX</th>
+      <th>Status</th>
+      <th>Empresa</th>
+      <th>Contato</th>
       <th>Primeiro onboard</th>
       <th>Última vez vista</th>
+      <th>Ação</th>
     </tr>
   </thead>
   <tbody>
@@ -25,11 +29,25 @@
       </td>
       <td>{{ m.serial }}</td>
       <td>{{ m.dragx_version or '-' }}</td>
+      <td>{{ m.status or '-' }}</td>
+      <td>{{ m.company_name or '-' }}</td>
+      <td>{{ m.contact_name or '-' }}{% if m.phone %} ({{ m.phone }}){% endif %}</td>
       <td>{{ m.first_onboarded_at }}</td>
       <td>{{ m.last_seen_at }}</td>
+      <td>
+        {% if m.status == "blocked" %}
+        <form method="post" action="/machines/{{ m.id }}/unblock">
+          <button type="submit">Desbloquear</button>
+        </form>
+        {% else %}
+        <form method="post" action="/machines/{{ m.id }}/block">
+          <button type="submit">Bloquear</button>
+        </form>
+        {% endif %}
+      </td>
     </tr>
     {% else %}
-    <tr><td colspan="5">Nenhuma máquina cadastrada ainda.</td></tr>
+    <tr><td colspan="9">Nenhuma máquina cadastrada ainda.</td></tr>
     {% endfor %}
   </tbody>
 </table>

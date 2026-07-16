@@ -156,6 +156,20 @@ def machines_rename(
     return RedirectResponse("/machines", status_code=303)
 
 
+@app.post("/machines/{machine_id}/block")
+def machines_block(machine_id: int, db_session: Session = Depends(get_db), _: None = Depends(require_login)):
+    # block_machine returns None for an unknown id -- harmless no-op, same
+    # reasoning as rename_machine's None-return handling above.
+    block_machine(db_session, machine_id)
+    return RedirectResponse("/machines", status_code=303)
+
+
+@app.post("/machines/{machine_id}/unblock")
+def machines_unblock(machine_id: int, db_session: Session = Depends(get_db), _: None = Depends(require_login)):
+    unblock_machine(db_session, machine_id)
+    return RedirectResponse("/machines", status_code=303)
+
+
 @app.get("/machines/em-uso", response_class=HTMLResponse)
 def machines_em_uso(request: Request, _: None = Depends(require_login)):
     return templates.TemplateResponse(request, "machines_em_uso.html", {})
