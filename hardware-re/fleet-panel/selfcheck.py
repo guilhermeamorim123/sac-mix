@@ -385,6 +385,46 @@ check("proxy forwards the original HTTP method", fake_proxy_request.last_call[0]
 main.make_upstream_request = real_proxy_request
 
 
+# --- main.py: POST /api/machines/register ---
+resp = client.post(
+    "/api/machines/register",
+    json={
+        "serial": "REG-API-TEST-001",
+        "phone": "+55 11 90000-0001",
+        "company_name": "Acme API Corp",
+        "email": "api-owner@acme.example",
+        "contact_name": "API Jane",
+    },
+    headers={"X-Api-Key": os.environ["CHECKIN_API_KEY"]},
+)
+check("register endpoint returns 200", resp.status_code, 200)
+check("register endpoint response is {'ok': True}", resp.json(), {"ok": True})
+
+registered_row = session.query(models.Machine).filter_by(serial="REG-API-TEST-001").one()
+check("register endpoint created a pending machine", registered_row.status, "pending")
+check("register endpoint stored the email", registered_row.email, "api-owner@acme.example")
+
+resp = client.post(
+    "/api/machines/register",
+    json={
+        "serial": "REG-API-TEST-002",
+        "phone": "+55 11 90000-0002",
+        "company_name": "No Key Corp",
+        "email": "nokey@acme.example",
+        "contact_name": "No Key",
+    },
+    headers={"X-Api-Key": "wrong-key"},
+)
+check("register endpoint rejects a wrong API key", resp.status_code, 401)
+
+resp = client.post(
+    "/api/machines/register",
+    json={"serial": "REG-API-TEST-003"},
+    headers={"X-Api-Key": os.environ["CHECKIN_API_KEY"]},
+)
+check("register endpoint requires all four contact fields (422 on missing ones)", resp.status_code, 422)
+
+
 # --- main.py: friendly error page when the DB is unreachable ---
 # Design spec (docs/superpowers/specs/2026-07-02-fleet-panel-design.md,
 # "Error handling"): dashboard pages must show a clear message instead of a

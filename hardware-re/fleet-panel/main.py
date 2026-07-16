@@ -20,7 +20,18 @@ from starlette.middleware.sessions import SessionMiddleware
 
 from auth import verify_login
 from db import get_engine, get_session_factory
-from models import add_machine_manual, checkin_machine, get_latest_release, list_machines, rename_machine
+from models import (
+    add_machine_manual,
+    approve_machine_by_token,
+    block_machine,
+    checkin_machine,
+    get_latest_release,
+    get_machine_status,
+    list_machines,
+    register_machine,
+    rename_machine,
+    unblock_machine,
+)
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
 
@@ -199,6 +210,30 @@ def api_checkin(payload: CheckinPayload, db_session: Session = Depends(get_db), 
     if not payload.serial:
         raise HTTPException(status_code=400, detail="'serial' é obrigatório")
     checkin_machine(db_session, payload.serial, payload.dragx_version)
+    return {"ok": True}
+
+
+class RegisterPayload(BaseModel):
+    serial: str
+    phone: str
+    company_name: str
+    email: str
+    contact_name: str
+
+
+@app.post("/api/machines/register")
+def api_register(payload: RegisterPayload, db_session: Session = Depends(get_db), x_api_key: str = Header(None)):
+    expected_key = os.environ.get("CHECKIN_API_KEY")
+    if not expected_key or not hmac.compare_digest(x_api_key or "", expected_key):
+        raise HTTPException(status_code=401, detail="chave de API inválida ou ausente")
+    register_machine(
+        db_session,
+        serial=payload.serial,
+        phone=payload.phone,
+        company_name=payload.company_name,
+        email=payload.email,
+        contact_name=payload.contact_name,
+    )
     return {"ok": True}
 
 
