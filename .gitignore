@@ -7,6 +7,9 @@
 # --- Internal planning/design docs (contain real source data) ---
 /docs/superpowers/
 
+# --- Visual brainstorming companion session files ---
+.superpowers/
+
 # --- OS / editor noise ---
 .DS_Store
 **/__pycache__/
@@ -15,3 +18,4 @@
 # --- Obsidian workspace state (per-user, not shareable) ---
 .obsidian/workspace.json
 .obsidian/workspace-mobile.json
+hardware-re/dragx-app/registration-build-scratch/
