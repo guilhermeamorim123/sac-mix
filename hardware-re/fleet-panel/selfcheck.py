@@ -460,11 +460,6 @@ check("an unknown approve token returns 200 with an informational page, not a 50
 check_true("an unknown approve token's page does not look like a raw error", "traceback" not in resp.text.lower())
 
 
-os.environ["OWNER_WHATSAPP_TO"] = "whatsapp:+5511900001234"
-os.environ["TWILIO_ACCOUNT_SID"] = "test-account-sid"
-os.environ["TWILIO_AUTH_TOKEN"] = "test-auth-token"
-os.environ["TWILIO_WHATSAPP_FROM"] = "whatsapp:+14155238886"
-
 # --- whatsapp_sender.py: send_registration_whatsapp ---
 whatsapp_sent_calls = []
 
@@ -570,6 +565,11 @@ broken_row = session.query(models.Machine).filter_by(serial="REG-EMAIL-TEST-003"
 check("the machine is still created as pending even when the email send fails", broken_row.status, "pending")
 
 email_sender.send_raw_email = real_send_email
+
+os.environ["OWNER_WHATSAPP_TO"] = "whatsapp:+5511900001234"
+os.environ["TWILIO_ACCOUNT_SID"] = "test-account-sid"
+os.environ["TWILIO_AUTH_TOKEN"] = "test-auth-token"
+os.environ["TWILIO_WHATSAPP_FROM"] = "whatsapp:+14155238886"
 
 # --- main.py: register endpoint triggers the whatsapp send, and survives failures ---
 wa_sent_calls = []
