@@ -58,13 +58,13 @@ Open http://localhost:8000/login.
 | `TWILIO_WHATSAPP_FROM` | Sending WhatsApp number | `whatsapp:+14155238886` (Twilio's shared sandbox number) during the sandbox phase; a dedicated number once approved for production |
 | `OWNER_WHATSAPP_TO` | Where WhatsApp registration-approval notifications are sent | Your own WhatsApp number, `whatsapp:+<countrycode><number>` format, e.g. `whatsapp:+5511999998888` |
 
-## WhatsApp sandbox setup (one-time, per receiving phone number)
+## WhatsApp sandbox setup (per receiving phone number)
 
 Twilio's WhatsApp sandbox requires the receiving phone to "join" once before it will accept messages:
 
-1. In the Twilio console, open the WhatsApp sandbox page — it shows a phone number and a join keyword (e.g. "join `some-word`").
+1. In the Twilio console (under Messaging → Try it out → Send a WhatsApp message), open the WhatsApp sandbox page — it shows a phone number and a join keyword (e.g. "join `some-word`").
 2. From the phone set as `OWNER_WHATSAPP_TO`, send that exact join message to that number on WhatsApp.
-3. The sandbox session persists but can expire after a period of inactivity per Twilio's own rules — if notifications stop arriving, re-send the join message.
+3. The sandbox session persists but can expire after around 72 hours of inactivity (per Twilio's current sandbox rules, which may change — re-send the join message if notifications stop arriving).
 
 This is a manual, per-phone step outside this codebase — it cannot be automated from `main.py`. It only applies during the sandbox phase; a production WhatsApp sender number (after Twilio/Meta business verification) does not require this.
 
@@ -74,7 +74,7 @@ This is a manual, per-phone step outside this codebase — it cannot be automate
 2. In Render: New > Web Service > connect this repo, root directory `hardware-re/fleet-panel`.
 3. Build command: `pip install -r requirements.txt`
 4. Start command: `uvicorn main:app --host 0.0.0.0 --port $PORT`
-5. Set the four environment variables above under the service's "Environment" tab.
+5. Set the environment variables above under the service's "Environment" tab.
 6. Deploy. Render gives you a URL like `https://<name>.onrender.com`.
 
 ## Wiring onboard.py to this panel
