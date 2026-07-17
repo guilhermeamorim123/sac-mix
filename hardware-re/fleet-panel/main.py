@@ -8,6 +8,7 @@ Run locally: uvicorn main:app --reload
 import hmac
 import logging
 import os
+import threading
 
 from fastapi import Depends, FastAPI, Request, Form, Header, HTTPException
 from fastapi.responses import RedirectResponse, HTMLResponse, JSONResponse, Response
@@ -256,27 +257,45 @@ def api_register(payload: RegisterPayload, request: Request, db_session: Session
     )
     owner_email = os.environ.get("OWNER_EMAIL")
     if owner_email:
-        try:
-            email_sender.send_approval_email(
-                to_address=owner_email,
-                machine_serial=machine.serial,
-                customer_fields={
+        def _send_email_in_background(serial, customer_fields, approval_token, panel_base_url):
+            # Runs on a daemon thread, fully detached from this request.
+            # A bounded socket timeout (see email_sender.send_raw_email)
+            # only protects against a *slow* SMTP server -- it does nothing
+            # for a network that silently drops the connection at a lower
+            # layer than Python's socket timeout can observe (seen in
+            # production: registration requests hung past 30s and came
+            # back as a bare 502 from the platform's own edge proxy, with
+            # this call still blocking the request the whole time). Moving
+            # the send off the request thread entirely is what actually
+            # satisfies the design doc's "never blocks the registration
+            # itself succeeding" requirement -- a hang here now only ever
+            # delays the notification email, never the API response.
+            try:
+                email_sender.send_approval_email(
+                    to_address=owner_email,
+                    machine_serial=serial,
+                    customer_fields=customer_fields,
+                    approval_token=approval_token,
+                    panel_base_url=panel_base_url,
+                )
+            except Exception:
+                logger.exception("failed to send registration approval email for %s", serial)
+
+        threading.Thread(
+            target=_send_email_in_background,
+            args=(
+                machine.serial,
+                {
                     "phone": payload.phone,
                     "company_name": payload.company_name,
                     "email": payload.email,
                     "contact_name": payload.contact_name,
                 },
-                approval_token=machine.approval_token,
-                panel_base_url=str(request.base_url).rstrip("/"),
-            )
-        except Exception:
-            # Never let an SMTP hiccup fail the registration itself -- the
-            # machine is already saved as pending and shows up in the
-            # dashboard's list regardless (see design doc's Error handling
-            # section). Still log it (with traceback) so a real production
-            # SMTP failure is discoverable server-side instead of silently
-            # invisible.
-            logger.exception("failed to send registration approval email for %s", machine.serial)
+                machine.approval_token,
+                str(request.base_url).rstrip("/"),
+            ),
+            daemon=True,
+        ).start()
     return {"ok": True}
 
 
