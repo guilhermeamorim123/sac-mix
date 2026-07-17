@@ -35,7 +35,17 @@ def send_raw_email(to_address, subject, body):
     message["From"] = from_address
     message["To"] = to_address
 
-    with smtplib.SMTP(host, port) as server:
+    # timeout=10 is required -- without it, a slow/unresponsive SMTP server
+    # (or a network hiccup between this host and the SMTP host) hangs this
+    # call forever. Since api_register calls this synchronously before
+    # responding, an unbounded hang here blocks the ENTIRE registration
+    # request until the platform's own edge proxy gives up (observed as a
+    # bare 502 in production, with the registration itself silently lost
+    # even though `register_machine` had already committed) -- exactly the
+    # failure this bound is meant to prevent. The existing try/except in
+    # api_register only catches raised exceptions, not a hang, so the
+    # timeout has to be enforced here, not just handled there.
+    with smtplib.SMTP(host, port, timeout=10) as server:
         server.starttls()
         server.login(user, password)
         server.sendmail(from_address, [to_address], message.as_string())
