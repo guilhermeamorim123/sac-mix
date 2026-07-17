@@ -12,6 +12,14 @@
         android:orientation="vertical"
         android:padding="32dp">
 
+        <ImageView
+            android:layout_width="72dp"
+            android:layout_height="72dp"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginBottom="12dp"
+            android:src="@mipmap/ic_launcher"
+            android:contentDescription="DragX"/>
+
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -28,6 +36,7 @@
             android:hint="Telefone"
             android:textColor="#FFFFFF"
             android:textColorHint="#AAAAAA"
+            android:scrollbars="none"
             android:inputType="phone"/>
 
         <EditText
@@ -37,6 +46,7 @@
             android:hint="Empresa"
             android:textColor="#FFFFFF"
             android:textColorHint="#AAAAAA"
+            android:scrollbars="none"
             android:inputType="text"/>
 
         <EditText
@@ -46,6 +56,7 @@
             android:hint="Email"
             android:textColor="#FFFFFF"
             android:textColorHint="#AAAAAA"
+            android:scrollbars="none"
             android:inputType="textEmailAddress"/>
 
         <EditText
@@ -55,6 +66,7 @@
             android:hint="Nome do contato"
             android:textColor="#FFFFFF"
             android:textColorHint="#AAAAAA"
+            android:scrollbars="none"
             android:inputType="text"/>
 
         <Button
@@ -73,6 +85,14 @@
         android:orientation="vertical"
         android:padding="32dp"
         android:visibility="gone">
+
+        <ImageView
+            android:layout_width="72dp"
+            android:layout_height="72dp"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginBottom="12dp"
+            android:src="@mipmap/ic_launcher"
+            android:contentDescription="DragX"/>
 
         <TextView
             android:id="@+id/waiting_message"
