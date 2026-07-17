@@ -197,6 +197,15 @@ def get_machine_status(session, serial):
     return machine.status if machine else None
 
 
+def get_machine_by_token(session, approval_token):
+    """Read-only lookup of a machine by its approval_token -- does NOT
+    change status. Used to render the approval confirmation page without
+    side effects, since a plain GET must be safe to fetch automatically
+    (e.g. WhatsApp/email link-preview crawlers) without approving
+    anything on its own."""
+    return session.query(Machine).filter_by(approval_token=approval_token).one_or_none()
+
+
 def approve_machine_by_token(session, approval_token):
     """Looks up a machine by its approval_token and sets status="approved".
     Returns (machine, was_already_approved) on success, or None if no

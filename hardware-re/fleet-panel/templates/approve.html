@@ -2,7 +2,13 @@
 {% block title %}Aprovação de máquina - Painel DragX{% endblock %}
 {% block content %}
 <h1>Aprovação de máquina</h1>
-{% if result == "approved" %}
+{% if result == "confirm" %}
+  <p>Aprovar a máquina <strong>{{ serial }}</strong>?</p>
+  <p>Empresa: {{ company_name }}<br>Contato: {{ contact_name }}</p>
+  <form method="post" action="/approve/{{ approval_token }}">
+    <button type="submit">Aprovar esta máquina</button>
+  </form>
+{% elif result == "approved" %}
   <p>Máquina <strong>{{ serial }}</strong> liberada com sucesso.</p>
 {% elif result == "already_approved" %}
   <p>Máquina <strong>{{ serial }}</strong> já estava liberada. Nenhuma ação necessária.</p>

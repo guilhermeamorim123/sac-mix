@@ -439,25 +439,42 @@ resp = client.get(
 check("status endpoint returns 404 for an unknown serial", resp.status_code, 404)
 
 
-# --- main.py: GET /approve/{approval_token} ---
+# --- main.py: GET /approve/{approval_token} (read-only confirmation) ---
 pending_row = session.query(models.Machine).filter_by(serial="REG-API-TEST-001").one()
 token = pending_row.approval_token
 
 resp = client.get(f"/approve/{token}")
-check("approve link returns 200 for a valid pending token", resp.status_code, 200)
-check_true("approve link response mentions the machine is now released", "liberada" in resp.text.lower())
+check("GET approve link returns 200 for a valid pending token", resp.status_code, 200)
+check_true("GET approve link shows a confirmation prompt, not an immediate approval",
+           "aprovar" in resp.text.lower())
 
 session.refresh(pending_row)
-check("approve link actually sets status to approved", pending_row.status, "approved")
-
-resp = client.get(f"/approve/{token}")
-check("revisiting an already-used approve link still returns 200", resp.status_code, 200)
-check_true("revisiting an already-used approve link says already approved, not an error",
-           "já" in resp.text.lower() or "already" in resp.text.lower())
+check("GET approve link does NOT approve the machine by itself (side-effect-free)", pending_row.status, "pending")
 
 resp = client.get("/approve/this-token-does-not-exist-at-all")
-check("an unknown approve token returns 200 with an informational page, not a 500", resp.status_code, 200)
-check_true("an unknown approve token's page does not look like a raw error", "traceback" not in resp.text.lower())
+check("GET an unknown approve token returns 200 with an informational page, not a 500", resp.status_code, 200)
+check_true("GET an unknown approve token's page does not look like a raw error", "traceback" not in resp.text.lower())
+
+# --- main.py: POST /approve/{approval_token} (the actual approval action) ---
+resp = client.post(f"/approve/{token}")
+check("POST approve link returns 200 for a valid pending token", resp.status_code, 200)
+check_true("POST approve link response mentions the machine is now released", "liberada" in resp.text.lower())
+
+session.refresh(pending_row)
+check("POST approve link actually sets status to approved", pending_row.status, "approved")
+
+resp = client.post(f"/approve/{token}")
+check("revisiting an already-used approve link (POST) still returns 200", resp.status_code, 200)
+check_true("revisiting an already-used approve link (POST) says already approved, not an error",
+           "já" in resp.text.lower() or "already" in resp.text.lower())
+
+resp = client.get(f"/approve/{token}")
+check_true("GET approve link on an already-approved machine shows the already-approved page",
+           "já" in resp.text.lower() or "already" in resp.text.lower())
+
+resp = client.post("/approve/this-token-does-not-exist-at-all")
+check("POST an unknown approve token returns 200 with an informational page, not a 500", resp.status_code, 200)
+check_true("POST an unknown approve token's page does not look like a raw error", "traceback" not in resp.text.lower())
 
 
 # --- whatsapp_sender.py: send_registration_whatsapp ---

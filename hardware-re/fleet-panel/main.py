@@ -30,6 +30,7 @@ from models import (
     block_machine,
     checkin_machine,
     get_latest_release,
+    get_machine_by_token,
     get_machine_status,
     list_machines,
     list_registered_machines,
@@ -342,6 +343,31 @@ def api_machine_status(serial: str, db_session: Session = Depends(get_db), x_api
 
 
 @app.get("/approve/{approval_token}", response_class=HTMLResponse)
+def approve_machine_confirm(approval_token: str, request: Request, db_session: Session = Depends(get_db)):
+    # Deliberately read-only: messaging apps (WhatsApp, email clients) often
+    # fetch links automatically to build a preview, and a GET that mutated
+    # state here would let that automated fetch silently approve the
+    # machine before a human ever saw the message. The actual approval only
+    # happens in the POST handler below, triggered by a real button click.
+    machine = get_machine_by_token(db_session, approval_token)
+    if machine is None:
+        return templates.TemplateResponse(request, "approve.html", {"result": "not_found", "serial": None})
+    if machine.status == "approved":
+        return templates.TemplateResponse(request, "approve.html", {"result": "already_approved", "serial": machine.serial})
+    return templates.TemplateResponse(
+        request,
+        "approve.html",
+        {
+            "result": "confirm",
+            "serial": machine.serial,
+            "company_name": machine.company_name,
+            "contact_name": machine.contact_name,
+            "approval_token": approval_token,
+        },
+    )
+
+
+@app.post("/approve/{approval_token}", response_class=HTMLResponse)
 def approve_machine(approval_token: str, request: Request, db_session: Session = Depends(get_db)):
     result = approve_machine_by_token(db_session, approval_token)
     if result is None:
