@@ -47,6 +47,7 @@ check("machines table exists after get_engine()", "machines" in table_names, Tru
 # --- checkin_machine ---
 import datetime  # noqa: E402
 import email_sender  # noqa: E402
+import whatsapp_sender  # noqa: E402
 import models  # noqa: E402
 
 SessionLocal = db.get_session_factory(engine)
@@ -458,6 +459,41 @@ resp = client.get("/approve/this-token-does-not-exist-at-all")
 check("an unknown approve token returns 200 with an informational page, not a 500", resp.status_code, 200)
 check_true("an unknown approve token's page does not look like a raw error", "traceback" not in resp.text.lower())
 
+
+os.environ["OWNER_WHATSAPP_TO"] = "whatsapp:+5511900001234"
+os.environ["TWILIO_ACCOUNT_SID"] = "test-account-sid"
+os.environ["TWILIO_AUTH_TOKEN"] = "test-auth-token"
+os.environ["TWILIO_WHATSAPP_FROM"] = "whatsapp:+14155238886"
+
+# --- whatsapp_sender.py: send_registration_whatsapp ---
+whatsapp_sent_calls = []
+
+
+def fake_send_whatsapp_message(to, body):
+    whatsapp_sent_calls.append((to, body))
+
+
+real_send_whatsapp_message = whatsapp_sender.send_whatsapp_message
+whatsapp_sender.send_whatsapp_message = fake_send_whatsapp_message
+
+whatsapp_sender.send_registration_whatsapp(
+    to_number="whatsapp:+5511900001234",
+    machine_serial="REG-WA-TEST-001",
+    customer_fields={
+        "phone": "+55 11 90000-6666", "company_name": "Acme WhatsApp Corp",
+        "email": "wa-customer@acme.example", "contact_name": "WA Jane",
+    },
+    approval_token="fake-wa-token-xyz789",
+    panel_base_url="https://dragx-fleet-panel.onrender.com",
+)
+check("send_registration_whatsapp sends exactly one message", len(whatsapp_sent_calls), 1)
+check("send_registration_whatsapp sends to the right number", whatsapp_sent_calls[0][0], "whatsapp:+5511900001234")
+check_true("send_registration_whatsapp's body mentions the machine serial", "REG-WA-TEST-001" in whatsapp_sent_calls[0][1])
+check_true("send_registration_whatsapp's body includes the approval link",
+           "https://dragx-fleet-panel.onrender.com/approve/fake-wa-token-xyz789" in whatsapp_sent_calls[0][1])
+check_true("send_registration_whatsapp's body includes the company name", "Acme WhatsApp Corp" in whatsapp_sent_calls[0][1])
+
+whatsapp_sender.send_whatsapp_message = real_send_whatsapp_message
 
 os.environ["OWNER_EMAIL"] = "test-owner@example.com"
 
