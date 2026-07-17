@@ -2,8 +2,36 @@
 {% block title %}Máquinas em uso - Painel DragX{% endblock %}
 {% block content %}
 <h1>Máquinas em uso</h1>
-<p class="placeholder-msg">
-  Em breve — essa aba vai mostrar máquinas com clientes cadastrados,
-  assim que o app DragX tiver a tela de cadastro do cliente.
-</p>
+<div class="table-scroll">
+<table class="machines-table">
+  <thead>
+    <tr>
+      <th>Serial</th>
+      <th>Nome</th>
+      <th>Status</th>
+      <th>Empresa</th>
+      <th>Contato</th>
+      <th>Telefone</th>
+      <th>Email</th>
+      <th>Última vez vista</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for m in machines %}
+    <tr>
+      <td>{{ m.serial }}</td>
+      <td>{{ m.name or '-' }}</td>
+      <td>{{ m.status or '-' }}</td>
+      <td>{{ m.company_name }}</td>
+      <td>{{ m.contact_name }}</td>
+      <td>{{ m.phone }}</td>
+      <td>{{ m.email }}</td>
+      <td>{{ m.last_seen_at }}</td>
+    </tr>
+    {% else %}
+    <tr><td colspan="8">Nenhuma máquina com cliente cadastrado ainda.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+</div>
 {% endblock %}

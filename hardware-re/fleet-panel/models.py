@@ -232,3 +232,17 @@ def unblock_machine(session, machine_id):
     machine.status = "approved"
     session.commit()
     return machine
+
+
+def list_registered_machines(session):
+    """Returns every machine that has gone through the registration flow
+    (i.e. has a company_name on file), most-recently-seen first. Excludes
+    machines that only ever reached checkin_machine/add_machine_manual
+    without ever registering -- those have no customer contact details to
+    show."""
+    return (
+        session.query(Machine)
+        .filter(Machine.company_name.isnot(None))
+        .order_by(Machine.last_seen_at.desc())
+        .all()
+    )

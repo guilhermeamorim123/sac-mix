@@ -30,6 +30,7 @@ from models import (
     get_latest_release,
     get_machine_status,
     list_machines,
+    list_registered_machines,
     register_machine,
     rename_machine,
     unblock_machine,
@@ -171,8 +172,9 @@ def machines_unblock(machine_id: int, db_session: Session = Depends(get_db), _: 
 
 
 @app.get("/machines/em-uso", response_class=HTMLResponse)
-def machines_em_uso(request: Request, _: None = Depends(require_login)):
-    return templates.TemplateResponse(request, "machines_em_uso.html", {})
+def machines_em_uso(request: Request, db_session: Session = Depends(get_db), _: None = Depends(require_login)):
+    machines = list_registered_machines(db_session)
+    return templates.TemplateResponse(request, "machines_em_uso.html", {"machines": machines})
 
 
 @app.get("/machines/add", response_class=HTMLResponse)

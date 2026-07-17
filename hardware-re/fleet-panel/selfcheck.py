@@ -183,15 +183,6 @@ resp = client.get("/machines")
 check_true("renamed machine's new name shows up on the dashboard", "Loja 2 Final" in resp.text)
 
 
-# --- main.py: /machines/em-uso placeholder ---
-resp = anon_client.get("/machines/em-uso")
-check("GET /machines/em-uso without login redirects to /login", str(resp.url).endswith("/login"), True)
-
-resp = client.get("/machines/em-uso")
-check("GET /machines/em-uso with login returns 200", resp.status_code, 200)
-check_true("GET /machines/em-uso shows the 'em breve' message", "em breve" in resp.text.lower())
-
-
 # --- main.py: /machines/add ---
 resp = anon_client.get("/machines/add")
 check("GET /machines/add without login redirects to /login", str(resp.url).endswith("/login"), True)
@@ -572,6 +563,34 @@ check("blocking an unknown machine id still redirects harmlessly", resp.status_c
 
 resp = client.get("/machines")
 check_true("the machines dashboard renders the current status", "approved" in resp.text or "blocked" in resp.text)
+
+
+# --- models.py: list_registered_machines ---
+never_registered = models.checkin_machine(session, "EMUSO-TEST-NOREG", "V9.9.9.999")
+registered_pending = models.register_machine(
+    session, serial="EMUSO-TEST-001",
+    phone="+55 11 90000-1111", company_name="Em Uso Corp",
+    email="emuso@acme.example", contact_name="Em Uso Jane",
+)
+
+registered_list = models.list_registered_machines(session)
+registered_serials = [m.serial for m in registered_list]
+check_true("list_registered_machines includes a machine that went through registration",
+           "EMUSO-TEST-001" in registered_serials)
+check_true("list_registered_machines excludes a machine that only ever checked in normally",
+           "EMUSO-TEST-NOREG" not in registered_serials)
+
+# --- main.py: GET /machines/em-uso shows registered customer details ---
+resp = anon_client.get("/machines/em-uso")
+check("GET /machines/em-uso without login still redirects to /login", str(resp.url).endswith("/login"), True)
+
+resp = client.get("/machines/em-uso")
+check("GET /machines/em-uso with login returns 200", resp.status_code, 200)
+check_true("machines_em_uso lists a registered machine's serial", "EMUSO-TEST-001" in resp.text)
+check_true("machines_em_uso lists a registered machine's company name", "Em Uso Corp" in resp.text)
+check_true("machines_em_uso lists a registered machine's contact name", "Em Uso Jane" in resp.text)
+check_true("machines_em_uso lists a registered machine's status", "pending" in resp.text)
+check_true("machines_em_uso does not list a machine that never registered", "EMUSO-TEST-NOREG" not in resp.text)
 
 
 # --- main.py: friendly error page when the DB is unreachable ---
