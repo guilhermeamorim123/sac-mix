@@ -571,6 +571,58 @@ check("the machine is still created as pending even when the email send fails", 
 
 email_sender.send_raw_email = real_send_email
 
+# --- main.py: register endpoint triggers the whatsapp send, and survives failures ---
+wa_sent_calls = []
+
+
+def fake_send_whatsapp_message(to, body):
+    wa_sent_calls.append((to, body))
+
+
+real_send_whatsapp_message = whatsapp_sender.send_whatsapp_message
+whatsapp_sender.send_whatsapp_message = fake_send_whatsapp_message
+
+resp = client.post(
+    "/api/machines/register",
+    json={
+        "serial": "REG-WA-TEST-002",
+        "phone": "+55 11 90000-5555",
+        "company_name": "Acme WA Corp 2",
+        "email": "wa-customer2@acme.example",
+        "contact_name": "WA Jane 2",
+    },
+    headers={"X-Api-Key": os.environ["CHECKIN_API_KEY"]},
+)
+check("register endpoint still returns 200 when whatsapp send succeeds", resp.status_code, 200)
+check("register endpoint triggers exactly one whatsapp send", len(wa_sent_calls), 1)
+check("register endpoint's whatsapp send goes to OWNER_WHATSAPP_TO", wa_sent_calls[0][0], "whatsapp:+5511900001234")
+
+whatsapp_sender.send_whatsapp_message = real_send_whatsapp_message
+
+
+def broken_send_whatsapp_message(to, body):
+    raise RuntimeError("Twilio is down for this test")
+
+
+whatsapp_sender.send_whatsapp_message = broken_send_whatsapp_message
+
+resp = client.post(
+    "/api/machines/register",
+    json={
+        "serial": "REG-WA-TEST-003",
+        "phone": "+55 11 90000-4444",
+        "company_name": "Acme WA Corp 3",
+        "email": "wa-customer3@acme.example",
+        "contact_name": "WA Jane 3",
+    },
+    headers={"X-Api-Key": os.environ["CHECKIN_API_KEY"]},
+)
+check("register endpoint returns 200 even when the whatsapp send raises", resp.status_code, 200)
+wa_broken_row = session.query(models.Machine).filter_by(serial="REG-WA-TEST-003").one()
+check("the machine is still created as pending even when the whatsapp send fails", wa_broken_row.status, "pending")
+
+whatsapp_sender.send_whatsapp_message = real_send_whatsapp_message
+
 
 # --- main.py: POST /machines/{id}/block and /machines/{id}/unblock ---
 # REG-EMAIL-TEST-002 was created above via POST /api/machines/register,

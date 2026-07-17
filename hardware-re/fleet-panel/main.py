@@ -21,6 +21,7 @@ from sqlalchemy.orm import Session
 from starlette.middleware.sessions import SessionMiddleware
 
 import email_sender
+import whatsapp_sender
 from auth import verify_login
 from db import get_engine, get_session_factory
 from models import (
@@ -255,6 +256,14 @@ def api_register(payload: RegisterPayload, request: Request, db_session: Session
         email=payload.email,
         contact_name=payload.contact_name,
     )
+    customer_fields = {
+        "phone": payload.phone,
+        "company_name": payload.company_name,
+        "email": payload.email,
+        "contact_name": payload.contact_name,
+    }
+    panel_base_url = str(request.base_url).rstrip("/")
+
     owner_email = os.environ.get("OWNER_EMAIL")
     if owner_email:
         def _send_email_in_background(serial, customer_fields, approval_token, panel_base_url):
@@ -283,19 +292,41 @@ def api_register(payload: RegisterPayload, request: Request, db_session: Session
 
         threading.Thread(
             target=_send_email_in_background,
-            args=(
-                machine.serial,
-                {
-                    "phone": payload.phone,
-                    "company_name": payload.company_name,
-                    "email": payload.email,
-                    "contact_name": payload.contact_name,
-                },
-                machine.approval_token,
-                str(request.base_url).rstrip("/"),
-            ),
+            args=(machine.serial, customer_fields, machine.approval_token, panel_base_url),
             daemon=True,
         ).start()
+
+    owner_whatsapp_to = os.environ.get("OWNER_WHATSAPP_TO")
+    twilio_configured = bool(
+        owner_whatsapp_to
+        and os.environ.get("TWILIO_ACCOUNT_SID")
+        and os.environ.get("TWILIO_AUTH_TOKEN")
+        and os.environ.get("TWILIO_WHATSAPP_FROM")
+    )
+    if twilio_configured:
+        def _send_whatsapp_in_background(to_number, serial, customer_fields, approval_token, panel_base_url):
+            # Same rationale as _send_email_in_background above: runs on
+            # its own detached daemon thread so a slow or unreachable
+            # Twilio API call can never block or delay the registration
+            # response. This thread is independent from the email one --
+            # one channel hanging or failing never affects the other.
+            try:
+                whatsapp_sender.send_registration_whatsapp(
+                    to_number=to_number,
+                    machine_serial=serial,
+                    customer_fields=customer_fields,
+                    approval_token=approval_token,
+                    panel_base_url=panel_base_url,
+                )
+            except Exception:
+                logger.exception("failed to send registration whatsapp notification for %s", serial)
+
+        threading.Thread(
+            target=_send_whatsapp_in_background,
+            args=(owner_whatsapp_to, machine.serial, customer_fields, machine.approval_token, panel_base_url),
+            daemon=True,
+        ).start()
+
     return {"ok": True}
 
 
