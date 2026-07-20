@@ -534,6 +534,28 @@ check_true("send_registration_whatsapp's body includes the company name", "Acme 
 
 whatsapp_sender.send_whatsapp_message = real_send_whatsapp_message
 
+# --- whatsapp_sender.py: send_balance_replenished_whatsapp ---
+replenish_sent_calls = []
+
+
+def fake_send_whatsapp_message_for_replenish(to, body):
+    replenish_sent_calls.append((to, body))
+
+
+real_send_whatsapp_message_2 = whatsapp_sender.send_whatsapp_message
+whatsapp_sender.send_whatsapp_message = fake_send_whatsapp_message_for_replenish
+
+whatsapp_sender.send_balance_replenished_whatsapp(
+    to_number="whatsapp:+5511900001234",
+    machine_serial="CUT-WA-TEST-001",
+)
+check("send_balance_replenished_whatsapp sends exactly one message", len(replenish_sent_calls), 1)
+check("send_balance_replenished_whatsapp sends to the right number", replenish_sent_calls[0][0], "whatsapp:+5511900001234")
+check_true("send_balance_replenished_whatsapp's body mentions the machine serial", "CUT-WA-TEST-001" in replenish_sent_calls[0][1])
+check_true("send_balance_replenished_whatsapp's body mentions 2000", "2000" in replenish_sent_calls[0][1])
+
+whatsapp_sender.send_whatsapp_message = real_send_whatsapp_message_2
+
 os.environ["OWNER_EMAIL"] = "test-owner@example.com"
 
 # --- email_sender.py: send_approval_email ---

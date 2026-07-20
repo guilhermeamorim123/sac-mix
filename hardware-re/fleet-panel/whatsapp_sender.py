@@ -58,3 +58,13 @@ def send_registration_whatsapp(to_number, machine_serial, customer_fields, appro
         f"Para liberar essa máquina, acesse:\n{approval_link}"
     )
     send_whatsapp_message(to_number, body)
+
+
+def send_balance_replenished_whatsapp(to_number, machine_serial):
+    """Sends the owner a WhatsApp notification when a machine's cut
+    balance ran out and was automatically topped up to 2000 cuts."""
+    body = (
+        f"Saldo de cortes reposto automaticamente: {machine_serial}\n\n"
+        f"O saldo chegou a zero e foi renovado para 2000 cortes."
+    )
+    send_whatsapp_message(to_number, body)
