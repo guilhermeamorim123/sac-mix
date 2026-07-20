@@ -793,6 +793,7 @@ check_true("machines_em_uso lists a registered machine's serial", "EMUSO-TEST-00
 check_true("machines_em_uso lists a registered machine's company name", "Em Uso Corp" in resp.text)
 check_true("machines_em_uso lists a registered machine's contact name", "Em Uso Jane" in resp.text)
 check_true("machines_em_uso lists a registered machine's status", "pending" in resp.text)
+check_true("machines_em_uso lists a registered machine's cut balance", "2000" in resp.text)
 check_true("machines_em_uso does not list a machine that never registered", "EMUSO-TEST-NOREG" not in resp.text)
 
 

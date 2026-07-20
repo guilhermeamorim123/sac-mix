@@ -13,6 +13,7 @@
       <th>Contato</th>
       <th>Telefone</th>
       <th>Email</th>
+      <th>Saldo de cortes</th>
       <th>Última vez vista</th>
     </tr>
   </thead>
@@ -26,10 +27,11 @@
       <td>{{ m.contact_name }}</td>
       <td>{{ m.phone }}</td>
       <td>{{ m.email }}</td>
+      <td>{{ m.cut_balance }}</td>
       <td>{{ m.last_seen_at }}</td>
     </tr>
     {% else %}
-    <tr><td colspan="8">Nenhuma máquina com cliente cadastrado ainda.</td></tr>
+    <tr><td colspan="9">Nenhuma máquina com cliente cadastrado ainda.</td></tr>
     {% endfor %}
   </tbody>
 </table>
