@@ -36,6 +36,7 @@ from models import (
     list_registered_machines,
     register_machine,
     rename_machine,
+    report_cut,
     unblock_machine,
 )
 
@@ -378,6 +379,42 @@ def approve_machine(approval_token: str, request: Request, db_session: Session =
         "approve.html",
         {"result": "already_approved" if was_already_approved else "approved", "serial": machine.serial},
     )
+
+
+@app.post("/api/machines/{serial}/cut")
+def api_report_cut(serial: str, request: Request, db_session: Session = Depends(get_db), x_api_key: str = Header(None)):
+    expected_key = os.environ.get("CHECKIN_API_KEY")
+    if not expected_key or not hmac.compare_digest(x_api_key or "", expected_key):
+        raise HTTPException(status_code=401, detail="chave de API inválida ou ausente")
+    machine, was_replenished = report_cut(db_session, serial)
+    if was_replenished:
+        owner_whatsapp_to = os.environ.get("OWNER_WHATSAPP_TO")
+        twilio_configured = bool(
+            owner_whatsapp_to
+            and os.environ.get("TWILIO_ACCOUNT_SID")
+            and os.environ.get("TWILIO_AUTH_TOKEN")
+            and os.environ.get("TWILIO_WHATSAPP_FROM")
+        )
+        if twilio_configured:
+            def _send_replenish_whatsapp_in_background(to_number, serial):
+                # Same rationale as the registration/WhatsApp background
+                # threads elsewhere in this file: runs detached so a slow
+                # or unreachable Twilio API call can never delay this
+                # endpoint's response to the machine.
+                try:
+                    whatsapp_sender.send_balance_replenished_whatsapp(
+                        to_number=to_number,
+                        machine_serial=serial,
+                    )
+                except Exception:
+                    logger.exception("failed to send balance-replenished whatsapp notification for %s", serial)
+
+            threading.Thread(
+                target=_send_replenish_whatsapp_in_background,
+                args=(owner_whatsapp_to, machine.serial),
+                daemon=True,
+            ).start()
+    return {"ok": True}
 
 
 @app.post("/v1/api/ver01/app_upgrade")

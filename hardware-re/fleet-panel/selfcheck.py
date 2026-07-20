@@ -690,6 +690,55 @@ check("the machine is still created as pending even when the whatsapp send fails
 whatsapp_sender.send_whatsapp_message = real_send_whatsapp_message
 
 
+# --- main.py: POST /api/machines/{serial}/cut ---
+resp = client.post(
+    "/api/machines/CUT-API-TEST-001/cut",
+    headers={"X-Api-Key": os.environ["CHECKIN_API_KEY"]},
+)
+check("cut endpoint returns 200", resp.status_code, 200)
+check("cut endpoint response is {'ok': True}", resp.json(), {"ok": True})
+
+cut_api_row = session.query(models.Machine).filter_by(serial="CUT-API-TEST-001").one()
+check("cut endpoint created the machine with the right starting balance", cut_api_row.cut_balance, 1999)
+
+resp = client.post(
+    "/api/machines/CUT-API-TEST-001/cut",
+    headers={"X-Api-Key": "wrong-key"},
+)
+check("cut endpoint rejects a wrong API key", resp.status_code, 401)
+
+# --- main.py: cut endpoint triggers the whatsapp replenish notification at the boundary ---
+cut_api_row.cut_balance = 1
+session.commit()
+
+wa_replenish_calls = []
+
+
+def fake_send_whatsapp_message_for_cut_endpoint(to, body):
+    wa_replenish_calls.append((to, body))
+
+
+real_send_whatsapp_message_3 = whatsapp_sender.send_whatsapp_message
+whatsapp_sender.send_whatsapp_message = fake_send_whatsapp_message_for_cut_endpoint
+
+resp = client.post(
+    "/api/machines/CUT-API-TEST-001/cut",
+    headers={"X-Api-Key": os.environ["CHECKIN_API_KEY"]},
+)
+check("cut endpoint still returns 200 at the replenish boundary", resp.status_code, 200)
+session.refresh(cut_api_row)
+check("cut endpoint replenishes the balance to 2000 at the boundary", cut_api_row.cut_balance, 2000)
+check("cut endpoint triggers exactly one whatsapp send at the replenish boundary", len(wa_replenish_calls), 1)
+
+resp = client.post(
+    "/api/machines/CUT-API-TEST-001/cut",
+    headers={"X-Api-Key": os.environ["CHECKIN_API_KEY"]},
+)
+check("cut endpoint does not trigger another whatsapp send on a normal (non-boundary) decrement", len(wa_replenish_calls), 1)
+
+whatsapp_sender.send_whatsapp_message = real_send_whatsapp_message_3
+
+
 # --- main.py: POST /machines/{id}/block and /machines/{id}/unblock ---
 # REG-EMAIL-TEST-002 was created above via POST /api/machines/register,
 # which (per models.register_machine) always sets status="pending", never
