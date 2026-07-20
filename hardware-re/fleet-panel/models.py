@@ -46,6 +46,10 @@ class Machine(Base):
     contact_name = Column(String, nullable=True)
     status = Column(String, nullable=False, default="approved")
     approval_token = Column(String, unique=True, nullable=True)
+    # Usage counter, not a gate -- see docs/superpowers/specs/2026-07-17-cut-balance-design.md.
+    # Every machine starts at 2000 and is auto-replenished by 2000 whenever
+    # it would hit 0, so cutting itself is never blocked by this value.
+    cut_balance = Column(Integer, nullable=False, default=2000)
 
 
 class DragxRelease(Base):
@@ -255,3 +259,31 @@ def list_registered_machines(session):
         .order_by(Machine.last_seen_at.desc())
         .all()
     )
+
+
+def report_cut(session, serial):
+    """Records one real cut for the given machine's cut-balance counter.
+    Upserts the machine (same first-contact pattern as checkin_machine) if
+    it doesn't exist yet, decrements cut_balance by 1, and if that would
+    take the balance to 0 or below, replenishes it by adding 2000 to
+    whatever the non-positive value is (not resetting to exactly 2000) so
+    a rare double-decrement race never permanently loses a cut from the
+    count. Returns (machine, was_replenished)."""
+    now = datetime.datetime.now(datetime.timezone.utc)
+    machine = session.query(Machine).filter_by(serial=serial).one_or_none()
+    if machine is None:
+        machine = Machine(
+            serial=serial,
+            cut_balance=2000,
+            first_onboarded_at=now,
+            last_seen_at=now,
+            status="approved",
+        )
+        session.add(machine)
+    machine.cut_balance -= 1
+    was_replenished = False
+    if machine.cut_balance <= 0:
+        machine.cut_balance += 2000
+        was_replenished = True
+    session.commit()
+    return machine, was_replenished

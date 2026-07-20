@@ -273,6 +273,33 @@ check("block_machine returns None for an unknown id", models.block_machine(sessi
 check("unblock_machine returns None for an unknown id", models.unblock_machine(session, 999999), None)
 
 
+# --- models.py: report_cut ---
+cut_test_machine = models.add_machine_manual(session, serial="CUT-TEST-001", name="Cut Test Machine")
+check("a machine created via add_machine_manual starts with cut_balance=2000", cut_test_machine.cut_balance, 2000)
+
+reported, was_replenished = models.report_cut(session, "CUT-TEST-001")
+check("report_cut decrements cut_balance by 1", reported.cut_balance, 1999)
+check("report_cut does not replenish when balance is still positive", was_replenished, False)
+
+cut_test_machine.cut_balance = 1
+session.commit()
+boundary_reported, boundary_was_replenished = models.report_cut(session, "CUT-TEST-001")
+check("report_cut replenishes to 2000 when the decrement would hit 0", boundary_reported.cut_balance, 2000)
+check("report_cut reports was_replenished=True at the replenish boundary", boundary_was_replenished, True)
+
+cut_test_machine.cut_balance = -5
+session.commit()
+negative_reported, negative_was_replenished = models.report_cut(session, "CUT-TEST-001")
+check("report_cut adds 2000 to a negative balance rather than resetting to exactly 2000",
+      negative_reported.cut_balance, 1994)
+check("report_cut reports was_replenished=True even from a negative balance", negative_was_replenished, True)
+
+new_machine_cut, new_machine_was_replenished = models.report_cut(session, "CUT-NEW-MACHINE-001")
+check("report_cut creates a new machine if the serial is unknown", new_machine_cut.serial, "CUT-NEW-MACHINE-001")
+check("report_cut on a brand-new machine starts at 2000 then decrements to 1999", new_machine_cut.cut_balance, 1999)
+check("report_cut does not replenish a brand-new machine's first cut", new_machine_was_replenished, False)
+
+
 # --- main.py: /api/machines/checkin ---
 resp = client.post("/api/machines/checkin", json={"serial": "API-001", "dragx_version": "V7.0.3.005"})
 check("POST /api/machines/checkin without API key returns 401", resp.status_code, 401)
