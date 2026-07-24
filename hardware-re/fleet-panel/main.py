@@ -33,6 +33,7 @@ from models import (
     get_machine_by_token,
     get_machine_status,
     list_machines,
+    list_pending_machines,
     list_registered_machines,
     register_machine,
     rename_machine,
@@ -195,6 +196,21 @@ def machines_unblock(machine_id: int, db_session: Session = Depends(get_db), _: 
 def machines_em_uso(request: Request, db_session: Session = Depends(get_db), _: None = Depends(require_login)):
     machines = list_registered_machines(db_session)
     return templates.TemplateResponse(request, "machines_em_uso.html", {"machines": machines})
+
+
+@app.get("/machines/pending", response_class=HTMLResponse)
+def machines_pending(request: Request, db_session: Session = Depends(get_db), _: None = Depends(require_login)):
+    machines = list_pending_machines(db_session)
+    return templates.TemplateResponse(request, "pending_approvals.html", {"machines": machines})
+
+
+@app.post("/machines/pending/{approval_token}/approve")
+def machines_pending_approve(approval_token: str, db_session: Session = Depends(get_db), _: None = Depends(require_login)):
+    # Reuses the exact same model function the public /approve/{token}
+    # magic-link handler calls -- approving here and approving via the
+    # email/WhatsApp link are equivalent and idempotent with each other.
+    approve_machine_by_token(db_session, approval_token)
+    return RedirectResponse("/machines/pending", status_code=303)
 
 
 @app.get("/machines/add", response_class=HTMLResponse)
