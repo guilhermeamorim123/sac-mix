@@ -273,6 +273,13 @@ def list_registered_machines(session):
     )
 
 
+def list_pending_machines(session):
+    """Returns every machine currently awaiting approval (status ==
+    "pending"), ordered most-recently-seen first, for the dedicated
+    /machines/pending panel page."""
+    return session.query(Machine).filter_by(status="pending").order_by(Machine.last_seen_at.desc()).all()
+
+
 def report_cut(session, serial):
     """Records one real cut for the given machine's cut-balance counter.
     Upserts the machine (same first-contact pattern as checkin_machine) if
