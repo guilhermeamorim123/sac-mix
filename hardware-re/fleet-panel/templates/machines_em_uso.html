@@ -27,7 +27,13 @@
       <td>{{ m.contact_name }}</td>
       <td>{{ m.phone }}</td>
       <td>{{ m.email }}</td>
-      <td>{{ m.cut_balance }}</td>
+      <td>
+        <form method="post" action="/machines/set-balance" class="balance-form">
+          <input type="hidden" name="serial" value="{{ m.serial }}">
+          <input type="number" name="balance" value="{{ m.cut_balance }}" min="0">
+          <button type="submit">Salvar</button>
+        </form>
+      </td>
       <td>{{ m.last_seen_at }}</td>
     </tr>
     {% else %}
