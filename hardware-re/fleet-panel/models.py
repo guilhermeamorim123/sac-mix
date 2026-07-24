@@ -125,6 +125,18 @@ def rename_machine(session, serial, new_name):
     return machine
 
 
+def set_cut_balance(session, serial, new_balance):
+    """Sets a machine's cut_balance to an exact value (overwrite, not an
+    increment). Returns the Machine row, or None if no machine with this
+    serial exists -- harmless no-op, same convention as rename_machine."""
+    machine = session.query(Machine).filter_by(serial=serial).one_or_none()
+    if machine is None:
+        return None
+    machine.cut_balance = new_balance
+    session.commit()
+    return machine
+
+
 def list_machines(session):
     """Returns all machines, most-recently-seen first."""
     return session.query(Machine).order_by(Machine.last_seen_at.desc()).all()
