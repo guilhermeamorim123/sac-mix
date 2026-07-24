@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}Aprovações pendentes - Painel DragX{% endblock %}
+{% block content %}
+<h1>Aprovações pendentes</h1>
+<div class="table-scroll">
+<table class="machines-table">
+  <thead>
+    <tr>
+      <th>Serial</th>
+      <th>Empresa</th>
+      <th>Contato</th>
+      <th>Telefone</th>
+      <th>Email</th>
+      <th>Cadastrado em</th>
+      <th>Ação</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for m in machines %}
+    <tr>
+      <td>{{ m.serial }}</td>
+      <td>{{ m.company_name or '-' }}</td>
+      <td>{{ m.contact_name or '-' }}</td>
+      <td>{{ m.phone or '-' }}</td>
+      <td>{{ m.email or '-' }}</td>
+      <td>{{ m.first_onboarded_at }}</td>
+      <td>
+        <form method="post" action="/machines/pending/{{ m.approval_token }}/approve">
+          <button type="submit">Aprovar</button>
+        </form>
+      </td>
+    </tr>
+    {% else %}
+    <tr><td colspan="7">Nenhuma aprovação pendente no momento.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endblock %}
