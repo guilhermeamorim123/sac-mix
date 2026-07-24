@@ -37,6 +37,7 @@ from models import (
     register_machine,
     rename_machine,
     report_cut,
+    set_cut_balance,
     unblock_machine,
 )
 
@@ -159,6 +160,21 @@ def machines_rename(
     # just rendered from a real row on the dashboard.
     rename_machine(db_session, serial, name)
     return RedirectResponse("/machines", status_code=303)
+
+
+@app.post("/machines/set-balance")
+def machines_set_balance(
+    serial: str = Form(...),
+    balance: int = Form(..., ge=0),
+    db_session: Session = Depends(get_db),
+    _: None = Depends(require_login),
+):
+    # set_cut_balance returns None if serial doesn't exist -- a harmless
+    # no-op by design, same reasoning as machines_rename's handling above.
+    # balance's ge=0 constraint rejects negative values with a 422 before
+    # this function body even runs.
+    set_cut_balance(db_session, serial, balance)
+    return RedirectResponse("/machines/em-uso", status_code=303)
 
 
 @app.post("/machines/{machine_id}/block")
