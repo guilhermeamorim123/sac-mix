@@ -52,6 +52,35 @@ class Machine(Base):
     cut_balance = Column(Integer, nullable=False, default=2000)
 
 
+class DeviaMachine(Base):
+    __tablename__ = "devia_machines"
+
+    # A completely separate table from `machines` (CUTTER_E326 fleet) --
+    # different hardware family, different identifier shape (Bluetooth MAC
+    # address, not a vendor serial number), different backend (no
+    # cutter.skycut.cn account/balance system involved at all). Sharing this
+    # panel's login/hosting/approval UX pattern is intentional; sharing rows
+    # with `machines` is not, and must never happen (e.g. never write a
+    # DeviaMachine's bluetooth_address into Machine.serial or vice versa).
+    id = Column(Integer, primary_key=True)
+    bluetooth_address = Column(String, unique=True, nullable=False)
+    device_name = Column(String, nullable=True)
+    first_onboarded_at = Column(DateTime(timezone=True), nullable=False)
+    last_seen_at = Column(DateTime(timezone=True), nullable=False)
+    app_version = Column(String, nullable=True)
+    phone = Column(String, nullable=True)
+    company_name = Column(String, nullable=True)
+    email = Column(String, nullable=True)
+    contact_name = Column(String, nullable=True)
+    # Unlike Machine.status (defaults to "approved" for a pre-existing
+    # trusted fleet onboarded before registration existed), this defaults to
+    # "pending" -- there is no legacy Devia fleet, every row is created by
+    # register_devia_machine and must be explicitly approved before the app
+    # unlocks cutting on that specific paired machine.
+    status = Column(String, nullable=False, default="pending")
+    approval_token = Column(String, unique=True, nullable=True)
+
+
 class DragxRelease(Base):
     __tablename__ = "dragx_release"
 
@@ -63,6 +92,18 @@ class DragxRelease(Base):
     version_name = Column(String, nullable=False)
     download_url = Column(String, nullable=False)
     file_md5 = Column(String, nullable=False)
+    published_at = Column(DateTime(timezone=True), nullable=False)
+
+
+class DragxCatalog(Base):
+    __tablename__ = "dragx_catalog"
+
+    # Single-row table (id is always 1), same convention as DragxRelease --
+    # only "what's current right now" matters, no history. See
+    # docs/superpowers/specs/2026-07-30-dragx-mobile-catalog-autoupdate-design.md.
+    id = Column(Integer, primary_key=True)
+    version = Column(Integer, nullable=False)
+    url = Column(String, nullable=False)
     published_at = Column(DateTime(timezone=True), nullable=False)
 
 
@@ -170,6 +211,27 @@ def set_latest_release(session, version_code, version_name, download_url, file_m
         release.published_at = now
     session.commit()
     return release
+
+
+def get_latest_catalog(session):
+    """Returns the single DragxCatalog row, or None if nothing has been
+    published yet."""
+    return session.query(DragxCatalog).filter_by(id=1).one_or_none()
+
+
+def set_latest_catalog(session, version, url):
+    """Upserts the single DragxCatalog row (always id=1). Returns the row."""
+    now = datetime.datetime.now(datetime.timezone.utc)
+    catalog = session.query(DragxCatalog).filter_by(id=1).one_or_none()
+    if catalog is None:
+        catalog = DragxCatalog(id=1, version=version, url=url, published_at=now)
+        session.add(catalog)
+    else:
+        catalog.version = version
+        catalog.url = url
+        catalog.published_at = now
+    session.commit()
+    return catalog
 
 
 def register_machine(session, serial, phone, company_name, email, contact_name):
@@ -306,3 +368,96 @@ def report_cut(session, serial):
         was_replenished = True
     session.commit()
     return machine, was_replenished
+
+
+def register_devia_machine(session, bluetooth_address, device_name, phone, company_name, email, contact_name):
+    """Upserts a Devia machine's registration/contact fields, always setting
+    status="pending" and generating a FRESH approval_token (same rationale
+    as register_machine: an old, possibly-already-sent token must not
+    silently keep working once new contact details are submitted).
+    Returns the DeviaMachine row."""
+    now = datetime.datetime.now(datetime.timezone.utc)
+    machine = session.query(DeviaMachine).filter_by(bluetooth_address=bluetooth_address).one_or_none()
+    token = secrets.token_urlsafe(32)
+    if machine is None:
+        machine = DeviaMachine(
+            bluetooth_address=bluetooth_address,
+            device_name=device_name,
+            phone=phone,
+            company_name=company_name,
+            email=email,
+            contact_name=contact_name,
+            status="pending",
+            approval_token=token,
+            first_onboarded_at=now,
+            last_seen_at=now,
+        )
+        session.add(machine)
+    else:
+        machine.device_name = device_name
+        machine.phone = phone
+        machine.company_name = company_name
+        machine.email = email
+        machine.contact_name = contact_name
+        machine.status = "pending"
+        machine.approval_token = token
+        machine.last_seen_at = now
+    session.commit()
+    return machine
+
+
+def get_devia_machine_status(session, bluetooth_address):
+    """Returns the Devia machine's current status string, or None if no
+    machine with this bluetooth_address exists (i.e. it was never
+    registered)."""
+    machine = session.query(DeviaMachine).filter_by(bluetooth_address=bluetooth_address).one_or_none()
+    return machine.status if machine else None
+
+
+def get_devia_machine_by_token(session, approval_token):
+    """Read-only lookup by approval_token -- same no-side-effects rationale
+    as get_machine_by_token (safe for automated link-preview fetches)."""
+    return session.query(DeviaMachine).filter_by(approval_token=approval_token).one_or_none()
+
+
+def approve_devia_machine_by_token(session, approval_token):
+    """Looks up a Devia machine by its approval_token and sets
+    status="approved". Returns (machine, was_already_approved) on success,
+    or None if no machine has this token. Idempotent, same as
+    approve_machine_by_token."""
+    machine = session.query(DeviaMachine).filter_by(approval_token=approval_token).one_or_none()
+    if machine is None:
+        return None
+    was_already_approved = machine.status == "approved"
+    machine.status = "approved"
+    session.commit()
+    return machine, was_already_approved
+
+
+def list_pending_devia_machines(session):
+    """Returns every Devia machine currently awaiting approval, most-
+    recently-seen first, for the dedicated /devia/machines/pending panel
+    page."""
+    return (
+        session.query(DeviaMachine)
+        .filter_by(status="pending")
+        .order_by(DeviaMachine.last_seen_at.desc())
+        .all()
+    )
+
+
+def checkin_devia_machine(session, bluetooth_address, app_version):
+    """Updates last_seen_at/app_version for an ALREADY-REGISTERED Devia
+    machine. Deliberately does NOT upsert/auto-create a row for an unknown
+    bluetooth_address (unlike checkin_machine, which does) -- there is no
+    pre-existing trusted Devia fleet to grandfather in, so a check-in from
+    a machine that never went through register_devia_machine is treated as
+    an error by the caller, not silently approved. Returns the DeviaMachine
+    row, or None if no machine with this bluetooth_address exists."""
+    machine = session.query(DeviaMachine).filter_by(bluetooth_address=bluetooth_address).one_or_none()
+    if machine is None:
+        return None
+    machine.last_seen_at = datetime.datetime.now(datetime.timezone.utc)
+    machine.app_version = app_version
+    session.commit()
+    return machine
