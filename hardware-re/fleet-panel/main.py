@@ -26,15 +26,22 @@ from auth import verify_login
 from db import get_engine, get_session_factory
 from models import (
     add_machine_manual,
+    approve_devia_machine_by_token,
     approve_machine_by_token,
     block_machine,
+    checkin_devia_machine,
     checkin_machine,
+    get_devia_machine_by_token,
+    get_devia_machine_status,
+    get_latest_catalog,
     get_latest_release,
     get_machine_by_token,
     get_machine_status,
     list_machines,
+    list_pending_devia_machines,
     list_pending_machines,
     list_registered_machines,
+    register_devia_machine,
     register_machine,
     rename_machine,
     report_cut,
@@ -213,6 +220,18 @@ def machines_pending_approve(approval_token: str, db_session: Session = Depends(
     return RedirectResponse("/machines/pending", status_code=303)
 
 
+@app.get("/devia/machines/pending", response_class=HTMLResponse)
+def devia_machines_pending(request: Request, db_session: Session = Depends(get_db), _: None = Depends(require_login)):
+    machines = list_pending_devia_machines(db_session)
+    return templates.TemplateResponse(request, "pending_approvals_devia.html", {"machines": machines})
+
+
+@app.post("/devia/machines/pending/{approval_token}/approve")
+def devia_machines_pending_approve(approval_token: str, db_session: Session = Depends(get_db), _: None = Depends(require_login)):
+    approve_devia_machine_by_token(db_session, approval_token)
+    return RedirectResponse("/devia/machines/pending", status_code=303)
+
+
 @app.get("/machines/add", response_class=HTMLResponse)
 def add_machine_form(request: Request, _: None = Depends(require_login)):
     return templates.TemplateResponse(request, "add_machine.html", {})
@@ -375,6 +394,121 @@ def api_machine_status(serial: str, db_session: Session = Depends(get_db), x_api
     return {"status": status}
 
 
+class DeviaRegisterPayload(BaseModel):
+    bluetooth_address: str
+    device_name: str | None = None
+    phone: str
+    company_name: str
+    email: str
+    contact_name: str
+
+
+@app.post("/api/devia/machines/register")
+def api_devia_register(payload: DeviaRegisterPayload, request: Request, db_session: Session = Depends(get_db), x_api_key: str = Header(None)):
+    expected_key = os.environ.get("CHECKIN_API_KEY")
+    if not expected_key or not hmac.compare_digest(x_api_key or "", expected_key):
+        raise HTTPException(status_code=401, detail="chave de API inválida ou ausente")
+    machine = register_devia_machine(
+        db_session,
+        bluetooth_address=payload.bluetooth_address,
+        device_name=payload.device_name,
+        phone=payload.phone,
+        company_name=payload.company_name,
+        email=payload.email,
+        contact_name=payload.contact_name,
+    )
+    customer_fields = {
+        "phone": payload.phone,
+        "company_name": payload.company_name,
+        "email": payload.email,
+        "contact_name": payload.contact_name,
+    }
+    panel_base_url = str(request.base_url).rstrip("/")
+
+    owner_email = os.environ.get("OWNER_EMAIL")
+    if owner_email:
+        def _send_email_in_background(bluetooth_address, customer_fields, approval_token, panel_base_url):
+            # Same detached-thread rationale as _send_email_in_background
+            # in api_register above -- a slow/hung SMTP call must never
+            # delay or block this registration response.
+            try:
+                email_sender.send_devia_approval_email(
+                    to_address=owner_email,
+                    bluetooth_address=bluetooth_address,
+                    customer_fields=customer_fields,
+                    approval_token=approval_token,
+                    panel_base_url=panel_base_url,
+                )
+            except Exception:
+                logger.exception("failed to send devia registration approval email for %s", bluetooth_address)
+
+        threading.Thread(
+            target=_send_email_in_background,
+            args=(machine.bluetooth_address, customer_fields, machine.approval_token, panel_base_url),
+            daemon=True,
+        ).start()
+
+    owner_whatsapp_to = os.environ.get("OWNER_WHATSAPP_TO")
+    twilio_configured = bool(
+        owner_whatsapp_to
+        and os.environ.get("TWILIO_ACCOUNT_SID")
+        and os.environ.get("TWILIO_AUTH_TOKEN")
+        and os.environ.get("TWILIO_WHATSAPP_FROM")
+    )
+    if twilio_configured:
+        def _send_whatsapp_in_background(to_number, bluetooth_address, customer_fields, approval_token, panel_base_url):
+            try:
+                whatsapp_sender.send_devia_registration_whatsapp(
+                    to_number=to_number,
+                    bluetooth_address=bluetooth_address,
+                    customer_fields=customer_fields,
+                    approval_token=approval_token,
+                    panel_base_url=panel_base_url,
+                )
+            except Exception:
+                logger.exception("failed to send devia registration whatsapp notification for %s", bluetooth_address)
+
+        threading.Thread(
+            target=_send_whatsapp_in_background,
+            args=(owner_whatsapp_to, machine.bluetooth_address, customer_fields, machine.approval_token, panel_base_url),
+            daemon=True,
+        ).start()
+
+    return {"ok": True}
+
+
+@app.get("/api/devia/machines/{bluetooth_address}/status")
+def api_devia_machine_status(bluetooth_address: str, db_session: Session = Depends(get_db), x_api_key: str = Header(None)):
+    expected_key = os.environ.get("CHECKIN_API_KEY")
+    if not expected_key or not hmac.compare_digest(x_api_key or "", expected_key):
+        raise HTTPException(status_code=401, detail="chave de API inválida ou ausente")
+    status = get_devia_machine_status(db_session, bluetooth_address)
+    if status is None:
+        raise HTTPException(status_code=404, detail="máquina não encontrada")
+    return {"status": status}
+
+
+class DeviaCheckinPayload(BaseModel):
+    bluetooth_address: str
+    app_version: str | None = None
+
+
+@app.post("/api/devia/machines/checkin")
+def api_devia_checkin(payload: DeviaCheckinPayload, db_session: Session = Depends(get_db), x_api_key: str = Header(None)):
+    expected_key = os.environ.get("CHECKIN_API_KEY")
+    if not expected_key or not hmac.compare_digest(x_api_key or "", expected_key):
+        raise HTTPException(status_code=401, detail="chave de API inválida ou ausente")
+    if not payload.bluetooth_address:
+        raise HTTPException(status_code=400, detail="'bluetooth_address' é obrigatório")
+    machine = checkin_devia_machine(db_session, payload.bluetooth_address, payload.app_version)
+    if machine is None:
+        # Deliberately NOT an upsert -- see checkin_devia_machine's
+        # docstring. The app must register (and be approved) before its
+        # routine check-ins are accepted.
+        raise HTTPException(status_code=404, detail="máquina não registrada")
+    return {"ok": True}
+
+
 @app.get("/approve/{approval_token}", response_class=HTMLResponse)
 def approve_machine_confirm(approval_token: str, request: Request, db_session: Session = Depends(get_db)):
     # Deliberately read-only: messaging apps (WhatsApp, email clients) often
@@ -410,6 +544,41 @@ def approve_machine(approval_token: str, request: Request, db_session: Session =
         request,
         "approve.html",
         {"result": "already_approved" if was_already_approved else "approved", "serial": machine.serial},
+    )
+
+
+@app.get("/devia/approve/{approval_token}", response_class=HTMLResponse)
+def approve_devia_machine_confirm(approval_token: str, request: Request, db_session: Session = Depends(get_db)):
+    # Same read-only-GET rationale as approve_machine_confirm above.
+    machine = get_devia_machine_by_token(db_session, approval_token)
+    if machine is None:
+        return templates.TemplateResponse(request, "approve_devia.html", {"result": "not_found", "bluetooth_address": None})
+    if machine.status == "approved":
+        return templates.TemplateResponse(request, "approve_devia.html", {"result": "already_approved", "bluetooth_address": machine.bluetooth_address})
+    return templates.TemplateResponse(
+        request,
+        "approve_devia.html",
+        {
+            "result": "confirm",
+            "bluetooth_address": machine.bluetooth_address,
+            "device_name": machine.device_name,
+            "company_name": machine.company_name,
+            "contact_name": machine.contact_name,
+            "approval_token": approval_token,
+        },
+    )
+
+
+@app.post("/devia/approve/{approval_token}", response_class=HTMLResponse)
+def approve_devia_machine(approval_token: str, request: Request, db_session: Session = Depends(get_db)):
+    result = approve_devia_machine_by_token(db_session, approval_token)
+    if result is None:
+        return templates.TemplateResponse(request, "approve_devia.html", {"result": "not_found", "bluetooth_address": None})
+    machine, was_already_approved = result
+    return templates.TemplateResponse(
+        request,
+        "approve_devia.html",
+        {"result": "already_approved" if was_already_approved else "approved", "bluetooth_address": machine.bluetooth_address},
     )
 
 
@@ -491,6 +660,17 @@ def dragx_app_upgrade(appVersion: str = Form("0"), db_session: Session = Depends
             "sysDt": 0,
         },
     }
+
+
+@app.get("/api/catalog/latest")
+def catalog_latest(db_session: Session = Depends(get_db)):
+    catalog = get_latest_catalog(db_session)
+    if catalog is None:
+        # No catalog published yet -- version 0 always compares as "not
+        # newer" against a fresh install's default local version (also 0),
+        # so the phone-side check never falsely offers an update.
+        return {"version": 0, "url": ""}
+    return {"version": catalog.version, "url": catalog.url}
 
 
 VENDOR_BASE_URL = "http://cutter.skycut.cn/v1"
