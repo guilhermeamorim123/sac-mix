@@ -117,6 +117,24 @@ all_releases = session.query(models.DragxRelease).all()
 check("set_latest_release never creates a second row", len(all_releases), 1)
 
 
+# --- DragxCatalog: get_latest_catalog / set_latest_catalog ---
+check("get_latest_catalog returns None before any publish", models.get_latest_catalog(session), None)
+
+catalog1 = models.set_latest_catalog(session, version=1, url="https://example.com/offFiles-v1.zip")
+check("set_latest_catalog sets version", catalog1.version, 1)
+check("set_latest_catalog sets url", catalog1.url, "https://example.com/offFiles-v1.zip")
+
+catalog2 = models.set_latest_catalog(session, version=2, url="https://example.com/offFiles-v2.zip")
+check("set_latest_catalog upserts (still id=1)", catalog2.id, 1)
+check("set_latest_catalog upserts version", catalog2.version, 2)
+
+fetched_catalog = models.get_latest_catalog(session)
+check("get_latest_catalog returns current version", fetched_catalog.version, 2)
+check("get_latest_catalog returns current url", fetched_catalog.url, "https://example.com/offFiles-v2.zip")
+all_catalogs = session.query(models.DragxCatalog).all()
+check("set_latest_catalog never creates a second row", len(all_catalogs), 1)
+
+
 # --- auth.py: hash_password / verify_password / verify_login ---
 import auth  # noqa: E402
 
@@ -464,6 +482,90 @@ resp = client.get(
     headers={"X-Api-Key": os.environ["CHECKIN_API_KEY"]},
 )
 check("status endpoint returns 404 for an unknown serial", resp.status_code, 404)
+
+
+# --- main.py: POST /api/devia/machines/register ---
+resp = client.post(
+    "/api/devia/machines/register",
+    json={
+        "bluetooth_address": "00:15:A6:01:0E:1D",
+        "device_name": "CUTTER_FBFC",
+        "phone": "+55 11 90000-0009",
+        "company_name": "Devia Test Corp",
+        "email": "devia-owner@acme.example",
+        "contact_name": "Devia Jane",
+    },
+    headers={"X-Api-Key": os.environ["CHECKIN_API_KEY"]},
+)
+check("devia register endpoint returns 200", resp.status_code, 200)
+check("devia register endpoint response is {'ok': True}", resp.json(), {"ok": True})
+
+devia_registered_row = session.query(models.DeviaMachine).filter_by(bluetooth_address="00:15:A6:01:0E:1D").one()
+check("devia register endpoint created a pending machine", devia_registered_row.status, "pending")
+check("devia register endpoint stored the device name", devia_registered_row.device_name, "CUTTER_FBFC")
+
+resp = client.post(
+    "/api/devia/machines/register",
+    json={
+        "bluetooth_address": "00:15:A6:01:0E:2D",
+        "phone": "+55 11 90000-0010",
+        "company_name": "No Key Corp",
+        "email": "nokey@acme.example",
+        "contact_name": "No Key",
+    },
+    headers={"X-Api-Key": "wrong-key"},
+)
+check("devia register endpoint rejects a wrong API key", resp.status_code, 401)
+
+# --- main.py: GET /api/devia/machines/{bluetooth_address}/status ---
+resp = client.get(
+    "/api/devia/machines/00:15:A6:01:0E:1D/status",
+    headers={"X-Api-Key": os.environ["CHECKIN_API_KEY"]},
+)
+check("devia status endpoint returns 200 for a registered machine", resp.status_code, 200)
+check("devia status endpoint reports pending for a freshly-registered machine", resp.json(), {"status": "pending"})
+
+resp = client.get(
+    "/api/devia/machines/DOES-NOT-EXIST/status",
+    headers={"X-Api-Key": os.environ["CHECKIN_API_KEY"]},
+)
+check("devia status endpoint returns 404 for an unknown address", resp.status_code, 404)
+
+# --- main.py: POST /api/devia/machines/checkin ---
+resp = client.post(
+    "/api/devia/machines/checkin",
+    json={"bluetooth_address": "00:15:A6:01:0E:1D", "app_version": "0.1"},
+    headers={"X-Api-Key": os.environ["CHECKIN_API_KEY"]},
+)
+check("devia checkin endpoint returns 200 for a registered machine", resp.status_code, 200)
+session.refresh(devia_registered_row)
+check("devia checkin endpoint stored app_version", devia_registered_row.app_version, "0.1")
+
+resp = client.post(
+    "/api/devia/machines/checkin",
+    json={"bluetooth_address": "NEVER-REGISTERED"},
+    headers={"X-Api-Key": os.environ["CHECKIN_API_KEY"]},
+)
+check("devia checkin endpoint returns 404 for an unregistered machine (no upsert)", resp.status_code, 404)
+
+# --- main.py: GET/POST /devia/approve/{approval_token} ---
+devia_token = devia_registered_row.approval_token
+
+resp = client.get(f"/devia/approve/{devia_token}")
+check("GET devia approve link returns 200 for a valid pending token", resp.status_code, 200)
+check_true("GET devia approve link shows a confirmation prompt, not an immediate approval",
+           "aprovar" in resp.text.lower())
+
+session.refresh(devia_registered_row)
+check("GET devia approve link does NOT approve the machine by itself", devia_registered_row.status, "pending")
+
+resp = client.post(f"/devia/approve/{devia_token}")
+check("POST devia approve link returns 200 for a valid pending token", resp.status_code, 200)
+session.refresh(devia_registered_row)
+check("POST devia approve link approves the machine", devia_registered_row.status, "approved")
+
+resp = client.get("/devia/approve/this-token-does-not-exist-at-all")
+check("GET an unknown devia approve token returns 200 with an informational page, not a 500", resp.status_code, 200)
 
 
 # --- main.py: GET /approve/{approval_token} (read-only confirmation) ---
