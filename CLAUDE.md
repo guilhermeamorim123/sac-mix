@@ -9,7 +9,18 @@ Markdown-based system for managing 1:1s, weeklys, project meetings, tasks, and t
 ## Your Setup
 
 <!-- cos-setup:start -->
-_Não configurado ainda. Rode `/cos-setup` para personalizar este segundo cérebro._
+**Owner:** Guilherme Figueredo
+**Role:** Estudante | Gestor de Anuncios | T.I. | Seller (empresa da familia)
+**Persona:** BIG FRIEND
+**Language:** pt-BR
+**Host:** Claude Code
+
+**Capabilities ativas:**
+- tasks: vault-only
+- comms: WhatsApp MCP (bridge local em `whatsapp-mcp/`)
+- calendar: vault-only
+- email: vault-only
+- docs: Google Drive (planilhas de vendas e anuncios) — conectar em claude.ai/connectors
 <!-- cos-setup:end -->
 
 ## Context
@@ -123,15 +134,32 @@ Note: at the time this template was authored, custom-named subagents on Claude C
 
 ## Local Setup
 
-Required environment variables in `~/.zshrc` (or equivalent shell rc):
+**On every new device, run these steps in order:**
 
-```bash
-# Enable forked subagents in Claude Code (v2.1.117+)
-# Subagents fork from main process for faster startup and shared MCP connections
-export CLAUDE_CODE_FORK_SUBAGENT=1
-```
+1. After Obsidian Sync delivers the vault, run once to copy `_claude/` → `.claude/`:
+   ```bash
+   python scripts/bootstrap_claude.py
+   ```
 
-After adding, restart Claude Code for changes to take effect. Agents are loaded at session start, so any skill changes referencing new loaders also require a restart.
+2. Build the wikilink index (required for the wikilink hook to resolve `[[links]]`):
+   ```bash
+   python scripts/seed_wikilink_index.py
+   ```
+
+3. Set the required environment variable:
+   - **macOS/Linux** — add to `~/.zshrc` or `~/.bashrc`:
+     ```bash
+     export CLAUDE_CODE_FORK_SUBAGENT=1
+     ```
+   - **Windows** — add to your PowerShell profile (`$PROFILE`) for persistence:
+     ```powershell
+     [System.Environment]::SetEnvironmentVariable("CLAUDE_CODE_FORK_SUBAGENT","1","User")
+     ```
+     Or set it temporarily per session: `$env:CLAUDE_CODE_FORK_SUBAGENT = "1"`
+
+4. Restart Claude Code. Agents and skills are loaded at session start — restart is required after any skill or settings changes.
+
+See `docs/reference/scripts.md` for full script reference (including `transcrever_audio.py` for meeting audio transcription). See `docs/reference/hooks.md` for hook configuration and troubleshooting.
 
 ## Wikilink & Tag Management Hook
 
@@ -171,7 +199,7 @@ Claude operates as a **thought partner**, not a report generator. Every major wo
 
 ## Workflows
 
-All workflow instructions live in their respective SKILL.md files (`.claude/skills/cos-*/SKILL.md`). The `workflows/` folder has been removed — skills are the single source of truth.
+All workflow instructions live in their respective SKILL.md files (`.claude/skills/cos-*/SKILL.md`). Skills are the single source of truth.
 
 | Workflow                  | Trigger                                                 | Skill                       |
 | ------------------------- | ------------------------------------------------------- | --------------------------- |
@@ -186,10 +214,11 @@ All workflow instructions live in their respective SKILL.md files (`.claude/skil
 | Session Sync              | End of session or `/cos-session-sync`                   | `cos-session-sync`          |
 | Daily Brief & Day Planner | "Quero planejar meu dia" or `/cos-daily-brief`          | `cos-daily-brief`           |
 | Inbox Process             | Items in `+Inbox/`                                      | `cos-inbox-process`         |
+| WhatsApp Digest           | "Ver minhas mensagens do WhatsApp" or `/cos-whatsapp-digest` | `cos-whatsapp-digest`  |
 | New Agent (any platform)  | "Quero criar um agente" or `/new-agent`                  | `new-agent`                 |
 | List Agents               | "Quais agentes eu já criei?" or `/list-agents`           | `list-agents`               |
 
-**Slash commands available**: `/cos-setup`, `/cos-prepare-1on1 <member>`, `/cos-prepare-weekly`, `/cos-process-1on1 <member>`, `/cos-process-weekly`, `/cos-process-meeting`, `/cos-context-maintenance`, `/cos-session-sync`, `/cos-daily-brief`, `/cos-inbox-process`, `/cos-project-management`, `/new-agent`, `/list-agents`
+**Slash commands available**: `/cos-setup`, `/cos-prepare-1on1 <member>`, `/cos-prepare-weekly`, `/cos-process-1on1 <member>`, `/cos-process-weekly`, `/cos-process-meeting`, `/cos-context-maintenance`, `/cos-session-sync`, `/cos-daily-brief`, `/cos-inbox-process`, `/cos-project-management`, `/cos-whatsapp-digest`, `/new-agent`, `/list-agents`
 
 ### Agent Factory subsystem
 

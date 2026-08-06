@@ -1,17 +1,17 @@
 ---
 type: config
 host: claude-code
-owner: "[[Owner Name]]"
-role: "—"
-cos_persona: "Chief of Staff"
+owner: "[[Guilherme Figueredo]]"
+role: "Estudante | Gestor de Anuncios | T.I. | Seller"
+cos_persona: "BIG FRIEND"
 team_size: 0
 language: "pt-BR"
 capabilities:
   tasks:    { mcp: "", enabled: false }
-  comms:    { mcp: "", enabled: false }
+  comms:    { mcp: "whatsapp", enabled: true }
   calendar: { mcp: "", enabled: false }
   email:    { mcp: "", enabled: false }
-  docs:     { mcp: "", enabled: false }
+  docs:     { mcp: "Google Drive", enabled: true }
 ---
 
 # CoS Config
@@ -42,16 +42,16 @@ Cada papel abaixo é uma necessidade do CoS. Ligue (`enabled: true`) e aponte (`
 > Para cada capability ligada, anote aqui o que o MCP precisa (IDs de lista, canais, workspace, timezone, filtros). É texto livre — as skills passam isto ao `cos-mcp-loader` como contexto.
 
 ### tasks
-_(ex: workspace/space, listas relevantes, quais status contam como "concluído")_
+vault-only - sem MCP configurado.
 
 ### comms
-_(ex: canais relevantes, seu handle/user id)_
+WhatsApp MCP — bridge local rodando em `whatsapp-mcp/whatsapp-bridge/`. MCP registrado em `.mcp.json` como `whatsapp`. Ferramentas disponíveis: list_chats, list_messages, send_message, search_contacts, get_direct_chat_by_contact.
 
 ### calendar
-_(ex: calendário primário, timezone)_
+vault-only - sem calendario digital configurado.
 
 ### email
-_(ex: filtros, remetentes relevantes)_
+vault-only - email nao e canal principal de trabalho por ora.
 
 ### docs
-_(ex: pastas/drives relevantes)_
+Google Drive - planilhas de vendas e anuncios da empresa da familia. Conectar em claude.ai/connectors com a conta Google do usuario.
