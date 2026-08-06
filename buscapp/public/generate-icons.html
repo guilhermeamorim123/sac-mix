@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>BUSCAPP — Gerador de Ícones</title>
+<style>
+  body { background: #0A0A0A; color: #fff; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; padding: 40px; gap: 32px; }
+  h1 { color: #22C55E; font-size: 24px; margin: 0; }
+  .row { display: flex; gap: 40px; align-items: flex-end; flex-wrap: wrap; justify-content: center; }
+  .card { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+  canvas { border-radius: 22%; border: 1px solid #2A2A2A; }
+  button { background: #22C55E; color: #000; font-weight: 700; border: none; border-radius: 8px; padding: 10px 24px; cursor: pointer; font-size: 14px; }
+  button:hover { background: #16A34A; }
+  p { color: #9CA3AF; font-size: 13px; margin: 0; text-align: center; max-width: 420px; }
+</style>
+</head>
+<body>
+<h1>BUSCAPP — Gerador de Ícones PWA</h1>
+<p>Clique nos botões para baixar os ícones. Salve os dois arquivos dentro de <code>buscapp/public/</code> substituindo os placeholders.</p>
+
+<div class="row">
+  <div class="card">
+    <canvas id="c192" width="192" height="192"></canvas>
+    <button onclick="download('c192','icon-192.png')">⬇ Baixar icon-192.png</button>
+  </div>
+  <div class="card">
+    <canvas id="c512" width="512" height="512"></canvas>
+    <button onclick="download('c512','icon-512.png')">⬇ Baixar icon-512.png</button>
+  </div>
+</div>
+
+<script>
+function drawIcon(canvas) {
+  const s = canvas.width
+  const ctx = canvas.getContext('2d')
+  const r = s * 0.18 // corner radius for rounded square
+
+  // Background — rounded square
+  ctx.fillStyle = '#0A0A0A'
+  ctx.beginPath()
+  ctx.roundRect(0, 0, s, s, r)
+  ctx.fill()
+
+  // Green glow ring
+  const grd = ctx.createRadialGradient(s/2, s/2, s*0.1, s/2, s/2, s*0.6)
+  grd.addColorStop(0, 'rgba(34,197,94,0.15)')
+  grd.addColorStop(1, 'rgba(34,197,94,0)')
+  ctx.fillStyle = grd
+  ctx.beginPath()
+  ctx.roundRect(0, 0, s, s, r)
+  ctx.fill()
+
+  // Letter B
+  const fontSize = s * 0.55
+  ctx.font = `900 ${fontSize}px Arial Black, Arial, sans-serif`
+  ctx.fillStyle = '#22C55E'
+  ctx.textAlign = 'center'
+  ctx.textBaseline = 'middle'
+  ctx.fillText('B', s * 0.46, s * 0.48)
+
+  // Magnifying glass circle (bottom-right of B)
+  const cx = s * 0.67
+  const cy = s * 0.64
+  const lensR = s * 0.13
+  const lw = s * 0.04
+
+  ctx.strokeStyle = '#22C55E'
+  ctx.lineWidth = lw
+  ctx.beginPath()
+  ctx.arc(cx, cy, lensR, 0, Math.PI * 2)
+  ctx.stroke()
+
+  // Handle
+  const angle = Math.PI / 4
+  ctx.beginPath()
+  ctx.moveTo(cx + Math.cos(angle) * (lensR + lw * 0.5), cy + Math.sin(angle) * (lensR + lw * 0.5))
+  ctx.lineTo(cx + Math.cos(angle) * (lensR + s * 0.11), cy + Math.sin(angle) * (lensR + s * 0.11))
+  ctx.stroke()
+}
+
+['c192','c512'].forEach(id => drawIcon(document.getElementById(id)))
+
+function download(id, filename) {
+  const a = document.createElement('a')
+  a.download = filename
+  a.href = document.getElementById(id).toDataURL('image/png')
+  a.click()
+}
+</script>
+</body>
+</html>
