@@ -19,3 +19,39 @@
 .obsidian/workspace.json
 .obsidian/workspace-mobile.json
 hardware-re/dragx-app/registration-build-scratch/
+
+# --- Secrets / credentials (NEVER commit) ---
+**/.env
+**/.env.local
+.claude/settings.local.json
+hardware-re/dragx-app/dragx-release.keystore
+
+# --- Local databases / runtime state ---
+hardware-re/fleet-panel/fleet_panel.db
+.claude/scheduled_tasks.lock
+scripts/*.log
+
+# --- Vendored external repo: has its own .git, clone separately ---
+whatsapp-mcp/
+
+# --- Stray Obsidian vault created by mistake ---
+/G/
+
+# --- Downloaded tool binaries (re-fetch from upstream releases) ---
+hardware-re/cutter-e326-bridge/frida-server
+hardware-re/cutter-e326-bridge/frida-server.xz
+
+# --- Android RE build artifacts (~5.5 GB, all regenerable from source) ---
+hardware-re/dragx-app/*.apk
+hardware-re/dragx-app/decoded*/
+hardware-re/dragx-app/verify-*/
+hardware-re/dragx-app/registration-build-scratch*/
+hardware-re/dragx-app/uninstaller-helper/
+hardware-re/dragx-app/uninstaller-helper-verify/
+hardware-re/dragx-app/apk-server/
+hardware-re/dragx-app/boot-partition-mod/
+hardware-re/dragx-app/extracted-libs/
+hardware-re/dragx-app/tools-bin/
+hardware-re/dragx-app/screen_*.png
+hardware-re/dragx-app/ui_dump.xml
+/screen_check*.png
