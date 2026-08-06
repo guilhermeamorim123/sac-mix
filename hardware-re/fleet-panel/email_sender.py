@@ -67,3 +67,23 @@ def send_approval_email(to_address, machine_serial, customer_fields, approval_to
         f"Para liberar essa máquina, clique no link abaixo:\n{approval_link}\n"
     )
     send_raw_email(to_address, subject, body)
+
+
+def send_devia_approval_email(to_address, bluetooth_address, customer_fields, approval_token, panel_base_url):
+    """Same as send_approval_email, but for a Devia/Skycut Bluetooth
+    machine (separate table, separate approval path -- see
+    models.DeviaMachine). customer_fields is a dict with phone/
+    company_name/email/contact_name, exactly as submitted through the
+    Devia registration endpoint."""
+    approval_link = f"{panel_base_url}/devia/approve/{approval_token}"
+    subject = f"Nova maquina Devia aguardando aprovacao: {bluetooth_address}"
+    body = (
+        f"Uma nova maquina Devia (Bluetooth) se registrou e esta aguardando sua aprovacao.\n\n"
+        f"Endereco Bluetooth: {bluetooth_address}\n"
+        f"Empresa: {customer_fields['company_name']}\n"
+        f"Contato: {customer_fields['contact_name']}\n"
+        f"Telefone: {customer_fields['phone']}\n"
+        f"Email: {customer_fields['email']}\n\n"
+        f"Para liberar essa maquina, clique no link abaixo:\n{approval_link}\n"
+    )
+    send_raw_email(to_address, subject, body)

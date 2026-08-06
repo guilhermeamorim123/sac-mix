@@ -60,6 +60,22 @@ def send_registration_whatsapp(to_number, machine_serial, customer_fields, appro
     send_whatsapp_message(to_number, body)
 
 
+def send_devia_registration_whatsapp(to_number, bluetooth_address, customer_fields, approval_token, panel_base_url):
+    """Same as send_registration_whatsapp, but for a Devia/Skycut Bluetooth
+    machine (separate table, separate approval path -- see
+    models.DeviaMachine)."""
+    approval_link = f"{panel_base_url}/devia/approve/{approval_token}"
+    body = (
+        f"Nova maquina Devia (Bluetooth) aguardando aprovacao: {bluetooth_address}\n\n"
+        f"Empresa: {customer_fields['company_name']}\n"
+        f"Contato: {customer_fields['contact_name']}\n"
+        f"Telefone: {customer_fields['phone']}\n"
+        f"Email: {customer_fields['email']}\n\n"
+        f"Para liberar essa maquina, acesse:\n{approval_link}"
+    )
+    send_whatsapp_message(to_number, body)
+
+
 def send_balance_replenished_whatsapp(to_number, machine_serial):
     """Sends the owner a WhatsApp notification when a machine's cut
     balance ran out and was automatically topped up to 2000 cuts."""

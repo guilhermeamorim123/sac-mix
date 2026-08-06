@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}Aprovação de máquina Devia - Painel DragX{% endblock %}
+{% block content %}
+<h1>Aprovação de máquina Devia</h1>
+{% if result == "confirm" %}
+  <p>Aprovar a máquina <strong>{{ bluetooth_address }}</strong> ({{ device_name or 'sem nome' }})?</p>
+  <p>Empresa: {{ company_name }}<br>Contato: {{ contact_name }}</p>
+  <form method="post" action="/devia/approve/{{ approval_token }}">
+    <button type="submit">Aprovar esta máquina</button>
+  </form>
+{% elif result == "approved" %}
+  <p>Máquina <strong>{{ bluetooth_address }}</strong> liberada com sucesso.</p>
+{% elif result == "already_approved" %}
+  <p>Máquina <strong>{{ bluetooth_address }}</strong> já estava liberada. Nenhuma ação necessária.</p>
+{% else %}
+  <p>Não encontramos nenhuma máquina com esse link de aprovação. Se você acha que isso é um erro, entre em contato com o suporte.</p>
+{% endif %}
+{% endblock %}

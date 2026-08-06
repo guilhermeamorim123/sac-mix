@@ -5,7 +5,7 @@
     android:background="#101014">
 
     <LinearLayout
-        android:id="@+id/form_layout"
+        android:id="@+id/set_home_prompt_layout"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_gravity="center"
@@ -13,6 +13,89 @@
         android:padding="32dp">
 
         <ImageView
+            android:id="@+id/set_home_logo"
+            android:layout_width="72dp"
+            android:layout_height="72dp"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginBottom="12dp"
+            android:src="@mipmap/ic_launcher"
+            android:contentDescription="DragX"/>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:layout_marginBottom="24dp"
+            android:text="Antes de continuar, selecione o DragX como aplicativo inicial (Home) desta máquina."
+            android:textColor="#FFFFFF"
+            android:textSize="18sp"/>
+
+        <Button
+            android:id="@+id/set_home_settings_button"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Abrir configurações de app inicial"/>
+
+        <Button
+            android:id="@+id/set_home_continue_button"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:text="Continuar"/>
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/wifi_prompt_layout"
+        android:visibility="gone"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:orientation="vertical"
+        android:padding="32dp">
+
+        <ImageView
+            android:id="@+id/wifi_logo"
+            android:layout_width="72dp"
+            android:layout_height="72dp"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginBottom="12dp"
+            android:src="@mipmap/ic_launcher"
+            android:contentDescription="DragX"/>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:layout_marginBottom="24dp"
+            android:text="Antes de continuar, conecte esta máquina ao WiFi do local."
+            android:textColor="#FFFFFF"
+            android:textSize="18sp"/>
+
+        <Button
+            android:id="@+id/wifi_settings_button"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Abrir configurações de WiFi"/>
+
+        <Button
+            android:id="@+id/wifi_continue_button"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:text="Continuar"/>
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/form_layout"
+        android:visibility="gone"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:orientation="vertical"
+        android:padding="32dp">
+
+        <ImageView
+            android:id="@+id/form_logo"
             android:layout_width="72dp"
             android:layout_height="72dp"
             android:layout_gravity="center_horizontal"
@@ -87,6 +170,7 @@
         android:visibility="gone">
 
         <ImageView
+            android:id="@+id/waiting_logo"
             android:layout_width="72dp"
             android:layout_height="72dp"
             android:layout_gravity="center_horizontal"

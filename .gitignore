@@ -55,3 +55,9 @@ hardware-re/dragx-app/tools-bin/
 hardware-re/dragx-app/screen_*.png
 hardware-re/dragx-app/ui_dump.xml
 /screen_check*.png
+
+# --- Build outputs with the real CHECKIN_API_KEY substituted into them.
+#     Source keeps the __CHECKIN_API_KEY__ placeholder; these do not. ---
+hardware-re/devia-mobile-app/build_src/
+hardware-re/devia-mobile-app/proj/build/
+hardware-re/devia-mobile-app/proj/*.dex
