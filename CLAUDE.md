@@ -134,6 +134,23 @@ Note: at the time this template was authored, custom-named subagents on Claude C
 
 ## Local Setup
 
+**Transport between devices is git**, not OneDrive. The remote is `github.com/guilhermeamorim123/sac-mix`. Clone outside any cloud-synced folder — OneDrive/Dropbox duplicate files on conflict instead of merging them, which corrupts the vault when two machines write to it.
+
+Two things deliberately do **not** travel through git and must be recreated per device:
+- `.claude/settings.local.json` — holds machine-specific paths and API tokens
+- `whatsapp-mcp/` — carries its own `.git`; clone it from upstream (`verygoodplugins/whatsapp-mcp`)
+
+Run `/cos-sync` at the start and at the end of every session on every machine. Skipping it is what produces merge conflicts.
+
+### macOS
+
+One command does everything below:
+```bash
+bash scripts/setup_mac.sh
+```
+
+### Windows / manual
+
 **On every new device, run these steps in order:**
 
 1. After Obsidian Sync delivers the vault, run once to copy `_claude/` → `.claude/`:

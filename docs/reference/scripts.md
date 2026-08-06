@@ -8,6 +8,7 @@
 
 | Script | Type | Trigger | Purpose |
 |--------|------|---------|---------|
+| `setup_mac.sh` | Manual (once per macOS device) | User runs after cloning | Full macOS onboarding — wraps the two scripts below plus env var, whatsapp-mcp clone and secret protection |
 | `bootstrap_claude.py` | Manual (once per device) | User runs on new device | Copy `_claude/` → `.claude/` for first-time setup |
 | `sync_claude_config.py` | Hook (automatic) | `UserPromptSubmit` | Keep `.claude/` ↔ `_claude/` in sync across devices |
 | `wikilink_hook.py` | Hook (automatic) | `PostToolUse` (Write/Edit) | Validate wikilinks and tags in vault `.md` files |
@@ -17,6 +18,29 @@
 ---
 
 ## Manual Scripts
+
+### `setup_mac.sh`
+
+**What:** One-shot onboarding of the vault on a fresh macOS machine. Idempotent — safe to re-run.
+
+**Usage:**
+```bash
+git clone https://github.com/guilhermeamorim123/sac-mix.git ~/"Chief of Staff"
+cd ~/"Chief of Staff"
+bash scripts/setup_mac.sh
+```
+
+**Behavior:**
+1. Verifies `git`, `python3`, `uv`, `go`, `node` and `claude` are installed — exits with install instructions if any are missing
+2. Runs `bootstrap_claude.py` and `seed_wikilink_index.py`
+3. Clones `whatsapp-mcp` from upstream (it is gitignored here because it carries its own `.git`)
+4. Appends `**/.claude/settings.local.json` to `~/.config/git/ignore` so the token file cannot be committed
+5. Appends `export CLAUDE_CODE_FORK_SUBAGENT=1` to `~/.zshrc`
+6. Prints the remaining manual steps: WhatsApp QR pairing, `buscapp/.env.local`, Claude Code login
+
+**Dependencies:** bash (macOS default). Does not install anything itself.
+
+---
 
 ### `bootstrap_claude.py`
 
