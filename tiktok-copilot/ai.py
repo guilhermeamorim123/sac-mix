@@ -17,7 +17,8 @@ import logging
 
 import anthropic
 
-from catalog import as_prompt_block
+from catalog import Catalog
+from config import Settings
 from models import Analysis, ChatMessage
 
 log = logging.getLogger(__name__)
@@ -95,14 +96,29 @@ _SCHEMA = {
 
 
 class Classifier:
-    def __init__(self, api_key: str, model: str, produtos: list[dict], frete: dict):
+    def __init__(self, api_key: str, model: str, catalogo: Catalog, settings: Settings):
         self._client = anthropic.AsyncAnthropic(api_key=api_key)
         self._model = model
+        self._system: list[dict] = []
+        self.recarregar(catalogo, settings)
+
+    def recarregar(self, catalogo: Catalog, settings: Settings) -> None:
+        """Reconstroi o system prompt.
+
+        Chamado quando o lojista mexe no catalogo ou no tom de voz pelo painel
+        no meio da live. Custa um cache-miss na proxima rajada -- barato perto
+        de responder com preco velho.
+        """
+        contexto = catalogo.as_prompt_block()
+        extra = settings.prompt_extra()
+        if extra:
+            contexto += f"\n\n{extra}"
+
         self._system = [
             {"type": "text", "text": INSTRUCOES},
             {
                 "type": "text",
-                "text": as_prompt_block(produtos, frete),
+                "text": contexto,
                 # Breakpoint do cache: tudo acima e estavel durante a live.
                 "cache_control": {"type": "ephemeral"},
             },

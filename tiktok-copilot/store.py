@@ -8,12 +8,15 @@ O agente nao sabe qual esta ativo -- so conhece a interface `Store`.
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import logging
 import sqlite3
 from abc import ABC, abstractmethod
 from pathlib import Path
 from uuid import uuid4
 
+from catalog import Catalog
+from config import Settings
 from models import Analysis, ChatMessage, now
 
 log = logging.getLogger(__name__)
@@ -24,7 +27,8 @@ class Store(ABC):
     async def init(self) -> None: ...
 
     @abstractmethod
-    async def save(self, msg: ChatMessage, analysis: Analysis) -> None: ...
+    async def save(self, msg: ChatMessage, analysis: Analysis,
+                   live_id: str | None = None) -> None: ...
 
     @abstractmethod
     async def mark_replied(self, message_id: str, reply: str, source: str) -> None: ...
@@ -34,11 +38,19 @@ class Store(ABC):
         """Comandos que o painel enfileirou (ex: enviar uma resposta aprovada)."""
 
     @abstractmethod
-    async def ack_command(self, command_id: str) -> None: ...
+    async def ack_command(self, command_id: str, status: str = "done") -> None: ...
 
     @abstractmethod
     async def save_live(self, resumo: dict) -> None:
         """Grava a live encerrada; alimenta a pagina 'Lives Prontas'."""
+
+    async def fetch_catalog(self) -> Catalog | None:
+        """Catalogo mantido pelo painel. None = o agente usa o products.json."""
+        return None
+
+    async def fetch_settings(self) -> Settings | None:
+        """Preferencias da loja. None = o agente usa o que veio do .env."""
+        return None
 
     async def close(self) -> None:
         return None
@@ -102,6 +114,7 @@ _DDL = """
 CREATE TABLE IF NOT EXISTS messages (
     message_id   TEXT PRIMARY KEY,
     seller_id    TEXT NOT NULL,
+    live_id      TEXT,
     user_id      TEXT NOT NULL,
     username     TEXT NOT NULL,
     nickname     TEXT,
@@ -160,26 +173,32 @@ class SqliteStore(Store):
     async def init(self) -> None:
         self._conn = sqlite3.connect(self._path, check_same_thread=False)
         self._conn.executescript(_DDL)
+        # Banco criado por uma versao anterior nao tem live_id. Migra na hora
+        # em vez de exigir que o vendedor apague o arquivo.
+        with contextlib.suppress(sqlite3.OperationalError):
+            self._conn.execute("ALTER TABLE messages ADD COLUMN live_id TEXT")
         self._conn.commit()
         log.info("SQLite pronto em %s", self._path.resolve())
 
-    async def save(self, msg: ChatMessage, analysis: Analysis) -> None:
+    async def save(self, msg: ChatMessage, analysis: Analysis,
+                   live_id: str | None = None) -> None:
         assert self._conn is not None
         whats = msg.whatsapp
         async with self._lock:
-            await asyncio.to_thread(self._save_sync, msg, analysis, whats)
+            await asyncio.to_thread(self._save_sync, msg, analysis, whats, live_id)
 
-    def _save_sync(self, msg: ChatMessage, a: Analysis, whats: str | None) -> None:
+    def _save_sync(self, msg: ChatMessage, a: Analysis, whats: str | None,
+                   live_id: str | None) -> None:
         assert self._conn is not None
         ts = msg.received_at.isoformat()
         self._conn.execute(
             """INSERT OR REPLACE INTO messages
-               (message_id, seller_id, user_id, username, nickname, text, intent,
-                lead_score, suggested_reply, requires_human, product_mentioned,
-                whatsapp, received_at)
-               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)""",
-            (msg.message_id, self._seller, msg.user_id, msg.username, msg.nickname,
-             msg.text, a.intent, a.lead_score, a.suggested_reply,
+               (message_id, seller_id, live_id, user_id, username, nickname, text,
+                intent, lead_score, suggested_reply, requires_human,
+                product_mentioned, whatsapp, received_at)
+               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+            (msg.message_id, self._seller, live_id, msg.user_id, msg.username,
+             msg.nickname, msg.text, a.intent, a.lead_score, a.suggested_reply,
              int(a.requires_human), a.product_mentioned, whats, ts),
         )
         # O lead guarda o MELHOR score que a pessoa ja teve, nao o ultimo: quem
@@ -217,7 +236,7 @@ class SqliteStore(Store):
     async def pending_commands(self) -> list[dict]:
         return []  # sem painel remoto no modo local
 
-    async def ack_command(self, command_id: str) -> None:
+    async def ack_command(self, command_id: str, status: str = "done") -> None:
         return None
 
     async def save_live(self, resumo: dict) -> None:
@@ -228,10 +247,11 @@ class SqliteStore(Store):
                 lambda: (
                     self._conn.execute(
                         """INSERT INTO lives
-                           (id, seller_id, titulo, gravada_em, duracao_min, comentarios,
-                            leads_captados, rating, score, recomendacao)
-                           VALUES (?,?,?,?,?,?,?,?,?,?)""",
-                        (str(uuid4()), self._seller, resumo["titulo"],
+                           (id, seller_id, titulo, tipo, gravada_em, duracao_min,
+                            comentarios, leads_captados, rating, score, recomendacao)
+                           VALUES (?,?,?,?,?,?,?,?,?,?,?)""",
+                        (resumo.get("id") or str(uuid4()), self._seller,
+                         resumo["titulo"], resumo.get("tipo", "ao_vivo"),
                          now().isoformat(), resumo["duracao_min"], resumo["comentarios"],
                          resumo["leads_captados"], rating, score, recomendacao),
                     ),
@@ -264,10 +284,12 @@ class SupabaseStore(Store):
         self._client = await asyncio.to_thread(create_client, self._url, self._key)
         log.info("Supabase conectado (seller_id=%s)", self._seller)
 
-    async def save(self, msg: ChatMessage, analysis: Analysis) -> None:
+    async def save(self, msg: ChatMessage, analysis: Analysis,
+                   live_id: str | None = None) -> None:
         row = {
             "message_id": msg.message_id,
             "seller_id": self._seller,
+            "live_id": live_id,
             "user_id": msg.user_id,
             "username": msg.username,
             "nickname": msg.nickname,
@@ -326,11 +348,11 @@ class SupabaseStore(Store):
             log.error("Falha ao ler comandos: %s", exc)
             return []
 
-    async def ack_command(self, command_id: str) -> None:
+    async def ack_command(self, command_id: str, status: str = "done") -> None:
         try:
             await asyncio.to_thread(
                 lambda: self._client.table("commands")
-                .update({"status": "done", "done_at": now().isoformat()})
+                .update({"status": status, "done_at": now().isoformat()})
                 .eq("id", command_id)
                 .execute()
             )
@@ -342,6 +364,7 @@ class SupabaseStore(Store):
         row = {
             "seller_id": self._seller,
             "titulo": resumo["titulo"],
+            "tipo": resumo.get("tipo", "ao_vivo"),
             "duracao_min": resumo["duracao_min"],
             "comentarios": resumo["comentarios"],
             "leads_captados": resumo["leads_captados"],
@@ -349,6 +372,10 @@ class SupabaseStore(Store):
             "score": score,
             "recomendacao": recomendacao,
         }
+        # O id nasce no agente, no inicio da live, para que cada mensagem ja
+        # grave o live_id certo enquanto a transmissao acontece.
+        if resumo.get("id"):
+            row["id"] = resumo["id"]
         try:
             await asyncio.to_thread(
                 lambda: self._client.table("lives").insert(row).execute()
@@ -356,6 +383,59 @@ class SupabaseStore(Store):
         except Exception as exc:  # noqa: BLE001
             log.error("Falha ao gravar a live: %s", exc)
         log.info("Live avaliada: %s (%d/100) -- %s", rating, score, recomendacao)
+
+    # -- catalogo e configuracoes mantidos pelo painel ---------------------
+
+    async def fetch_catalog(self) -> Catalog:
+        """Le produtos, frete e base de conhecimento da loja.
+
+        Diferente do resto desta classe, aqui a excecao SOBE em vez de virar
+        log. Catalogo e o que impede a IA de inventar preco: rodar com dado
+        velho porque a rede falhou e pior do que nao rodar. Quem chama decide
+        -- no arranque o agente aborta, no refresh ele mantem o que ja tinha.
+        """
+        produtos, frete, conhecimento = await asyncio.gather(
+            asyncio.to_thread(
+                lambda: self._client.table("produtos")
+                .select("nome,preco,estoque,cores,tamanhos,obs")
+                .eq("seller_id", self._seller).eq("ativo", True)
+                .order("ordem").execute()
+            ),
+            asyncio.to_thread(
+                lambda: self._client.table("frete_regras")
+                .select("regiao,descricao")
+                .eq("seller_id", self._seller)
+                .order("ordem").execute()
+            ),
+            asyncio.to_thread(
+                lambda: self._client.table("base_conhecimento")
+                .select("titulo,conteudo")
+                .eq("seller_id", self._seller).eq("ativo", True)
+                .order("ordem").execute()
+            ),
+        )
+        return Catalog.from_rows(
+            produtos.data or [], frete.data or [], conhecimento.data or []
+        )
+
+    async def fetch_settings(self) -> Settings | None:
+        try:
+            res = await asyncio.to_thread(
+                lambda: self._client.table("configuracoes")
+                .select("*").eq("seller_id", self._seller)
+                .limit(1).execute()
+            )
+        except Exception as exc:  # noqa: BLE001
+            log.error("Falha ao ler configuracoes: %s", exc)
+            return None
+
+        if not res.data:
+            log.warning(
+                "Sem linha em `configuracoes` para seller_id=%s. "
+                "Usando o que veio do .env.", self._seller
+            )
+            return None
+        return Settings.from_row(res.data[0])
 
 
 def build(cfg) -> Store:

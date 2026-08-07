@@ -4,7 +4,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
-from typing import Literal
+from typing import Collection, Literal
 
 Intent = Literal[
     "preco",
@@ -22,6 +22,9 @@ Intent = Literal[
 
 # Intents que a IA pode responder sozinha sem risco: resposta e factual e sai
 # direto do catalogo. Qualquer coisa fora dessa lista vai para o vendedor.
+# E o padrao; a loja pode restringir mais pela tabela `configuracoes` (ver
+# `config.Settings.intents_auto`), nunca ampliar para fora do que
+# `config.INTENTS_AUTO_PERMITIDOS` autoriza.
 AUTO_SAFE_INTENTS: frozenset[str] = frozenset({"preco", "frete", "prazo", "como_comprar"})
 
 # Numero de celular BR: aceita +55, DDD com ou sem parenteses, separadores
@@ -82,10 +85,13 @@ class Analysis:
     reasoning: str = ""
     product_mentioned: str | None = None
 
-    @property
-    def can_auto_send(self) -> bool:
-        """Auto-envio so quando a IA nao pediu humano E o intent e seguro."""
-        return not self.requires_human and self.intent in AUTO_SAFE_INTENTS
+    def can_auto_send(self, intents_auto: Collection[str] = AUTO_SAFE_INTENTS) -> bool:
+        """Auto-envio so quando a IA nao pediu humano E o intent esta liberado.
+
+        `intents_auto` vem das configuracoes da loja; o padrao vale para o modo
+        local, em que nao ha banco para consultar.
+        """
+        return not self.requires_human and self.intent in intents_auto
 
 
 @dataclass(slots=True)

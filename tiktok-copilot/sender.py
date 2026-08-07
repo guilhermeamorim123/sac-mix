@@ -50,7 +50,8 @@ class ChatSender:
         supervision_check: Callable[[], Awaitable[bool]] | None = None,
     ):
         self._cdp_url = cdp_url
-        self._max_per_min = max_per_min
+        # publico: o painel pode mudar o teto no meio da live
+        self.max_per_min = max_per_min
         self.enabled = enabled
         self._supervision_check = supervision_check
 
@@ -107,7 +108,7 @@ class ChatSender:
         agora = time.monotonic()
         while self._sent_at and agora - self._sent_at[0] > 60:
             self._sent_at.popleft()
-        return len(self._sent_at) < self._max_per_min
+        return len(self._sent_at) < self.max_per_min
 
     # -- envio -------------------------------------------------------------
 
@@ -124,7 +125,7 @@ class ChatSender:
 
         async with self._lock:
             if not self._within_rate_limit():
-                log.info("Throttle: teto de %d msg/min atingido, pulando.", self._max_per_min)
+                log.info("Throttle: teto de %d msg/min atingido, pulando.", self.max_per_min)
                 return False
 
             if self._page is None:

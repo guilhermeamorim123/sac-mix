@@ -2,7 +2,8 @@
 
     python test_smoke.py
 """
-import catalog
+from catalog import Catalog
+from config import INTENTS_AUTO_PADRAO, Settings
 from models import AUTO_SAFE_INTENTS, Analysis, extract_whatsapp
 from store import avaliar
 
@@ -28,13 +29,30 @@ check("fixo e ignorado",      extract_whatsapp("tel fixo 1133334444"), None)
 
 print("\n--- Trava de auto-envio ---")
 check("preco + sem humano = envia",
-      Analysis("1", "preco", 5, "R$89,90", requires_human=False).can_auto_send, True)
+      Analysis("1", "preco", 5, "R$89,90", requires_human=False).can_auto_send(), True)
 check("reclamacao nunca envia",
-      Analysis("2", "reclamacao", 8, "opa", requires_human=False).can_auto_send, False)
+      Analysis("2", "reclamacao", 8, "opa", requires_human=False).can_auto_send(), False)
 check("requires_human trava",
-      Analysis("3", "preco", 5, "x", requires_human=True).can_auto_send, False)
+      Analysis("3", "preco", 5, "x", requires_human=True).can_auto_send(), False)
 check("intents seguros", sorted(AUTO_SAFE_INTENTS),
       ["como_comprar", "frete", "prazo", "preco"])
+
+print("\n--- Configuracoes vindas do painel ---")
+restrito = Settings.from_row({"auto_reply_enabled": True, "max_por_minuto": 2,
+                              "intents_auto": ["preco"], "hot_lead_threshold": 8})
+check("loja restringe a lista", sorted(restrito.intents_auto), ["preco"])
+check("frete deixa de auto-enviar",
+      Analysis("4", "frete", 5, "R$14,90", requires_human=False)
+      .can_auto_send(restrito.intents_auto), False)
+check("preco continua auto-enviando",
+      Analysis("5", "preco", 5, "R$89,90", requires_human=False)
+      .can_auto_send(restrito.intents_auto), True)
+
+# O painel nao deve conseguir liberar reclamacao nem no banco.
+perigoso = Settings.from_row({"intents_auto": ["preco", "reclamacao", "outro"]})
+check("intent perigoso e descartado", sorted(perigoso.intents_auto), ["preco"])
+check("padrao quando a coluna vem vazia",
+      sorted(Settings.from_row({}).intents_auto), sorted(INTENTS_AUTO_PADRAO))
 
 print("\n--- Avaliacao de live ---")
 for resumo, esperado in [
@@ -46,11 +64,47 @@ for resumo, esperado in [
     check(f"{resumo['titulo']} ({score}/100)", rating, esperado)
     print(f"         {rec}")
 
-print("\n--- Catalogo no prompt ---")
-bloco = catalog.as_prompt_block(catalog.load(), catalog.load_frete())
+print("\n--- Catalogo do arquivo local ---")
+local = Catalog.from_json()
+bloco = local.as_prompt_block()
 check("catalogo nao vazio", len(bloco) > 100, True)
 check("marca esgotado", "esgotado" in bloco, True)
-print("\n" + bloco[:320] + "\n...")
+
+print("\n--- Catalogo vindo do banco ---")
+# Mesma forma das linhas de `produtos`, `frete_regras` e `base_conhecimento`.
+banco = Catalog.from_rows(
+    produtos=[
+        {"nome": "Fone TWS", "preco": "89.90", "estoque": 40,
+         "cores": ["preto"], "tamanhos": [], "obs": "12h de bateria"},
+        {"nome": "Smartwatch D20", "preco": 59.9, "estoque": 0,
+         "cores": None, "tamanhos": None, "obs": None},
+    ],
+    frete=[{"regiao": "Sudeste", "descricao": "R$ 14,90 - 3 a 5 dias uteis"}],
+    conhecimento=[{"titulo": "Troca", "conteudo": "7 dias corridos apos o recebimento."}],
+)
+bloco_banco = banco.as_prompt_block()
+check("preco em string vira numero", banco.produtos[0]["preco"], 89.9)
+check("preco formatado em BRL", "R$89,90" in bloco_banco, True)
+check("estoque zero vira esgotado", "esgotado" in bloco_banco, True)
+check("cores nulas viram lista vazia", banco.produtos[1]["cores"], [])
+check("frete entra no prompt", "FRETE E PRAZO" in bloco_banco, True)
+check("base de conhecimento entra", "BASE DE CONHECIMENTO" in bloco_banco, True)
+check("fingerprint muda com o catalogo",
+      banco.fingerprint == local.fingerprint, False)
+check("fingerprint estavel para o mesmo dado",
+      banco.fingerprint == Catalog.from_rows(
+          produtos=[
+              {"nome": "Fone TWS", "preco": 89.9, "estoque": 40,
+               "cores": ["preto"], "tamanhos": [], "obs": "12h de bateria"},
+              {"nome": "Smartwatch D20", "preco": 59.9, "estoque": 0,
+               "cores": [], "tamanhos": [], "obs": None},
+          ],
+          frete=[{"regiao": "Sudeste", "descricao": "R$ 14,90 - 3 a 5 dias uteis"}],
+          conhecimento=[{"titulo": "Troca", "conteudo": "7 dias corridos apos o recebimento."}],
+      ).fingerprint, True)
+check("catalogo sem produtos e vazio", Catalog().vazio, True)
+
+print("\n" + bloco_banco)
 
 print(f"\n{'TUDO PASSOU' if falhas == 0 else f'{falhas} FALHA(S)'}")
 raise SystemExit(1 if falhas else 0)
