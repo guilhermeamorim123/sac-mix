@@ -174,28 +174,76 @@ tamanho.
 
 A fase 2 depende de uma verificação que ainda não foi feita — ver riscos.
 
-## Economia unitária: um alerta
+## Economia unitária e preço
 
-A R$ 60/mês (≈ US$ 11) por vendedor, com `claude-opus-5` e uma live de uma hora
-custando "poucos dólares", **a conta não fecha**. Um vendedor que faça 20 lives
-por mês consome muito mais do que paga. O produto fica com margem negativa
-exatamente nos clientes mais engajados, que é o pior formato possível.
+Conta feita em 06/08/2026 com os parâmetros reais do agente (lote de 12,
+system prompt medido em 917 tokens, catálogo da Mix Conecta). Preços da API:
+Opus 5 US$ 5/US$ 25 por milhão de tokens (entrada/saída), Haiku 4.5 US$ 1/US$ 5.
+Dólar a R$ 5,50.
 
-Dois movimentos resolvem, e eles se somam:
+### Custo por hora de live
 
-1. **Filtrar antes de gastar token.** A maior parte do chat de live é emoji,
-   "oi", "boa noite" e spam — coisa de `lead_score` 0 a 2. Isso não precisa de
-   modelo nenhum: um filtro determinístico (comprimento, ausência de verbo ou
-   de interrogação, lista de saudações, mensagem repetida) descarta a maioria
-   antes da chamada. Estimativa a medir na primeira live real, mas cortar 60-70%
-   das mensagens é plausível.
-2. **Haiku como padrão, Opus como exceção.** Classificar e redigir 200
-   caracteres é tarefa em que o Haiku vai bem. O `.env` já permite a troca;
-   falta medir os dois lado a lado numa live de verdade e decidir com número, não
-   com impressão.
+| Cenário | msgs/h | Opus 5 | Haiku 4.5 | Haiku + triagem |
+|---|---|---|---|---|
+| Tranquila | 300 | $ 1,06 | $ 0,18 | $ 0,06 |
+| Movimentada | 900 | $ 3,19 | $ 0,54 | $ 0,19 |
+| Viral | 2.000 | $ 7,08 | $ 1,20 | $ 0,42 |
 
-Medir isso na fase 0 é mais importante que qualquer código da fase 2 — é o que
-diz se o preço de R$ 60 se sustenta ou precisa mudar.
+A saída domina o custo (~95%). Por isso o modelo pesa mais que qualquer outra
+variável, e reduzir o **número de mensagens classificadas** é a segunda alavanca.
+
+### As duas decisões que fazem o preço fechar
+
+**1. Haiku 4.5 como motor, não Opus 5.** Classificar uma pergunta de chat e
+escrever 200 caracteres com o catálogo à frente não é tarefa de modelo grande.
+Um vendedor de 3 lives/dia custaria R$ 552/mês em Opus contra R$ 94 em Haiku —
+com a triagem já aplicada nos dois. Sonnet 5 fica no meio (R$ 296) como plano B
+se a qualidade do Haiku não segurar; a decisão sai de rodar a mesma live nos
+dois e comparar onde discordam, não de impressão.
+
+**2. Triagem determinística antes da IA.** Implementada em `triagem.py`
+(06/08/2026): emoji, saudação e reação não vão para a API. A mensagem continua
+sendo gravada e aparecendo no painel — só não vira token. Num lote realista de
+teste, 71% do chat foi filtrado. **Não é otimização: sem ela o Studio custa
+R$ 268/mês em IA e a margem cai de 63% para 30%.**
+
+Regra de projeto da triagem: o erro caro é o falso positivo (filtrar quem ia
+comprar). Qualquer sinal de interesse — interrogação, número, palavra
+comercial, nome de produto — manda para a IA antes de qualquer teste de
+trivialidade.
+
+### Estrutura de preço
+
+O custo **não escala por vendedor, escala por hora de live**. Preço único cobra
+o mesmo de quem faz 3 lives por semana e de quem faz 3 por dia — o leve
+subsidia o pesado, e o pesado é o melhor cliente. Daí as faixas por hora:
+
+| Plano | Limite | Preço | Custo real (pior caso) | Margem bruta |
+|---|---|---|---|---|
+| Essencial | 10 h/mês | R$ 60 | ~R$ 20 | 67% |
+| Solo | 20 h/mês | R$ 97 | ~R$ 31 | 68% |
+| Pro | 60 h/mês | R$ 197 | ~R$ 78 | 61% |
+| Studio | 120 h/mês | R$ 397 | ~R$ 148 | 63% |
+
+O R$ 60 original não estava errado — estava precificado para um vendedor de 2 a
+3 lives por semana. Aplicado a um de 3 por dia, dava prejuízo de 6x.
+
+Medir hora de live é grátis: `lives.duracao_min` já é gravado. Falta o painel
+somar o mês e mostrar o consumo. No estouro, o menos hostil é continuar
+sugerindo e desligar o auto-envio, com aviso.
+
+### Ressalvas
+
+- A margem é **bruta de IA e infra**. Não inclui Pix/Stripe (~4%), suporte, nem
+  aquisição.
+- A infra (R$ 8 a R$ 22 por cliente) é estimativa, não medida — só sai de
+  verdade na fase 2.
+- **Exposição cambial:** o custo é em dólar, a receita em real. A R$ 7,00 o
+  dólar, a margem do Studio cai de 63% para ~54%. A folga que a triagem criou é
+  o que absorve isso. Revisar preço quando o câmbio andar mais de 15%.
+- A taxa de 71% saiu de um lote de teste, não de uma live. O agente loga
+  `triagem: X%` no encerramento de cada live — esse é o número que valida ou
+  derruba a tabela inteira.
 
 ## Riscos a verificar antes de escalar
 

@@ -40,6 +40,7 @@ de volta o catálogo e as preferências que o lojista mantém pelo painel.
 | `store.py` | Persistência — SQLite local ou Supabase |
 | `sender.py` | Digita no chat via Playwright (ver aviso abaixo) |
 | `catalog.py` | Catálogo, frete e base de conhecimento (do banco ou do `products.json`) |
+| `triagem.py` | Separa o chat que precisa de IA do que não precisa (ver abaixo) |
 | `config.py` | `.env` (máquina) + tabela `configuracoes` (loja) |
 | `schema.sql` | Espelho do banco. Regerado a partir dele. |
 | `LOVABLE_PROMPT.md` | Prompt que gerou o painel |
@@ -94,6 +95,42 @@ chave nas Configurações.
 E há um limite que o painel não vence: mesmo que alguém marque `reclamacao` na
 lista de intents automáticos, o agente descarta. Reclamação, negociação e
 qualquer coisa marcada como `requires_human` vão para o vendedor. Sempre.
+
+## Triagem: o que não custa token
+
+A maior parte do chat de uma live é emoji, "oi" e "top demais". Isso não precisa
+de modelo nenhum para ser classificado — e mandar para a API custa o mesmo que
+uma pergunta de verdade. O `triagem.py` separa os dois antes da chamada.
+
+**Não é descarte, é triagem.** A mensagem continua sendo gravada e continua
+aparecendo no chat do painel; ela só não vira token e não ganha sugestão de
+resposta, porque não havia o que responder.
+
+A ordem das checagens é sempre a mesma, e ela existe para proteger contra o
+único erro caro aqui — filtrar alguém que ia comprar:
+
+1. **Primeiro, tudo que indica interesse** manda para a IA: interrogação,
+   qualquer número (quem larga o WhatsApp no chat é lead quente), palavra
+   comercial (preço, frete, tem, quero, pix, tamanho, garantia…) ou o nome de um
+   produto do catálogo.
+2. **Só o que sobra** pode ser considerado trivial: emoji puro, "kkkkk",
+   mensagem de menos de 3 caracteres, ou até 4 palavras todas na lista de
+   saudações e reações.
+
+Na dúvida, vai para a IA. Uma saudação classificada à toa custa frações de
+centavo; um "quanto custa?" filtrado custa a venda.
+
+No encerramento da live o log mostra a taxa:
+
+```
+triagem                71.4% (250 de 350 nao custaram token)
+```
+
+**Anote esse número a cada live.** É ele que valida a conta de custo do
+`plans/002-livewire-saas-architecture.md` — e é o que decide se o preço fecha.
+
+> O painel deve esconder da fila de resposta as mensagens sem `suggested_reply`
+> — são as filtradas. Sem isso elas aparecem no fim da fila como cards vazios.
 
 ## Rodando
 

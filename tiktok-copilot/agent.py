@@ -29,6 +29,7 @@ from uuid import uuid4
 
 import ai
 import store as store_mod
+import triagem as triagem_mod
 from catalog import Catalog
 from config import Config, Settings
 from ingest import ChatIngest, batcher
@@ -59,6 +60,7 @@ class LiveSession:
         self.leads_captados = 0
         self.whatsapps: set[str] = set()
         self.autoenviadas = 0
+        self.filtradas = 0
 
     @property
     def duracao_min(self) -> int:
@@ -75,6 +77,7 @@ class LiveSession:
             "leads_captados": self.leads_captados,
             "whatsapps": len(self.whatsapps),
             "respostas_automaticas": self.autoenviadas,
+            "filtradas_sem_ia": self.filtradas,
         }
 
 
@@ -94,6 +97,7 @@ class Copilot:
         self.catalogo = Catalog()
         self.settings = Settings.from_env(cfg)
         self.classifier: ai.Classifier | None = None
+        self.triagem = triagem_mod.Triagem()
 
         # A trava de supervisao so entra no modo replay: numa live de verdade o
         # vendedor ja esta na frente da camera.
@@ -153,6 +157,9 @@ class Copilot:
         if settings is not None:
             self.settings = settings
         self.sender.max_per_min = self.settings.max_por_minuto
+        # A triagem conhece os nomes dos produtos: quem cita um produto esta
+        # olhando a vitrine, mesmo sem fazer pergunta.
+        self.triagem = triagem_mod.Triagem(self.catalogo)
 
         if self.catalogo.vazio:
             # Sem catalogo a IA nao tem o que citar: toda resposta viraria
@@ -183,16 +190,29 @@ class Copilot:
     async def _process_loop(self) -> None:
         async for lote in batcher(self.queue, self.cfg.batch_window_seconds,
                                   self.cfg.batch_max_size):
+            # Triagem antes da IA: emoji, "oi" e "top" nao precisam de modelo,
+            # e sao a maior parte do chat. Continuam sendo gravados e aparecem
+            # no painel -- so nao viram token.
+            para_ia, triviais = self.triagem.separar(lote)
+
+            for msg in triviais:
+                self.session.filtradas += 1
+                await self._handle(msg, triagem_mod.analise_local(msg), silencioso=True)
+
+            if not para_ia:
+                continue
+
             try:
-                analises = await self.classifier.analyze(lote)
+                analises = await self.classifier.analyze(para_ia)
             except Exception:  # noqa: BLE001
                 log.exception("Erro inesperado ao classificar; lote descartado.")
                 continue
 
-            for msg, analise in zip(lote, analises):
+            for msg, analise in zip(para_ia, analises):
                 await self._handle(msg, analise)
 
-    async def _handle(self, msg: ChatMessage, analise: Analysis) -> None:
+    async def _handle(self, msg: ChatMessage, analise: Analysis,
+                      silencioso: bool = False) -> None:
         self.session.comentarios += 1
         if analise.lead_score >= self.settings.hot_lead_threshold:
             self.session.leads_captados += 1
@@ -202,8 +222,11 @@ class Copilot:
         await self.store.save(msg, analise, live_id=self.session.id)
 
         quente = analise.lead_score >= self.settings.hot_lead_threshold
-        log.info("%s[%s/%d] %s: %s", "HOT " if quente else "    ",
-                 analise.intent, analise.lead_score, msg.nickname, msg.text[:60])
+        # Mensagem filtrada so aparece em DEBUG: encher o log de "top demais"
+        # esconde o que importa.
+        log.log(logging.DEBUG if silencioso else logging.INFO,
+                "%s[%s/%d] %s: %s", "HOT " if quente else "    ",
+                analise.intent, analise.lead_score, msg.nickname, msg.text[:60])
 
         if msg.whatsapp:
             log.info("     WhatsApp capturado: %s (@%s)", msg.whatsapp, msg.username)
@@ -383,6 +406,11 @@ class Copilot:
         for chave, valor in resumo.items():
             log.info("  %-22s %s", chave, valor)
         log.info("  mensagens descartadas  %s", self.ingest.stats["descartadas"])
+        # A taxa de triagem e o numero que valida (ou derruba) a estimativa de
+        # custo do plano. Anote a cada live.
+        log.info("  %-22s %.1f%% (%d de %d nao custaram token)",
+                 "triagem", self.triagem.taxa_filtrada, self.triagem.filtradas,
+                 self.triagem.filtradas + self.triagem.analisadas)
 
 
 async def main() -> None:

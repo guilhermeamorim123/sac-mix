@@ -54,6 +54,69 @@ check("intent perigoso e descartado", sorted(perigoso.intents_auto), ["preco"])
 check("padrao quando a coluna vem vazia",
       sorted(Settings.from_row({}).intents_auto), sorted(INTENTS_AUTO_PADRAO))
 
+print("\n--- Triagem: NUNCA filtrar quem demonstra interesse ---")
+from models import ChatMessage
+from triagem import Triagem, analise_local
+
+_cat = Catalog.from_rows(
+    produtos=[{"nome": "Fone Bluetooth TWS Pro", "preco": 89.9, "estoque": 10,
+               "cores": [], "tamanhos": [], "obs": None}],
+    frete=[], conhecimento=[],
+)
+t = Triagem(_cat)
+msg = lambda txt: ChatMessage(message_id="x", user_id="u", username="u",
+                              nickname="U", text=txt)
+
+# Se algum destes virar True, o filtro esta jogando venda fora.
+INTERESSE = [
+    "quanto custa?", "qual o preco", "tem em preto", "ainda tem?",
+    "quero 2", "vou levar", "manda o link", "como faco pra comprar",
+    "chega em quanto tempo", "faz frete pro ceara", "aceita pix?",
+    "parcela em 3x", "meu zap 11 98765-4321", "11987654321",
+    "esse fone e bom?", "o fone tem garantia", "qual o tamanho",
+    "nao chegou meu pedido", "demorou demais isso ai",
+    "boa noite, tem esse produto ainda", "oi quanto e",
+    "manda no whats", "top esse fone, quanto?",
+]
+falhas_criticas = 0
+for txt in INTERESSE:
+    if t.trivial(msg(txt)):
+        falhas_criticas += 1
+        print(f"  FALHOU  FILTROU INTERESSE: {txt!r}")
+check("nenhuma mensagem de interesse foi filtrada", falhas_criticas, 0)
+
+print("\n--- Triagem: ruido que nao deve custar token ---")
+RUIDO = ["oi", "boa noite", "top", "kkkkkk", "❤️❤️❤️", "👏", "...", "amei",
+         "lindo demais", "top demais", "obrigado", "vlw", "primeira vez aqui",
+         "bom dia", "parabens", "show", "aaaaaa", "ok", "sim", "tchau"]
+passou = [txt for txt in RUIDO if not t.trivial(msg(txt))]
+check("ruido filtrado", len(passou), 0)
+if passou:
+    print(f"         passaram para a IA: {passou}")
+check("taxa de filtragem contabilizada",
+      round(Triagem(_cat).taxa_filtrada), 0)
+
+# Citar o produto e sinal de interesse mesmo sem pergunta.
+check("nome do produto nao e trivial", t.trivial(msg("esse fone")), False)
+check("frase longa nao e trivial",
+      t.trivial(msg("boa noite pessoal tudo bem com voces hoje")), False)
+
+print("\n--- Triagem: analise local ---")
+a = analise_local(msg("top demais"))
+check("elogio classificado", a.intent, "elogio")
+check("score zero", a.lead_score, 0)
+check("sem sugestao (fica fora da fila)", a.suggested_reply, "")
+check("nao pede humano", a.requires_human, False)
+check("nao auto-envia", a.can_auto_send(), False)
+check("emoji vira outro", analise_local(msg("❤️")).intent, "outro")
+
+# Taxa medida num lote realista de live.
+t2 = Triagem(_cat)
+lote = [msg(x) for x in RUIDO + INTERESSE[:8]]
+para_ia, triviais = t2.separar(lote)
+print(f"\n  lote de {len(lote)}: {len(triviais)} filtradas, {len(para_ia)} para a IA "
+      f"({t2.taxa_filtrada:.0f}% sem token)")
+
 print("\n--- Avaliacao de live ---")
 for resumo, esperado in [
     ({"titulo": "forte",  "duracao_min": 75, "comentarios": 900, "leads_captados": 90}, "boa"),
