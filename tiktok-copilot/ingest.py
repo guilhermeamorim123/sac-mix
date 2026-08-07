@@ -16,6 +16,11 @@ from models import ChatMessage
 
 log = logging.getLogger(__name__)
 
+# De quanto em quanto tempo checar se a live ja abriu. Fixo e curto de
+# proposito: o vendedor liga o agente antes de subir a transmissao, e nao pode
+# ficar esperando um backoff crescer para o app perceber.
+ESPERA_OFFLINE = 15
+
 
 class ChatIngest:
     def __init__(self, username: str, queue: asyncio.Queue[ChatMessage]):
@@ -63,17 +68,50 @@ class ChatIngest:
                             self.stats["descartadas"])
 
     async def run(self) -> None:
-        """Conecta e fica ouvindo. Reconecta sozinho se a live cair."""
+        """Conecta e fica ouvindo. Reconecta sozinho se a live cair.
+
+        Pode ser iniciado ANTES da live: enquanto o vendedor nao abre a
+        transmissao, fica checando em intervalo fixo e curto. "Ainda nao
+        abriu" nao e erro -- tratar como erro produziria uma parede de
+        ERROR no log e um backoff que faria o agente demorar ate um minuto
+        para perceber que a live subiu.
+        """
         tentativa = 0
+        avisou = False
         while True:
             try:
                 await self._client.start()
+                # start() so retorna quando a live termina.
                 tentativa = 0
+                avisou = False
+                log.info("A live encerrou. Seguindo de olho, caso volte.")
             except Exception as exc:  # noqa: BLE001 - a lib levanta varios tipos
+                if self._esta_offline(exc):
+                    if not avisou:
+                        log.info(
+                            "Aguardando %s abrir a live (checando a cada %ds). "
+                            "Pode deixar rodando.", self._username, ESPERA_OFFLINE
+                        )
+                        avisou = True
+                    await asyncio.sleep(ESPERA_OFFLINE)
+                    continue
+
                 tentativa += 1
                 espera = min(60, 2 ** tentativa)
                 log.error("Erro na conexao (%s). Tentando de novo em %ds.", exc, espera)
                 await asyncio.sleep(espera)
+
+    @staticmethod
+    def _esta_offline(exc: Exception) -> bool:
+        """Distingue "ainda nao abriu a live" de falha de verdade.
+
+        Compara pelo NOME da excecao em vez de importar a classe: o caminho de
+        import muda entre versoes da TikTokLive, e uma mudanca la nao pode
+        transformar essa checagem num ImportError no meio da live.
+        """
+        nome = type(exc).__name__.lower()
+        texto = str(exc).lower()
+        return "useroffline" in nome or "offline" in texto or "not live" in texto
 
     async def stop(self) -> None:
         try:

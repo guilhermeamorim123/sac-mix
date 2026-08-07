@@ -135,11 +135,29 @@ triagem                71.4% (250 de 350 nao custaram token)
 
 ## Rodando
 
-Com a live já no ar:
+Pode rodar **antes ou depois** de abrir a live — tanto faz:
 
 ```bash
 python agent.py
 ```
+
+Se a live ainda não subiu, o agente avisa uma vez e fica checando a cada 15
+segundos, sem encher o log de erro:
+
+```
+20:41:03  INFO  ingest  Aguardando @mixconecta abrir a live (checando a cada 15s). Pode deixar rodando.
+20:43:18  INFO  ingest  Conectado a live de @mixconecta
+```
+
+Ou seja: liga o agente, abre a live no celular, e em até 15 segundos ele
+engata sozinho. Quando a live termina, ele volta a esperar em vez de morrer —
+se você abrir outra, ele pega de novo.
+
+> **O log do terminal é a fonte de verdade sobre "está conectado?".** O
+> indicador verde/cinza do painel ainda não tem quem o alimente — ele não
+> reflete o estado real da conexão. Mesma coisa para o contador de
+> espectadores: o `ingest.py` só escuta comentários, não os eventos de entrada
+> e saída da live.
 
 O terminal vai mostrar cada mensagem classificada:
 
