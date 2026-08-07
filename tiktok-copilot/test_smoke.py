@@ -117,6 +117,38 @@ para_ia, triviais = t2.separar(lote)
 print(f"\n  lote de {len(lote)}: {len(triviais)} filtradas, {len(para_ia)} para a IA "
       f"({t2.taxa_filtrada:.0f}% sem token)")
 
+print("\n--- Medicao de custo real ---")
+import types as _types
+from custo import Consumo
+
+c = Consumo("claude-opus-5")
+# usage tipico de uma chamada: prefixo cacheado + lote de 12
+for _ in range(10):
+    c.somar(_types.SimpleNamespace(input_tokens=305, output_tokens=1200,
+                                   cache_creation_input_tokens=0,
+                                   cache_read_input_tokens=917))
+check("chamadas contadas", c.chamadas, 10)
+# 10 x (305*5 + 1200*25 + 917*0.5) / 1M = 0.3198
+check("custo bate com a tabela de preco", round(c.custo_usd, 4), 0.3198)
+check("cache detectado", c.cache_funcionou, True)
+
+# Mesmo trafego no Haiku. Nao cacheia (prompt abaixo do minimo do modelo),
+# entao a entrada e cheia -- ainda assim sai ~4,4x mais barato.
+h = Consumo("claude-haiku-4-5")
+for _ in range(10):
+    h.somar(_types.SimpleNamespace(input_tokens=1222, output_tokens=1200,
+                                   cache_creation_input_tokens=0,
+                                   cache_read_input_tokens=0))
+check("haiku pelo menos 4x mais barato", c.custo_usd / h.custo_usd > 4, True)
+check("alerta de cache que nao pegou", h.cache_funcionou, False)
+check("aviso aparece no resumo",
+      any("cache" in l and "ATENCAO" in l for l in h.resumo(60)), True)
+
+vazio = Consumo("claude-opus-5")
+check("sem chamada nao inventa custo", vazio.custo_usd, 0.0)
+check("modelo desconhecido nao chuta preco",
+      Consumo("modelo-novo-2027").custo_usd, 0.0)
+
 print("\n--- Avaliacao de live ---")
 for resumo, esperado in [
     ({"titulo": "forte",  "duracao_min": 75, "comentarios": 900, "leads_captados": 90}, "boa"),

@@ -405,12 +405,16 @@ class Copilot:
         log.info("--- Resumo da live ---")
         for chave, valor in resumo.items():
             log.info("  %-22s %s", chave, valor)
-        log.info("  mensagens descartadas  %s", self.ingest.stats["descartadas"])
-        # A taxa de triagem e o numero que valida (ou derruba) a estimativa de
-        # custo do plano. Anote a cada live.
+        log.info("  %-22s %s", "descartadas (fila cheia)",
+                 self.ingest.stats["descartadas"])
+        # Os dois numeros que a primeira live existe para produzir.
         log.info("  %-22s %.1f%% (%d de %d nao custaram token)",
                  "triagem", self.triagem.taxa_filtrada, self.triagem.filtradas,
                  self.triagem.filtradas + self.triagem.analisadas)
+        if self.classifier is not None:
+            log.info("--- Custo da IA ---")
+            for linha in self.classifier.consumo.resumo(self.session.duracao_min):
+                log.info("%s", linha)
 
 
 async def main() -> None:

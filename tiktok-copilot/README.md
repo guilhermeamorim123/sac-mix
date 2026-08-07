@@ -42,6 +42,7 @@ de volta o catálogo e as preferências que o lojista mantém pelo painel.
 | `catalog.py` | Catálogo, frete e base de conhecimento (do banco ou do `products.json`) |
 | `triagem.py` | Separa o chat que precisa de IA do que não precisa (ver abaixo) |
 | `config.py` | `.env` (máquina) + tabela `configuracoes` (loja) |
+| `custo.py` | Soma o que a API cobrou de verdade na live |
 | `schema.sql` | Espelho do banco. Regerado a partir dele. |
 | `LOVABLE_PROMPT.md` | Prompt que gerou o painel |
 | `test_smoke.py` | Testes da lógica pura, sem rede |
@@ -148,7 +149,29 @@ O terminal vai mostrar cada mensagem classificada:
 14:32:09  INFO  agent      [elogio/1] Marcos: top demais
 ```
 
-`Ctrl+C` encerra e grava as métricas da live.
+`Ctrl+C` encerra e grava as métricas da live. O resumo final traz os dois
+números que decidem o produto:
+
+```
+--- Resumo da live ---
+  comentarios            412
+  leads_captados         28
+  whatsapps              11
+  triagem                68.4% (282 de 412 nao custaram token)
+--- Custo da IA ---
+  modelo                 claude-opus-5
+  chamadas a API         34
+  tokens entrada         9,180 (+31,178 lidos do cache)
+  tokens saida           38,400
+  CUSTO REAL             US$ 1.0175  (US$ 1.02/hora)
+```
+
+**Anote esses dois a cada live.** A tabela de preço do
+`plans/002-livewire-saas-architecture.md` inteira é estimativa; o `CUSTO REAL`
+e a `triagem` são o que confirmam ou derrubam ela. Se aparecer o aviso
+`o cache do catalogo nao pegou nenhuma vez`, o prompt ficou abaixo do mínimo
+cacheável do modelo — no Haiku 4.5 esse mínimo é 4.096 tokens, contra 512 no
+Opus 5.
 
 ## Testes
 
