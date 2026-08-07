@@ -19,6 +19,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import random
+import re
 import time
 from collections import deque
 from typing import Awaitable, Callable
@@ -40,6 +41,63 @@ INPUT_SELECTORS = [
     'div[contenteditable="true"]',
 ]
 
+# Depois de tantas falhas seguidas de envio, o auto-envio se trava sozinho.
+# Falhar tres vezes em sequencia nao e azar: ou o DOM mudou, ou tem alguma
+# coisa barrando do outro lado.
+LIMITE_FALHAS_SEGUIDAS = 3
+
+# Idem para mensagens que "saem" sem erro e nao aparecem no chat -- o sinal
+# classico de shadow-block. E o caso mais perigoso, porque nao avisa.
+LIMITE_SEM_ECO = 2
+
+# Coleta o texto so de elementos que sao aviso/toast/modal. De proposito NAO
+# varre a pagina inteira: o chat da live esta no DOM, e um espectador digitando
+# "isso e violacao" travaria o envio a toa.
+_JS_COLETA_ALERTAS = """
+() => {
+  const seletores = [
+    '[role="alert"]', '[role="dialog"]', '[role="status"]', '[aria-live]',
+    '[class*="toast" i]', '[class*="notice" i]', '[class*="notif" i]',
+    '[class*="warn" i]', '[class*="alert" i]', '[class*="banner" i]',
+    '[class*="violation" i]', '[class*="penalty" i]', '[class*="modal" i]'
+  ];
+  const vistos = new Set();
+  for (const s of seletores) {
+    for (const el of document.querySelectorAll(s)) {
+      const t = (el.innerText || '').trim();
+      if (t && t.length < 400) vistos.add(t);
+    }
+  }
+  return Array.from(vistos).slice(0, 40);
+}
+"""
+
+# A interface do LIVE Center aparece em portugues ou em ingles conforme a
+# conta, entao os dois idiomas entram.
+AVISO_PADROES = [
+    r"viola[cç]",
+    r"violat",
+    r"advert[eê]nc",
+    r"\bwarning\b",
+    r"restri[cç]",
+    r"restrict",
+    r"diretrizes da comunidade",
+    r"community guidelines",
+    r"penalidad",
+    r"\bpenalt",
+    r"suspens",
+    r"\bbanid",
+    r"n[aã]o foi poss[ií]vel enviar",
+    r"coment[aá]rio[^.]{0,30}(removid|bloquead|ocultad)",
+    r"comment[^.]{0,30}(removed|blocked|hidden)",
+    r"sua live[^.]{0,40}(aviso|advert|encerrad)",
+    r"your live[^.]{0,40}(warning|ended)",
+    r"conta[^.]{0,30}(restrit|suspens|limitad)",
+    r"account[^.]{0,30}(restrict|suspend|limit)",
+]
+
+_AVISO_RE = re.compile("|".join(AVISO_PADROES), re.IGNORECASE)
+
 
 class ChatSender:
     def __init__(
@@ -60,6 +118,14 @@ class ChatSender:
         self._page = None
         self._sent_at: deque[float] = deque()
         self._lock = asyncio.Lock()
+
+        # Trava de seguranca. Uma vez acionada, nenhum envio passa ate um
+        # humano rearmar pelo painel -- nem o comando "Enviar", que e aprovacao
+        # humana de UMA mensagem, nao de continuar automatizando.
+        self.travado = False
+        self.motivo_trava: str | None = None
+        self._falhas_seguidas = 0
+        self._sem_eco = 0
 
     # -- ciclo de vida -----------------------------------------------------
 
@@ -102,6 +168,72 @@ class ChatSender:
         if self._playwright:
             await self._playwright.stop()
 
+    # -- trava de seguranca -------------------------------------------------
+
+    def travar(self, motivo: str) -> None:
+        """Desliga o auto-envio de vez, nesta sessao.
+
+        Nao mexe na leitura do chat: o vendedor continua vendo tudo e
+        recebendo sugestao. O que para e o robo digitando.
+        """
+        if self.travado:
+            return
+        self.travado = True
+        self.motivo_trava = motivo
+        self.enabled = False
+        log.error("AUTO-ENVIO TRAVADO -- %s", motivo)
+        log.error("A leitura do chat continua. Rearme pelo painel se for falso alarme.")
+
+    def destravar(self) -> None:
+        """Só o painel chama, e só por ação humana explícita."""
+        if not self.travado:
+            return
+        log.warning("Auto-envio rearmado (trava anterior: %s).", self.motivo_trava)
+        self.travado = False
+        self.motivo_trava = None
+        self._falhas_seguidas = 0
+        self._sem_eco = 0
+
+    async def checar_avisos(self) -> str | None:
+        """Procura aviso do TikTok na tela. Devolve o texto, ou None.
+
+        Le so caixas de aviso/modal, nunca o chat -- ver `_JS_COLETA_ALERTAS`.
+        """
+        if self._page is None or self.travado:
+            return None
+        try:
+            textos = await self._page.evaluate(_JS_COLETA_ALERTAS)
+        except PlaywrightError as exc:
+            log.debug("Nao consegui varrer avisos: %s", exc)
+            return None
+
+        for texto in textos or []:
+            if _AVISO_RE.search(texto):
+                return " ".join(texto.split())[:200]
+        return None
+
+    async def _confirmar_eco(self, texto: str) -> bool:
+        """A mensagem enviada apareceu mesmo no chat?
+
+        Envio que nao da erro e nao aparece e o sinal de shadow-block, e e o
+        pior caso: sem isso o agente seguiria falando sozinho para ninguem,
+        acumulando strike. Na duvida (nao consegui verificar) devolve True --
+        nao vale travar o envio por causa de um seletor que mudou.
+        """
+        if self._page is None:
+            return True
+        trecho = texto.strip()[:40]
+        if not trecho:
+            return True
+        try:
+            await asyncio.sleep(2.5)  # o chat leva um instante para refletir
+            return await self._page.evaluate(
+                "(t) => (document.body.innerText || '').includes(t)", trecho
+            )
+        except PlaywrightError as exc:
+            log.debug("Nao consegui confirmar o eco: %s", exc)
+            return True
+
     # -- throttle ----------------------------------------------------------
 
     def _within_rate_limit(self) -> bool:
@@ -114,6 +246,9 @@ class ChatSender:
 
     async def send(self, texto: str) -> bool:
         """Digita `texto` no chat. Retorna True se realmente enviou."""
+        if self.travado:
+            log.warning("Envio recusado: auto-envio travado (%s).", self.motivo_trava)
+            return False
         if not self.enabled:
             return False
         if not texto.strip():
@@ -147,6 +282,7 @@ class ChatSender:
                     "Campo de comentario nao encontrado. O DOM do TikTok mudou -- "
                     "atualize INPUT_SELECTORS em sender.py."
                 )
+                self._registrar_falha("campo de comentario sumiu da pagina")
                 return False
 
             try:
@@ -160,11 +296,35 @@ class ChatSender:
                 await campo.press("Enter")
             except PlaywrightError as exc:
                 log.error("Falha ao digitar no chat: %s", exc)
+                self._registrar_falha(f"erro ao digitar: {exc}")
                 return False
 
             self._sent_at.append(time.monotonic())
+            self._falhas_seguidas = 0
             log.info("Enviado: %s", texto)
-            return True
+
+        # Fora do lock de proposito: a confirmacao espera alguns segundos e nao
+        # pode segurar a fila de envio inteira.
+        if await self._confirmar_eco(texto):
+            self._sem_eco = 0
+        else:
+            self._sem_eco += 1
+            log.warning(
+                "Mensagem enviada mas nao apareceu no chat (%d de %d). "
+                "Pode ser atraso -- ou shadow-block.",
+                self._sem_eco, LIMITE_SEM_ECO,
+            )
+            if self._sem_eco >= LIMITE_SEM_ECO:
+                self.travar(
+                    f"{self._sem_eco} mensagens sairam sem aparecer no chat "
+                    "(suspeita de shadow-block)"
+                )
+        return True
+
+    def _registrar_falha(self, motivo: str) -> None:
+        self._falhas_seguidas += 1
+        if self._falhas_seguidas >= LIMITE_FALHAS_SEGUIDAS:
+            self.travar(f"{self._falhas_seguidas} envios seguidos falharam -- {motivo}")
 
 
 class SupervisionGate:

@@ -52,6 +52,15 @@ class Store(ABC):
         """Preferencias da loja. None = o agente usa o que veio do .env."""
         return None
 
+    async def desligar_auto_reply(self, motivo: str) -> None:
+        """Desliga a auto-resposta na origem, quando a trava de seguranca cai.
+
+        Mexer no banco (e nao so no processo) e o que faz a chave aparecer
+        desligada no painel -- e e assim que o vendedor fica sabendo. Religar
+        depois exige a mao dele na chave, que e exatamente a intencao.
+        """
+        return None
+
     async def close(self) -> None:
         return None
 
@@ -436,6 +445,19 @@ class SupabaseStore(Store):
             )
             return None
         return Settings.from_row(res.data[0])
+
+    async def desligar_auto_reply(self, motivo: str) -> None:
+        try:
+            await asyncio.to_thread(
+                lambda: self._client.table("configuracoes")
+                .update({"auto_reply_enabled": False})
+                .eq("seller_id", self._seller)
+                .execute()
+            )
+            log.error("Auto-resposta desligada no banco. Motivo: %s", motivo)
+        except Exception as exc:  # noqa: BLE001
+            # O envio ja parou no processo; isto aqui e para o painel refletir.
+            log.error("Nao consegui desligar a auto-resposta no banco: %s", exc)
 
 
 def build(cfg) -> Store:

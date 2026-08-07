@@ -23,6 +23,7 @@ import asyncio
 import contextlib
 import logging
 import signal
+from dataclasses import replace
 from datetime import datetime, timezone
 from uuid import uuid4
 
@@ -131,6 +132,7 @@ class Copilot:
             asyncio.create_task(self._process_loop(), name="process"),
             asyncio.create_task(self._command_loop(), name="commands"),
             asyncio.create_task(self._refresh_loop(), name="refresh"),
+            asyncio.create_task(self._watchdog_loop(), name="watchdog"),
         ]
 
         try:
@@ -211,6 +213,36 @@ class Copilot:
                 self.session.autoenviadas += 1
                 await self.store.mark_replied(msg.message_id, analise.suggested_reply, "auto")
 
+    # -- vigia de seguranca ------------------------------------------------
+
+    async def _watchdog_loop(self) -> None:
+        """Procura aviso do TikTok na tela e corta o auto-envio na hora.
+
+        Só o auto-envio. A leitura do chat continua, e encerrar a live segue
+        sendo decisão do vendedor: um falso positivo não pode custar a
+        transmissão inteira. O que ele perde no pior caso é o robô digitando
+        por ele — o que, se o TikTok já está avisando, é o que ele quer perder.
+        """
+        while True:
+            await asyncio.sleep(self.cfg.watchdog_seconds)
+            if self.sender.travado:
+                continue
+            try:
+                aviso = await self.sender.checar_avisos()
+            except Exception as exc:  # noqa: BLE001
+                log.debug("Watchdog falhou nesta volta: %s", exc)
+                continue
+            if aviso:
+                await self._travar_envio(f"aviso do TikTok na tela: \"{aviso}\"")
+
+    async def _travar_envio(self, motivo: str) -> None:
+        self.sender.travar(motivo)
+        # Desliga na origem para a chave aparecer desligada no painel; sem isso
+        # o vendedor não fica sabendo, e o próximo refresh acharia que está tudo
+        # bem.
+        await self.store.desligar_auto_reply(motivo)
+        self.settings = replace(self.settings, auto_reply_enabled=False)
+
     # -- catalogo e configuracoes durante a live ---------------------------
 
     async def _refresh_loop(self) -> None:
@@ -259,11 +291,16 @@ class Copilot:
         # So mexe no interruptor quando o valor MUDOU no banco. Do contrario um
         # "PARAR TUDO" dado pelo painel seria desfeito no proximo refresh.
         if novas_settings.auto_reply_enabled != anterior.auto_reply_enabled:
-            self.sender.enabled = novas_settings.auto_reply_enabled
             log.warning("Auto-envio %s pelas Configuracoes do painel.",
                         "LIGADO" if novas_settings.auto_reply_enabled else "DESLIGADO")
             if novas_settings.auto_reply_enabled:
+                # Religar a chave no painel e o rearme humano da trava: a
+                # pessoa viu a chave desligada e decidiu ligar de novo.
+                self.sender.destravar()
+                self.sender.enabled = True
                 await self.sender.connect()
+            else:
+                self.sender.enabled = False
 
         if novas_settings.intents_auto != anterior.intents_auto:
             log.info("Intents com auto-resposta agora: %s",

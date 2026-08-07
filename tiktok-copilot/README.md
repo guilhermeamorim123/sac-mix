@@ -145,6 +145,37 @@ Três travas, checadas antes de cada envio:
    ampliá-la para reclamação ou negociação — isso é travado no código. Qualquer
    coisa que a IA marcou como `requires_human` vai para o vendedor. Sempre.
 
+### Freio de emergência automático
+
+Uma quarta trava, que não depende de ninguém estar olhando. A cada 5 segundos o
+agente varre a tela do LIVE Center atrás de sinal de problema, em português e
+inglês. Ele vigia três coisas:
+
+| Sinal | O que é |
+|---|---|
+| **Aviso na tela** | banner ou modal com "violação", "diretrizes da comunidade", "conta restrita", "comentário removido"… |
+| **Falhas seguidas** | 3 envios que não completaram — ou o DOM mudou, ou tem algo barrando |
+| **Mensagem sem eco** | 2 mensagens que saíram sem erro e não apareceram no chat — a assinatura de shadow-block |
+
+Qualquer um dos três **corta o auto-envio na hora** e desliga a chave no banco,
+para ela aparecer desligada no painel — é assim que você fica sabendo. A partir
+daí nem o botão Enviar passa: aprovação humana vale para uma mensagem, não para
+continuar automatizando depois de um aviso.
+
+Duas escolhas de projeto que valem explicar:
+
+- **A leitura não para.** Você continua vendo o chat, os leads e as sugestões.
+  O que morre é o robô digitando — justamente o que você quer que morra quando
+  o TikTok reclama.
+- **A live não é encerrada.** Isso é decisão sua. Um falso positivo não pode
+  custar uma transmissão inteira; o sistema grita e você decide.
+
+Para rearmar, ligue a chave de auto-resposta de novo no painel. Ter que fazer
+isso na mão é intencional: você vê que travou antes de religar.
+
+> A varredura lê só caixas de aviso, toast e modal — nunca o chat. Sem esse
+> cuidado, um espectador digitando "isso é violação" travaria seu envio.
+
 ### O agente nunca vê sua senha
 
 Você loga na mão, ele se anexa à sessão. Abra o Chrome assim:

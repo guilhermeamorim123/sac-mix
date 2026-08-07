@@ -69,6 +69,11 @@ class Config:
     # lojista pode importar planilha ou mudar o preco no meio da live.
     refresh_seconds: int = 30
 
+    # De quanto em quanto tempo varrer a tela do LIVE Center atras de aviso do
+    # TikTok. Curto de proposito: e a diferenca entre parar no primeiro aviso
+    # e parar depois de mais dez mensagens automaticas.
+    watchdog_seconds: int = 5
+
     # Acima disso o lead entra na aba "quentes" do painel. Sobrescrito pelo
     # banco quando ha `configuracoes` para a loja.
     hot_lead_threshold: int = 7
@@ -108,6 +113,7 @@ class Config:
             supabase_service_key=os.getenv("SUPABASE_SERVICE_KEY", ""),
             seller_id=os.getenv("SELLER_ID", "default"),
             refresh_seconds=int(os.getenv("REFRESH_SECONDS", "30")),
+            watchdog_seconds=int(os.getenv("WATCHDOG_SECONDS", "5")),
         )
 
 
