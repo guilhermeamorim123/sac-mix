@@ -100,6 +100,9 @@ def merge(history: dict, current: list[dict], *, run_date: str) -> dict:
                 "first_seen_run": run_date,
                 "last_seen_run": run_date,
                 "earliest_ad_start": offer["earliest_ad_start"],
+                # Offer-level attribute, like page_name — the dashboard reads
+                # it to mark language across the whole series.
+                "lusofono": offer.get("lusofono", False),
                 "runs": [run_row],
             }
             diff["new"].append(key)
@@ -111,6 +114,7 @@ def merge(history: dict, current: list[dict], *, run_date: str) -> dict:
             entry["last_seen_run"] = max(entry["last_seen_run"], run_date)
             entry["page_name"] = offer["page_name"]
             entry["earliest_ad_start"] = offer["earliest_ad_start"]
+            entry["lusofono"] = offer.get("lusofono", False)
             entry["runs"] = [r for r in entry["runs"] if r["date"] != run_date]
             entry["runs"].append(run_row)
             entry["runs"].sort(key=lambda r: r["date"])

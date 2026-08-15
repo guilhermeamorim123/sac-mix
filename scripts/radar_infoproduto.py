@@ -78,7 +78,8 @@ def main() -> None:
     from datetime import date
 
     sys.path.insert(0, str(VAULT / "scripts"))
-    from radar import classify, config, meta_client, offers, render, store
+    from radar import (classify, config, dashboard, meta_client, offers,
+                       render, store)
 
     parser = argparse.ArgumentParser(
         description="Radar de infoproduto em alta na UE e no Reino Unido.")
@@ -127,6 +128,8 @@ def main() -> None:
 
     note_path = render.write_note(mature, emerging, diff, stats,
                                   run_date=run_date, runs_dir=runs_dir)
+    panel_path = dashboard.write_dashboard(history, base / "Painel.md",
+                                           generated_on=run_date)
 
     print(f"\n{stats['total']} anúncios, {stats['kept']} passaram no filtro")
     print(f"{len(mature)} ofertas maduras, {len(emerging)} emergentes")
@@ -135,7 +138,8 @@ def main() -> None:
     if failed:
         print(f"\nAVISO: {len(failed)} termos falharam ({', '.join(failed)}). "
               f"Rode de novo em 1h com --force para completar.")
-    print(f"\nNota: {note_path.relative_to(VAULT)}")
+    print(f"\nNota da rodada: {note_path.relative_to(VAULT)}")
+    print(f"Painel acumulado: {panel_path.relative_to(VAULT)}")
 
 
 if __name__ == "__main__":
