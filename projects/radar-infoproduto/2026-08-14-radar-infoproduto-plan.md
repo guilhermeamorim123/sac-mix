@@ -320,12 +320,20 @@ def test_fields_include_every_signal_downstream_reads():
         "ad_delivery_stop_time",      # offers: active vs stopped
         "eu_total_reach",             # offers: reach
         "total_reach_by_location",    # offers: countries
-        "languages",                  # classify: Brazil exclusion
-        "target_locations",           # classify: Brazil exclusion
+        "languages",                  # classify: the lusophone label
         "page_id",                    # offers: half the identity key
         "ad_snapshot_url",            # render: creative links
     }
     assert required <= set(config.FIELDS)
+
+
+def test_target_locations_is_requested_but_unread():
+    # No module reads it: the lusophone label uses `languages` and the domain,
+    # and the collection only ever asks for EU + UK countries, so an ad
+    # targeting elsewhere never arrives. Kept in FIELDS because it costs
+    # nothing and makes the cached raw.json readable by hand. Deliberately
+    # NOT in `required` above — dropping it should not fail a build.
+    assert "target_locations" in config.FIELDS
 ```
 
 - [ ] **Step 2: Rodar e ver falhar**
@@ -466,7 +474,7 @@ TOP_N_PROFILES = 20
 - [ ] **Step 4: Rodar e ver passar**
 
 Run: `scripts/.venv-radar/bin/python -m pytest scripts/radar/tests/test_config.py -v`
-Expected: 7 passed.
+Expected: 8 passed.
 
 - [ ] **Step 5: Commit**
 
@@ -896,7 +904,7 @@ def is_lusophone(ad: dict) -> bool:
 - [ ] **Step 6: Rodar e ver passar**
 
 Run: `scripts/.venv-radar/bin/python -m pytest scripts/radar/tests -v`
-Expected: 23 passed (12 classify + 7 config + 3 fixture + 1 smoke).
+Expected: 24 passed (12 classify + 8 config + 3 fixture + 1 smoke).
 
 - [ ] **Step 7: Commit**
 
@@ -1077,7 +1085,7 @@ def keep_infoproducts(ads: list[dict], *, with_stats: bool = False) -> Any:
 Run: `scripts/.venv-radar/bin/python -m pytest scripts/radar/tests/test_classify.py -v`
 Expected: 22 passed.
 
-Suite inteira: 33 passed.
+Suite inteira: 34 passed.
 
 - [ ] **Step 5: Commit**
 
@@ -2260,7 +2268,7 @@ E acrescentar `import json` ao bloco de imports no topo do arquivo.
 - [ ] **Step 4: Rodar a suíte inteira**
 
 Run: `scripts/.venv-radar/bin/python -m pytest scripts/radar/tests -v`
-Expected: 76 passed, 0 failed.
+Expected: 77 passed, 0 failed.
 
 - [ ] **Step 5: Verificar a guarda de países na prática**
 
@@ -2355,9 +2363,9 @@ inglês; execução agendada.
 `build_params`, `next_page`, `fetch_term`, `fetch_all` (meta_client). Os nomes
 usados nas Tasks 13 e 14 batem com os definidos nas Tasks 5 a 12.
 
-**Contagem de testes esperada ao fim:** 1 (smoke) + 7 (config) + 3 (fixture) +
+**Contagem de testes esperada ao fim:** 1 (smoke) + 8 (config) + 3 (fixture) +
 22 (classify) + 16 (offers) + 7 (store) + 10 (render) + 7 (meta_client) + 2
-(pipeline) = **76**, o número conferido na Task 13 Step 4.
+(pipeline) = **77**, o número conferido na Task 13 Step 4.
 
 **Correções feitas nas revisões:**
 1. `store.merge` chamava `_latest_run_before` dentro da compreensão, uma vez
