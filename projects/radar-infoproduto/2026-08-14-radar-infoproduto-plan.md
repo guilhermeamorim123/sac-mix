@@ -2084,7 +2084,7 @@ git commit -m "feat(radar): renderizacao da nota markdown da rodada"
 ```python
 import pytest
 
-from radar import meta_client
+from radar import config, meta_client
 
 
 def test_build_params_serializes_countries_as_json_array():
@@ -2115,6 +2115,25 @@ def test_guard_rejects_a_non_eu_country():
 
 def test_guard_accepts_eu_and_uk():
     meta_client.assert_countries_supported(["DE", "GB", "ES"])
+
+
+def test_guard_fires_on_the_real_config_path(monkeypatch):
+    # The guard's whole job is to catch a bad edit to config.COUNTRIES, and
+    # main() calls it with exactly that list. An earlier version derived
+    # SUPPORTED from config.COUNTRIES, so the check compared the config
+    # against itself and could never fail — while the literal-input tests
+    # above kept passing. This test exercises the production path.
+    monkeypatch.setattr(config, "COUNTRIES", ["DE", "GB", "US"])
+    with pytest.raises(SystemExit) as exc:
+        meta_client.assert_countries_supported(config.COUNTRIES)
+    assert "US" in str(exc.value)
+
+
+def test_supported_is_not_derived_from_the_config():
+    # Belt and braces on the same defect: the constant must be independent.
+    assert meta_client.SUPPORTED is not config.COUNTRIES
+    assert "US" not in meta_client.SUPPORTED
+    assert len(meta_client.SUPPORTED) == 28
 
 
 def test_next_page_url_is_read_from_paging_cursor():
@@ -2156,7 +2175,17 @@ from radar import config
 BASE = "https://graph.facebook.com"
 
 # EU 27 + UK — the only countries for which the API returns commercial ads.
-SUPPORTED = frozenset(config.COUNTRIES)
+#
+# Hard-coded here on purpose, NOT derived from config.COUNTRIES. Deriving it
+# would compare the config against itself: the guard below could never fire,
+# no matter what someone put in the config, while its unit test kept passing
+# on literal inputs. An inert guard is worse than no guard, because it looks
+# like protection.
+SUPPORTED = frozenset({
+    "AT", "BE", "BG", "HR", "CY", "CZ", "DK", "EE", "FI", "FR", "DE", "GR",
+    "HU", "IE", "IT", "LV", "LT", "LU", "MT", "NL", "PL", "PT", "RO", "SK",
+    "SI", "ES", "SE", "GB",
+})
 
 
 def assert_countries_supported(countries: list[str]) -> None:
@@ -2261,7 +2290,7 @@ def fetch_all(token: str, terms: list[str], countries: list[str]) -> tuple[list[
 - [ ] **Step 4: Rodar e ver passar**
 
 Run: `scripts/.venv-radar/bin/python -m pytest scripts/radar/tests/test_meta_client.py -v`
-Expected: 7 passed.
+Expected: 9 passed.
 
 - [ ] **Step 5: Commit**
 
@@ -2396,9 +2425,12 @@ def main() -> None:
         sys.exit(f"Erro: --render-only exige o cache em "
                  f"{raw_path.relative_to(VAULT)}, que não existe.")
     else:
+        # Token first: announcing the collection before checking credentials
+        # tells the owner it started when it never did.
+        token = load_token()
         print(f"Coletando {len(config.SEARCH_TERMS)} termos em "
               f"{len(config.COUNTRIES)} países...")
-        raw, failed = meta_client.fetch_all(load_token(), config.SEARCH_TERMS,
+        raw, failed = meta_client.fetch_all(token, config.SEARCH_TERMS,
                                             config.COUNTRIES)
         raw_path.parent.mkdir(parents=True, exist_ok=True)
         raw_path.write_text(json.dumps(raw, ensure_ascii=False), encoding="utf-8")
@@ -2430,7 +2462,7 @@ E acrescentar `import json` ao bloco de imports no topo do arquivo.
 - [ ] **Step 4: Rodar a suíte inteira**
 
 Run: `scripts/.venv-radar/bin/python -m pytest scripts/radar/tests -v`
-Expected: 85 passed, 0 failed.
+Expected: 87 passed, 0 failed.
 
 - [ ] **Step 5: Verificar a guarda de países na prática**
 
@@ -2544,8 +2576,8 @@ inglês; execução agendada.
 usados nas Tasks 13 e 14 batem com os definidos nas Tasks 5 a 12.
 
 **Contagem de testes esperada ao fim:** 1 (smoke) + 8 (config) + 3 (fixture) +
-25 (classify) + 19 (offers) + 10 (store) + 10 (render) + 7 (meta_client) + 2
-(pipeline) = **85**, o número conferido na Task 13 Step 4.
+25 (classify) + 19 (offers) + 10 (store) + 10 (render) + 9 (meta_client) + 2
+(pipeline) = **87**, o número conferido na Task 13 Step 4.
 
 **Correções feitas nas revisões:**
 1. `store.merge` chamava `_latest_run_before` dentro da compreensão, uma vez

@@ -14,6 +14,7 @@ A primeira execucao cria um virtualenv privado em scripts/.venv-radar/.
 from __future__ import annotations
 
 import os
+import json
 import subprocess
 import sys
 from pathlib import Path
@@ -53,8 +54,88 @@ def ensure_venv() -> None:
     os.execv(str(VENV_PY), [str(VENV_PY), str(Path(__file__).resolve()), *sys.argv[1:]])
 
 
+def load_token() -> str:
+    """Token from the environment, falling back to .env at the vault root."""
+    token = os.environ.get("META_AD_LIBRARY_TOKEN")
+    if token:
+        return token
+    env_file = VAULT / ".env"
+    if env_file.is_file():
+        for line in env_file.read_text(encoding="utf-8").splitlines():
+            if line.strip().startswith("META_AD_LIBRARY_TOKEN="):
+                return line.split("=", 1)[1].strip().strip('"').strip("'")
+    sys.exit(
+        "Erro: META_AD_LIBRARY_TOKEN não encontrado.\n"
+        "Gere um token em developers.facebook.com (app com acesso à Ad Library) "
+        "e exporte:\n"
+        '  export META_AD_LIBRARY_TOKEN="<token>"\n'
+        "Ou coloque a linha META_AD_LIBRARY_TOKEN=<token> no .env da raiz do vault."
+    )
+
+
 def main() -> None:
-    print("Radar Infoproduto — esqueleto. A orquestração entra nas próximas tasks.")
+    import argparse
+    from datetime import date
+
+    sys.path.insert(0, str(VAULT / "scripts"))
+    from radar import classify, config, meta_client, offers, render, store
+
+    parser = argparse.ArgumentParser(
+        description="Radar de infoproduto em alta na UE e no Reino Unido.")
+    parser.add_argument("--date", help="data da rodada (YYYY-MM-DD); padrão: hoje")
+    parser.add_argument("--force", action="store_true",
+                        help="ignora o cache bruto e coleta de novo")
+    parser.add_argument("--render-only", action="store_true",
+                        help="re-renderiza a partir do cache, sem gastar cota")
+    args = parser.parse_args()
+
+    run_date = args.date or date.today().isoformat()
+    base = VAULT / "projects" / "radar-infoproduto"
+    raw_path = base / "data" / "runs" / run_date / "raw.json"
+    history_path = base / "data" / "history.json"
+    runs_dir = base / "runs"
+
+    meta_client.assert_countries_supported(config.COUNTRIES)
+
+    if raw_path.is_file() and not args.force:
+        print(f"Usando cache de {raw_path.relative_to(VAULT)} "
+              f"(--force para recoletar)")
+        raw = json.loads(raw_path.read_text(encoding="utf-8"))
+        failed: list[str] = []
+    elif args.render_only:
+        sys.exit(f"Erro: --render-only exige o cache em "
+                 f"{raw_path.relative_to(VAULT)}, que não existe.")
+    else:
+        # Token first: announcing the collection before checking credentials
+        # tells the owner it started when it never did.
+        token = load_token()
+        print(f"Coletando {len(config.SEARCH_TERMS)} termos em "
+              f"{len(config.COUNTRIES)} países...")
+        raw, failed = meta_client.fetch_all(token, config.SEARCH_TERMS,
+                                            config.COUNTRIES)
+        raw_path.parent.mkdir(parents=True, exist_ok=True)
+        raw_path.write_text(json.dumps(raw, ensure_ascii=False), encoding="utf-8")
+        print(f"Bruto salvo em {raw_path.relative_to(VAULT)}")
+
+    kept, stats = classify.keep_infoproducts(raw, with_stats=True)
+    grouped = offers.group(kept, today=date.fromisoformat(run_date))
+    mature, emerging = offers.partition(grouped)
+
+    history = store.load(history_path)
+    diff = store.merge(history, mature + emerging, run_date=run_date)
+    store.save(history, history_path)
+
+    note_path = render.write_note(mature, emerging, diff, stats,
+                                  run_date=run_date, runs_dir=runs_dir)
+
+    print(f"\n{stats['total']} anúncios, {stats['kept']} passaram no filtro")
+    print(f"{len(mature)} ofertas maduras, {len(emerging)} emergentes")
+    print(f"{len(diff['new'])} novas, {len(diff['survived'])} sobreviveram, "
+          f"{len(diff['died'])} morreram")
+    if failed:
+        print(f"\nAVISO: {len(failed)} termos falharam ({', '.join(failed)}). "
+              f"Rode de novo em 1h com --force para completar.")
+    print(f"\nNota: {note_path.relative_to(VAULT)}")
 
 
 if __name__ == "__main__":
