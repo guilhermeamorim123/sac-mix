@@ -75,3 +75,38 @@ def test_start_time_with_timestamp_is_parsed():
             "ad_delivery_start_time": "2026-07-01T10:33:00+0000"}]
     grouped = offers.group(ads, today=TODAY)
     assert grouped[0]["earliest_ad_start"] == "2026-07-01"
+
+
+def _dated_ad(day: str, n: int) -> dict:
+    return {"id": str(n), "page_id": "1", "page_name": "X",
+            "ad_creative_link_captions": ["x.kajabi.com"],
+            "ad_delivery_start_time": day,
+            "ad_snapshot_url": f"https://snap/{n}",
+            "ad_creative_bodies": ["b" * n]}
+
+
+def test_snapshot_urls_are_the_five_most_recent_not_the_first_five():
+    # Bucket order is whatever the API returned, term by term — it carries no
+    # recency guarantee. Feeding oldest-first proves the sort is real: without
+    # it, this returns the five oldest and the owner opens dead creatives.
+    ads = [_dated_ad(d, i) for i, d in enumerate(
+        ["2020-01-01", "2021-01-01", "2022-01-01", "2023-01-01",
+         "2024-01-01", "2025-01-01", "2026-08-01"], start=1)]
+    grouped = offers.group(ads, today=TODAY)
+    assert grouped[0]["snapshot_urls"] == [
+        "https://snap/7", "https://snap/6", "https://snap/5",
+        "https://snap/4", "https://snap/3",
+    ]
+
+
+def test_snapshot_urls_tolerate_an_unparseable_date():
+    ads = [_dated_ad("not-a-date", 1), _dated_ad("2026-01-01", 2)]
+    grouped = offers.group(ads, today=TODAY)
+    # The good date sorts ahead of the unparseable one; neither crashes.
+    assert grouped[0]["snapshot_urls"] == ["https://snap/2", "https://snap/1"]
+
+
+def test_sample_copy_takes_the_three_longest_bodies():
+    ads = [_dated_ad("2026-01-01", n) for n in (5, 40, 1, 20, 30)]
+    grouped = offers.group(ads, today=TODAY)
+    assert grouped[0]["sample_copy"] == ["b" * 40, "b" * 30, "b" * 20]

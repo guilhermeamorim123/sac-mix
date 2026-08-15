@@ -71,9 +71,21 @@ def group(ads: list[dict], *, today: date) -> list[dict]:
             (b for a in group_ads for b in (a.get("ad_creative_bodies") or [])),
             key=len, reverse=True,
         )
+        # Newest first. Bucket order is whatever the API happened to return,
+        # term by term — it carries no recency guarantee, so the note would
+        # otherwise link creatives from years ago that may already be stopped
+        # instead of the one actually spending money today.
+        recent = sorted(
+            (a for a in group_ads if a.get("ad_snapshot_url")),
+            key=lambda a: _parse_day(a.get("ad_delivery_start_time")) or date.min,
+            reverse=True,
+        )
         out.append({
             "key": key,
             "page_id": str(group_ads[0].get("page_id")),
+            # Taken from the first ad in the bucket. `domain` is safe this way
+            # because it is half the bucket key; `page_name` is not, so a page
+            # renamed mid-flight resolves arbitrarily. Harmless in practice.
             "page_name": group_ads[0].get("page_name") or "(sem nome)",
             "domain": classify.extract_domain(group_ads[0]) or "",
             "earliest_ad_start": earliest.isoformat(),
@@ -84,7 +96,6 @@ def group(ads: list[dict], *, today: date) -> list[dict]:
             "countries": _countries(group_ads),
             "lusofono": any(classify.is_lusophone(a) for a in group_ads),
             "sample_copy": bodies[:3],
-            "snapshot_urls": [a["ad_snapshot_url"] for a in group_ads[:5]
-                              if a.get("ad_snapshot_url")],
+            "snapshot_urls": [a["ad_snapshot_url"] for a in recent[:5]],
         })
     return out
