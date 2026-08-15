@@ -83,11 +83,12 @@ o [[Atendente IA]] ganha.
 - [x] Revisar e aprovar o spec de design ✅ 2026-08-14
 - [x] Escrever o plano de implementação ✅ 2026-08-14
 - [x] Construir o v1 (Tasks 2 a 13, 87 testes) ✅ 2026-08-15
+- [x] Painel acumulado (`Painel.md`, reescrito a cada rodada) ✅ 2026-08-15
+- [x] Review final e merge na main, com push ✅ 2026-08-15
 - [ ] Criar app de desenvolvedor na Meta e passar pela verificação de identidade 📅 2026-08-18 #task
 - [ ] Task 1 do plano: sondar a API na mão e confirmar versão, `search_type` e a forma de `total_reach_by_location` 📅 2026-08-18 #task
 - [ ] Primeira rodada real e auditoria manual do top 20 📅 2026-08-19 #task
 - [ ] Documentar o script em `docs/reference/scripts.md` (bloqueado: o arquivo tem alteração pendente do dono) 📅 2026-08-19 #task
-- [ ] Mergear `feat/radar-infoproduto` na main 📅 2026-08-19 #task
 
 ---
 **See also:** [[Atendente IA]] | [[Guilherme Figueredo]]
