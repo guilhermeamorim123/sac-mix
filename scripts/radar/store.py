@@ -21,9 +21,36 @@ _RUN_FIELDS = ("days_live", "active_creatives", "total_creatives", "reach", "sco
 
 
 def load(path: Path) -> dict:
+    """Read the history, failing legibly when the file is not what we expect.
+
+    The likeliest way this file breaks is a git merge conflict: the vault
+    syncs between machines over git, and two machines running the radar in the
+    same week produce competing rewrites. A raw JSONDecodeError there tells
+    the owner nothing useful, so conflict markers get their own message.
+    """
     if not path.is_file():
         return {"schema_version": SCHEMA_VERSION, "offers": {}}
-    data = json.loads(path.read_text(encoding="utf-8"))
+    text = path.read_text(encoding="utf-8")
+    if "<<<<<<<" in text or ">>>>>>>" in text:
+        raise SystemExit(
+            f"Erro: {path} tem marcador de conflito de merge do git.\n"
+            "Duas máquinas gravaram o histórico na mesma semana. Resolva o "
+            "conflito no arquivo (ou recupere uma versão com `git checkout "
+            "--theirs`) e rode de novo."
+        )
+    try:
+        data = json.loads(text)
+    except json.JSONDecodeError as exc:
+        raise SystemExit(
+            f"Erro: {path} não é JSON válido ({exc}).\n"
+            "O histórico é versionado no git — `git log -- <arquivo>` mostra "
+            "a última versão boa."
+        )
+    if not isinstance(data, dict):
+        raise SystemExit(
+            f"Erro: {path} deveria conter um objeto JSON, mas contém "
+            f"{type(data).__name__}."
+        )
     data.setdefault("schema_version", SCHEMA_VERSION)
     data.setdefault("offers", {})
     return data
@@ -77,7 +104,11 @@ def merge(history: dict, current: list[dict], *, run_date: str) -> dict:
             }
             diff["new"].append(key)
         else:
-            entry["last_seen_run"] = run_date
+            # min/max, not plain assignment: `--date` with an older date is
+            # allowed, and assigning blindly would leave first_seen AFTER
+            # last_seen — an incoherent summary over a correct runs array.
+            entry["first_seen_run"] = min(entry["first_seen_run"], run_date)
+            entry["last_seen_run"] = max(entry["last_seen_run"], run_date)
             entry["page_name"] = offer["page_name"]
             entry["earliest_ad_start"] = offer["earliest_ad_start"]
             entry["runs"] = [r for r in entry["runs"] if r["date"] != run_date]

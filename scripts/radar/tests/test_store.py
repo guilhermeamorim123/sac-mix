@@ -1,5 +1,7 @@
 import json
 
+import pytest
+
 from radar import store
 
 
@@ -70,3 +72,35 @@ def test_save_then_load_round_trips(tmp_path):
     store.merge(history, [offer("1|a.com")], run_date="2026-08-14")
     store.save(history, path)
     assert json.loads(path.read_text(encoding="utf-8")) == history
+
+
+def test_an_older_run_date_does_not_invert_first_and_last_seen(tmp_path):
+    # `--date` accepts any date, so a backfill can arrive after a newer run.
+    # Plain assignment would leave first_seen AFTER last_seen.
+    history = store.load(tmp_path / "history.json")
+    store.merge(history, [offer("1|a.com")], run_date="2026-08-21")
+    store.merge(history, [offer("1|a.com")], run_date="2026-08-01")
+    entry = history["offers"]["1|a.com"]
+    assert entry["first_seen_run"] == "2026-08-01"
+    assert entry["last_seen_run"] == "2026-08-21"
+    assert entry["first_seen_run"] <= entry["last_seen_run"]
+    assert [r["date"] for r in entry["runs"]] == ["2026-08-01", "2026-08-21"]
+
+
+def test_load_explains_a_git_merge_conflict(tmp_path):
+    # The likeliest corruption in this vault: two machines write the history
+    # in the same week and git leaves conflict markers in the file.
+    path = tmp_path / "history.json"
+    path.write_text('<<<<<<< HEAD\n{"offers": {}}\n=======\n{"offers": {}}\n'
+                    '>>>>>>> other\n', encoding="utf-8")
+    with pytest.raises(SystemExit) as exc:
+        store.load(path)
+    assert "conflito de merge" in str(exc.value)
+
+
+def test_load_rejects_valid_json_that_is_not_an_object(tmp_path):
+    path = tmp_path / "history.json"
+    path.write_text("[]", encoding="utf-8")
+    with pytest.raises(SystemExit) as exc:
+        store.load(path)
+    assert "objeto JSON" in str(exc.value)
