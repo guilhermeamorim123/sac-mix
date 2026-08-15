@@ -67,3 +67,59 @@ def is_lusophone(ad: dict) -> bool:
         return True
     host = extract_domain(ad)
     return bool(host and host_matches(host, config.PT_PLATFORM_DOMAINS))
+
+
+_TEXT_FIELDS = ("ad_creative_bodies", "ad_creative_link_titles",
+                "ad_creative_link_descriptions")
+
+
+def ad_text(ad: dict) -> str:
+    """Every piece of copy in the ad, lowercased into one searchable blob."""
+    parts: list[str] = []
+    for field in _TEXT_FIELDS:
+        parts.extend(str(v) for v in (ad.get(field) or []))
+    return " ".join(parts).lower()
+
+
+def is_infoproduct(ad: dict) -> bool:
+    """Two layers: platform fingerprint first, then copy on an own domain.
+
+    Layer 1 is near-proof and needs nothing else. Layer 2 is the false-positive
+    prone one, so it demands both an offer term AND a domain that appears in
+    none of the known lists.
+    """
+    host = extract_domain(ad)
+    if not host:
+        return False
+    if host_matches(host, config.FUNNEL_DOMAINS):
+        return True
+    if host_matches(host, config.PT_PLATFORM_DOMAINS):
+        return True
+    if host_matches(host, config.ECOMMERCE_DOMAINS):
+        return False
+    text = ad_text(ad)
+    return any(term in text for term in config.SEARCH_TERMS)
+
+
+def keep_infoproducts(ads: list[dict], *, with_stats: bool = False) -> Any:
+    """Filter to infoproduct ads. Nothing is dropped for language.
+
+    With `with_stats`, also returns a counter of what happened — the run
+    summary uses it, and a spike in one bucket is how a broken filter
+    announces itself. `lusophone` counts ads KEPT and labelled, not dropped.
+    """
+    kept: list[dict] = []
+    stats = {"total": len(ads), "not_infoproduct": 0, "no_domain": 0,
+             "lusophone": 0}
+    for ad in ads:
+        if not extract_domain(ad):
+            stats["no_domain"] += 1
+            continue
+        if not is_infoproduct(ad):
+            stats["not_infoproduct"] += 1
+            continue
+        if is_lusophone(ad):
+            stats["lusophone"] += 1
+        kept.append(ad)
+    stats["kept"] = len(kept)
+    return (kept, stats) if with_stats else kept
