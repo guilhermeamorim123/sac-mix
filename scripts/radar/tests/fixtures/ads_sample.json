@@ -1,0 +1,103 @@
+[
+  {
+    "id": "1001",
+    "page_id": "500",
+    "page_name": "Exemplo Academy",
+    "ad_creative_bodies": ["Join the free masterclass and learn the system."],
+    "ad_creative_link_captions": ["exemplo.kajabi.com"],
+    "ad_delivery_start_time": "2026-03-02",
+    "ad_snapshot_url": "https://facebook.com/ads/archive/render_ad/?id=1001",
+    "languages": ["en"],
+    "eu_total_reach": 300000,
+    "total_reach_by_location": [{"region": "Germany", "reach": 300000}],
+    "target_locations": [{"name": "Germany", "type": "country", "excluded": false}]
+  },
+  {
+    "id": "1002",
+    "page_id": "500",
+    "page_name": "Exemplo Academy",
+    "ad_creative_bodies": ["Last chance for the masterclass."],
+    "ad_creative_link_captions": ["exemplo.kajabi.com"],
+    "ad_delivery_start_time": "2026-05-10",
+    "ad_snapshot_url": "https://facebook.com/ads/archive/render_ad/?id=1002",
+    "languages": ["en"],
+    "eu_total_reach": 180000,
+    "total_reach_by_location": [{"region": "Spain", "reach": 180000}],
+    "target_locations": [{"name": "Spain", "type": "country", "excluded": false}]
+  },
+  {
+    "id": "1003",
+    "page_id": "500",
+    "page_name": "Exemplo Academy",
+    "ad_creative_bodies": ["Old creative, no longer running."],
+    "ad_creative_link_captions": ["exemplo.kajabi.com"],
+    "ad_delivery_start_time": "2026-01-05",
+    "ad_delivery_stop_time": "2026-02-01",
+    "ad_snapshot_url": "https://facebook.com/ads/archive/render_ad/?id=1003",
+    "languages": ["en"],
+    "eu_total_reach": 20000,
+    "target_locations": [{"name": "Germany", "type": "country", "excluded": false}]
+  },
+  {
+    "id": "2001",
+    "page_id": "600",
+    "page_name": "Loja Legal",
+    "ad_creative_bodies": ["Free shipping on our templates collection."],
+    "ad_creative_link_captions": ["lojalegal.myshopify.com"],
+    "ad_delivery_start_time": "2026-04-01",
+    "ad_snapshot_url": "https://facebook.com/ads/archive/render_ad/?id=2001",
+    "languages": ["en"],
+    "eu_total_reach": 90000,
+    "target_locations": [{"name": "France", "type": "country", "excluded": false}]
+  },
+  {
+    "id": "3001",
+    "page_id": "700",
+    "page_name": "Curso BR",
+    "ad_creative_bodies": ["Masterclass gratuita de trafego pago."],
+    "ad_creative_link_captions": ["pay.hotmart.com"],
+    "ad_delivery_start_time": "2026-04-15",
+    "ad_snapshot_url": "https://facebook.com/ads/archive/render_ad/?id=3001",
+    "languages": ["pt"],
+    "eu_total_reach": 40000,
+    "target_locations": [{"name": "Portugal", "type": "country", "excluded": false}]
+  },
+  {
+    "id": "4001",
+    "page_id": "800",
+    "page_name": "Solo Coach",
+    "ad_creative_bodies": ["My coaching program opens Monday."],
+    "ad_creative_link_captions": ["solocoach.co.uk"],
+    "ad_delivery_start_time": "2026-02-20",
+    "ad_snapshot_url": "https://facebook.com/ads/archive/render_ad/?id=4001",
+    "languages": ["en"],
+    "eu_total_reach": 150000,
+    "total_reach_by_location": [{"region": "United Kingdom", "reach": 150000}],
+    "target_locations": [{"name": "United Kingdom", "type": "country", "excluded": false}]
+  },
+  {
+    "id": "5001",
+    "page_id": "900",
+    "page_name": "Consultoria Qualquer",
+    "ad_creative_bodies": ["We build custom software for logistics."],
+    "ad_creative_link_captions": ["consultoria.example.com"],
+    "ad_delivery_start_time": "2026-06-01",
+    "ad_snapshot_url": "https://facebook.com/ads/archive/render_ad/?id=5001",
+    "languages": ["en"],
+    "eu_total_reach": 5000,
+    "target_locations": [{"name": "Netherlands", "type": "country", "excluded": false}]
+  },
+  {
+    "id": "6001",
+    "page_id": "950",
+    "page_name": "Nova Oferta",
+    "ad_creative_bodies": ["Free training starting this week."],
+    "ad_creative_link_captions": ["novaoferta.skool.com"],
+    "ad_delivery_start_time": "2026-08-05",
+    "ad_snapshot_url": "https://facebook.com/ads/archive/render_ad/?id=6001",
+    "languages": ["en"],
+    "eu_total_reach": 12000,
+    "total_reach_by_location": [{"region": "Ireland", "reach": 12000}],
+    "target_locations": [{"name": "Ireland", "type": "country", "excluded": false}]
+  }
+]
