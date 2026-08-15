@@ -35,3 +35,21 @@ def test_domain_lists_do_not_overlap():
 def test_search_terms_are_lowercase_and_unique():
     assert all(term == term.lower() for term in config.SEARCH_TERMS)
     assert len(config.SEARCH_TERMS) == len(set(config.SEARCH_TERMS))
+
+
+def test_fields_include_every_signal_downstream_reads():
+    # Dropping one of these breaks a downstream module silently — the column
+    # comes back empty instead of raising. This is the guard against that.
+    required = {
+        "ad_creative_link_captions",  # classify: the whole domain filter
+        "ad_creative_bodies",         # classify: copy match; render: promise
+        "ad_delivery_start_time",     # offers: days_live
+        "ad_delivery_stop_time",      # offers: active vs stopped
+        "eu_total_reach",             # offers: reach
+        "total_reach_by_location",    # offers: countries
+        "languages",                  # classify: Brazil exclusion
+        "target_locations",           # classify: Brazil exclusion
+        "page_id",                    # offers: half the identity key
+        "ad_snapshot_url",            # render: creative links
+    }
+    assert required <= set(config.FIELDS)
