@@ -47,9 +47,17 @@ def test_fields_include_every_signal_downstream_reads():
         "ad_delivery_stop_time",      # offers: active vs stopped
         "eu_total_reach",             # offers: reach
         "total_reach_by_location",    # offers: countries
-        "languages",                  # classify: Brazil exclusion
-        "target_locations",           # classify: Brazil exclusion
+        "languages",                  # classify: the lusophone label
         "page_id",                    # offers: half the identity key
         "ad_snapshot_url",            # render: creative links
     }
     assert required <= set(config.FIELDS)
+
+
+def test_target_locations_is_requested_but_unread():
+    # No module reads it: the lusophone label uses `languages` and the domain,
+    # and the collection only ever asks for EU + UK countries, so an ad
+    # targeting elsewhere never arrives. Kept in FIELDS because it costs
+    # nothing and makes the cached raw.json readable by hand. Deliberately
+    # NOT in `required` above — dropping it should not fail a build.
+    assert "target_locations" in config.FIELDS
