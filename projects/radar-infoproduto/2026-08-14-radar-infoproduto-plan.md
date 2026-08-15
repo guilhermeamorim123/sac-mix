@@ -1235,6 +1235,41 @@ def test_start_time_with_timestamp_is_parsed():
             "ad_delivery_start_time": "2026-07-01T10:33:00+0000"}]
     grouped = offers.group(ads, today=TODAY)
     assert grouped[0]["earliest_ad_start"] == "2026-07-01"
+
+
+def _dated_ad(day: str, n: int) -> dict:
+    return {"id": str(n), "page_id": "1", "page_name": "X",
+            "ad_creative_link_captions": ["x.kajabi.com"],
+            "ad_delivery_start_time": day,
+            "ad_snapshot_url": f"https://snap/{n}",
+            "ad_creative_bodies": ["b" * n]}
+
+
+def test_snapshot_urls_are_the_five_most_recent_not_the_first_five():
+    # Bucket order is whatever the API returned, term by term — it carries no
+    # recency guarantee. Feeding oldest-first proves the sort is real: without
+    # it, this returns the five oldest and the owner opens dead creatives.
+    ads = [_dated_ad(d, i) for i, d in enumerate(
+        ["2020-01-01", "2021-01-01", "2022-01-01", "2023-01-01",
+         "2024-01-01", "2025-01-01", "2026-08-01"], start=1)]
+    grouped = offers.group(ads, today=TODAY)
+    assert grouped[0]["snapshot_urls"] == [
+        "https://snap/7", "https://snap/6", "https://snap/5",
+        "https://snap/4", "https://snap/3",
+    ]
+
+
+def test_snapshot_urls_tolerate_an_unparseable_date():
+    ads = [_dated_ad("not-a-date", 1), _dated_ad("2026-01-01", 2)]
+    grouped = offers.group(ads, today=TODAY)
+    # The good date sorts ahead of the unparseable one; neither crashes.
+    assert grouped[0]["snapshot_urls"] == ["https://snap/2", "https://snap/1"]
+
+
+def test_sample_copy_takes_the_three_longest_bodies():
+    ads = [_dated_ad("2026-01-01", n) for n in (5, 40, 1, 20, 30)]
+    grouped = offers.group(ads, today=TODAY)
+    assert grouped[0]["sample_copy"] == ["b" * 40, "b" * 30, "b" * 20]
 ```
 
 - [ ] **Step 2: Rodar e ver falhar**
@@ -1320,9 +1355,21 @@ def group(ads: list[dict], *, today: date) -> list[dict]:
             (b for a in group_ads for b in (a.get("ad_creative_bodies") or [])),
             key=len, reverse=True,
         )
+        # Newest first. Bucket order is whatever the API happened to return,
+        # term by term — it carries no recency guarantee, so the note would
+        # otherwise link creatives from years ago that may already be stopped
+        # instead of the one actually spending money today.
+        recent = sorted(
+            (a for a in group_ads if a.get("ad_snapshot_url")),
+            key=lambda a: _parse_day(a.get("ad_delivery_start_time")) or date.min,
+            reverse=True,
+        )
         out.append({
             "key": key,
             "page_id": str(group_ads[0].get("page_id")),
+            # Taken from the first ad in the bucket. `domain` is safe this way
+            # because it is half the bucket key; `page_name` is not, so a page
+            # renamed mid-flight resolves arbitrarily. Harmless in practice.
             "page_name": group_ads[0].get("page_name") or "(sem nome)",
             "domain": classify.extract_domain(group_ads[0]) or "",
             "earliest_ad_start": earliest.isoformat(),
@@ -1333,8 +1380,7 @@ def group(ads: list[dict], *, today: date) -> list[dict]:
             "countries": _countries(group_ads),
             "lusofono": any(classify.is_lusophone(a) for a in group_ads),
             "sample_copy": bodies[:3],
-            "snapshot_urls": [a["ad_snapshot_url"] for a in group_ads[:5]
-                              if a.get("ad_snapshot_url")],
+            "snapshot_urls": [a["ad_snapshot_url"] for a in recent[:5]],
         })
     return out
 ```
@@ -1342,7 +1388,7 @@ def group(ads: list[dict], *, today: date) -> list[dict]:
 - [ ] **Step 4: Rodar e ver passar**
 
 Run: `scripts/.venv-radar/bin/python -m pytest scripts/radar/tests/test_offers.py -v`
-Expected: 9 passed.
+Expected: 12 passed.
 
 - [ ] **Step 5: Commit**
 
@@ -1467,7 +1513,7 @@ def partition(all_offers: list[dict]) -> tuple[list[dict], list[dict]]:
 - [ ] **Step 4: Rodar e ver passar**
 
 Run: `scripts/.venv-radar/bin/python -m pytest scripts/radar/tests/test_offers.py -v`
-Expected: 16 passed.
+Expected: 19 passed.
 
 Se `test_score_is_a_known_value` falhar, conferir a aritmética antes de mexer no código: com os pesos 0.5/0.3/0.2 e os tetos 180/50/1.000.000, o valor esperado é `100 * (0.5*(165/180) + 0.3*log10(23)/log10(51) + 0.2*log10(480001)/log10(1000001))`.
 
@@ -2319,7 +2365,7 @@ E acrescentar `import json` ao bloco de imports no topo do arquivo.
 - [ ] **Step 4: Rodar a suíte inteira**
 
 Run: `scripts/.venv-radar/bin/python -m pytest scripts/radar/tests -v`
-Expected: 79 passed, 0 failed.
+Expected: 82 passed, 0 failed.
 
 - [ ] **Step 5: Verificar a guarda de países na prática**
 
@@ -2433,8 +2479,8 @@ inglês; execução agendada.
 usados nas Tasks 13 e 14 batem com os definidos nas Tasks 5 a 12.
 
 **Contagem de testes esperada ao fim:** 1 (smoke) + 8 (config) + 3 (fixture) +
-25 (classify) + 16 (offers) + 7 (store) + 10 (render) + 7 (meta_client) + 2
-(pipeline) = **79**, o número conferido na Task 13 Step 4.
+25 (classify) + 19 (offers) + 7 (store) + 10 (render) + 7 (meta_client) + 2
+(pipeline) = **82**, o número conferido na Task 13 Step 4.
 
 **Correções feitas nas revisões:**
 1. `store.merge` chamava `_latest_run_before` dentro da compreensão, uma vez
