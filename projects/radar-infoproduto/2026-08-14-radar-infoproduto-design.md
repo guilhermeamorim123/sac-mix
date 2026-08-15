@@ -25,9 +25,12 @@ o sinal mais honesto disponível sem acesso ao faturamento de terceiros.
 ## Não-objetivos
 
 - Não é buscador de produto para promover como afiliado
-- Não cobre Brasil — excluído por decisão explícita do dono
 - Não extrai preço nem estrutura de oferta da landing page (v1 entrega o link)
 - Não cobre EUA (ver "A limitação que define o escopo")
+- **Não cobre o mercado brasileiro.** Anúncio entregue no Brasil não existe no
+  acervo comercial da API, e pôr `BR` na lista de países degrada a coleta
+  inteira para anúncio político. O que o radar enxerga é o infoprodutor
+  lusófono que anuncia **na Europa** — não o que anuncia no Brasil
 - Não é SaaS, não tem interface web, não roda na nuvem
 
 ## A limitação que define o escopo
@@ -62,6 +65,7 @@ país), não só datas. O sinal é quantitativo, não proxy.
 | 5 | Cache do JSON bruto por rodada | 200 chamadas/hora. Ajustar score ou markdown não pode custar cota |
 | 6 | Landing page não é baixada no v1 | Modelar oferta é trabalho de julgamento. O script entrega o link; a leitura é humana |
 | 7 | Agrupamento por `(page_id, domínio)` | Uma oferta roda dezenas de criativos. A unidade de análise é a oferta, não o anúncio |
+| 8 | Português é **rótulo**, não filtro (revisto em 15/08/2026) | A decisão original excluía Brasil. Revertida pelo dono: o infoprodutor lusófono que anuncia na Europa é justamente a cunha de menor atrito para ele. Hotmart e Kiwify passam de bloqueio a plataforma de funil — que é o que sempre foram |
 
 ## Fontes avaliadas e descartadas
 
@@ -78,9 +82,9 @@ país), não só datas. O sinal é quantitativo, não proxy.
 scripts/radar_infoproduto.py     entrada: argparse, bootstrap de venv, orquestração
 scripts/radar/
   __init__.py
-  config.py        termos, domínios de funil, blocklist BR, países, pesos, limiares
+  config.py        termos, domínios de funil, países, pesos, limiares
   meta_client.py   único módulo que toca a rede: paginação, rate limit, retry
-  classify.py      anúncio → é infoproduto? é Brasil? (funções puras)
+  classify.py      anúncio → é infoproduto? é lusófono? (funções puras)
   offers.py        anúncios → ofertas agrupadas + score (funções puras)
   store.py         histórico JSON, merge, diff entre rodadas
   render.py        ofertas → nota markdown
@@ -111,7 +115,7 @@ config.SEARCH_TERMS + config.COUNTRIES
    ↓  meta_client.fetch_ads()
        → data/runs/YYYY-MM-DD/raw.json          (cache bruto, resumível)
    ↓  classify.keep_infoproducts()
-       → anúncios de infoproduto, sem Brasil
+       → anúncios de infoproduto, lusófonos marcados
    ↓  offers.group_and_score()
        → ofertas com score
    ↓  store.merge()
@@ -145,8 +149,11 @@ infoproduto: `kajabi`, `clickfunnels`, `teachable`, `thinkific`,
 `samcart`, `podia`, `circle.so`, `mightynetworks`, `gumroad`, `stan.store`,
 `everwebinar`, `webinarjam`, `demio`, `msgsndr` (GoHighLevel).
 
-**Blocklist Brasil** — `hotmart`, `eduzz`, `kiwify`, `braip`, `monetizze`,
-`ticto`, `perfectpay`, `cakto`, `greenn`, `herospark`.
+**Plataformas lusófonas** — `hotmart`, `eduzz`, `kiwify`, `braip`,
+`monetizze`, `ticto`, `perfectpay`, `cakto`, `greenn`, `herospark`. Elas são
+plataformas de funil como as de cima, e contam como sinal **positivo** de
+infoproduto. A lista existe separada só para **rotular** a oferta como
+lusófona, nunca para descartá-la.
 
 **Plataformas de e-commerce** — usadas para *excluir*, não para incluir:
 `shopify`, `myshopify`, `amazon`, `etsy`, `ebay`, `woocommerce`, `bigcartel`,
@@ -170,20 +177,31 @@ implementação.
 
 Um anúncio é infoproduto se passar em **qualquer** uma destas:
 
-1. O domínio em `ad_creative_link_captions` bate com a lista de plataformas de funil
+1. O domínio em `ad_creative_link_captions` bate com a lista de plataformas de
+   funil — incluindo as lusófonas, que são plataformas de funil como as outras
 2. O texto do anúncio bate com termo de oferta **e** o destino é domínio próprio
 
 "Domínio próprio" quer dizer: o domínio registrável extraído da caption não
 aparece em nenhuma das listas conhecidas — nem plataforma de funil, nem
-plataforma de e-commerce, nem blocklist brasileira. É o caso do infoprodutor que
-usa domínio dele. Como a regra 2 é a mais propensa a falso positivo, ela exige
-as duas condições juntas.
+lusófona, nem de e-commerce. É o caso do infoprodutor que usa domínio dele.
+Como a regra 2 é a mais propensa a falso positivo, ela exige as duas condições
+juntas.
 
-Um anúncio é descartado como Brasil se **qualquer** uma for verdade:
+### Rótulo de idioma, não filtro
+
+Nada é descartado por ser lusófono. A oferta é **marcada** como tal se
+**qualquer** uma for verdade:
 
 1. `languages` contém `pt`
-2. `target_locations` inclui `BR`
-3. O domínio de destino bate com a blocklist brasileira
+2. O domínio de destino bate com a lista de plataformas lusófonas
+
+O rótulo é "lusófono", não "brasileiro", de propósito: `pt` pega português de
+Portugal também, e chamar isso de brasileiro seria simplesmente errado. Para o
+dono, aliás, os dois interessam pelo mesmo motivo — é oferta que ele lê sem
+fricção nenhuma.
+
+`target_locations` com `BR` não entra na regra porque, na prática, não ocorre:
+a coleta só pede países da UE e do Reino Unido.
 
 Ambas as funções são puras, recebem o dicionário do anúncio e devolvem booleano.
 São o coração testável do sistema.
@@ -206,6 +224,7 @@ Campos agregados por oferta:
 | `total_creatives` | todos os anúncios do grupo — fora do score, mas vai na ficha: 40 criativos totais com 3 ativos é oferta em declínio |
 | `reach` | soma de `eu_total_reach` |
 | `countries` | união de `total_reach_by_location` |
+| `lusofono` | verdadeiro se **qualquer** anúncio do grupo for lusófono |
 | `sample_copy` | os 3 `ad_creative_bodies` mais longos |
 | `snapshot_urls` | `ad_snapshot_url` dos 5 criativos mais recentes |
 
@@ -271,9 +290,11 @@ Estrutura:
 1. **Resumo** — quantos anúncios coletados, quantos sobreviveram ao filtro,
    quantas ofertas, quantas novas, quantas morreram desde a última rodada
 2. **Ranking** — tabela das ofertas maduras: posição, anunciante, domínio, dias
-   no ar, criativos ativos, alcance, score, variação de posição
+   no ar, criativos ativos, alcance, score, e uma coluna de idioma marcando as
+   lusófonas
 3. **Fichas do top 20** — uma seção por oferta: promessa (o texto do anúncio),
-   países, links de snapshot, e o link do domínio de destino para abrir na mão
+   países, idioma, links de snapshot, e o link do domínio de destino para abrir
+   na mão
 4. **Emergentes** — ofertas com menos de 21 dias, sem ranking
 5. **Mortas nesta rodada** — sumiram desde a última. Sinal de oferta que não
    sustentou

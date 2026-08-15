@@ -40,7 +40,7 @@ tags:
 | `scripts/radar_infoproduto.py` | CLI, bootstrap de venv, guarda de países, orquestração |
 | `scripts/radar/config.py` | Dado puro: países, termos, listas de domínio, pesos, limiares |
 | `scripts/radar/meta_client.py` | Único módulo com rede: URL, paginação, retry, rate limit |
-| `scripts/radar/classify.py` | Anúncio → é infoproduto? é Brasil? Funções puras |
+| `scripts/radar/classify.py` | Anúncio → é infoproduto? é lusófono? Funções puras |
 | `scripts/radar/offers.py` | Anúncios → ofertas agrupadas, score, portão de maturidade |
 | `scripts/radar/store.py` | `history.json`: carregar, mesclar, diferenciar rodadas |
 | `scripts/radar/render.py` | Ofertas + diff → markdown |
@@ -94,7 +94,7 @@ Confirmar na saída:
 1. Existe `data` com anúncios **comerciais** (não só político). Se vier só político, a lista de países está errada — tem que ser UE/UK.
 2. `eu_total_reach` vem preenchido em pelo menos parte dos anúncios.
 3. `ad_creative_link_captions` vem preenchido — é o campo do qual todo o filtro depende.
-4. **A forma exata de `total_reach_by_location` e de `target_locations`.** O código trata as duas possibilidades (lista de dicionários ou lista de strings), mas anote qual delas a API realmente devolve e quais chaves cada dicionário tem (`region`? `name`? `key`?). Se a forma for uma terceira, as funções `_targets_brazil` (Task 6) e `_countries` (Task 8) precisam de um ajuste — é a única coisa neste plano escrita contra um formato não confirmado.
+4. **A forma exata de `total_reach_by_location`.** O código trata as duas possibilidades (lista de dicionários ou lista de strings), mas anote qual delas a API realmente devolve e quais chaves cada dicionário tem (`region`? `name`? `key`?). Se a forma for uma terceira, `_countries` (Task 8) precisa de um ajuste — é a única coisa neste plano escrita contra um formato não confirmado.
 
 Testar também o modo de busca:
 
@@ -479,7 +479,7 @@ git commit -m "feat(radar): config de paises, termos, dominios e pesos"
 
 ## Task 4: Fixture de anúncios
 
-Todo teste daqui pra frente lê desta fixture. Ela cobre de propósito um caso de cada armadilha: plataforma de funil, e-commerce, plataforma brasileira, idioma português, domínio próprio com e sem termo, e anúncio já encerrado.
+Todo teste daqui pra frente lê desta fixture. Ela cobre de propósito um caso de cada armadilha: plataforma de funil, e-commerce, plataforma lusófona, idioma português, domínio próprio com e sem termo, e anúncio já encerrado.
 
 **Files:**
 - Create: `scripts/radar/tests/fixtures/ads_sample.json`
@@ -783,114 +783,140 @@ git commit -m "feat(radar): extracao e casamento de dominio de destino"
 
 ---
 
-## Task 6: classify.py — exclusão do Brasil
+## Task 6: classify.py — rótulo de idioma (lusófono)
+
+Nada é descartado por ser lusófono. Hotmart, Kiwify e as demais plataformas em
+português são plataformas de funil como Kajabi — sinal **positivo** de
+infoproduto. Esta task só ensina o módulo a **reconhecer** a oferta lusófona,
+para que a nota possa marcá-la.
+
+O rótulo é "lusófono" e não "brasileiro" de propósito: o idioma `pt` pega
+português de Portugal também, e chamar isso de brasileiro seria errado.
 
 **Files:**
+- Modify: `scripts/radar/config.py`
+- Modify: `scripts/radar/tests/test_config.py`
 - Modify: `scripts/radar/classify.py`
 - Modify: `scripts/radar/tests/test_classify.py`
 
-- [ ] **Step 1: Acrescentar os testes**
+- [ ] **Step 1: Renomear os nomes na config**
 
-Adicionar ao fim de `scripts/radar/tests/test_classify.py`:
+O nome `BR_DOMAINS` mentia sobre o que a lista faz agora. Em
+`scripts/radar/config.py`, substituir o bloco das plataformas brasileiras e as
+duas constantes seguintes por:
 
 ```python
-def test_is_brazil_by_language():
-    assert classify.is_brazil({"languages": ["pt"],
-                               "ad_creative_link_captions": ["algo.com"]})
+# Portuguese-language infoproduct platforms. These are funnel platforms exactly
+# like the ones above and count as POSITIVE evidence — the list exists only so
+# an offer can be LABELLED lusophone, never to drop it.
+PT_PLATFORM_DOMAINS = frozenset({
+    "hotmart", "eduzz", "kiwify", "braip", "monetizze", "ticto",
+    "perfectpay", "cakto", "greenn", "herospark",
+})
 
-
-def test_is_brazil_by_platform_domain():
-    assert classify.is_brazil({"languages": ["en"],
-                               "ad_creative_link_captions": ["pay.hotmart.com"]})
-
-
-def test_is_brazil_by_target_location_dict():
-    ad = {"languages": ["en"],
-          "ad_creative_link_captions": ["algo.com"],
-          "target_locations": [{"name": "Brazil", "type": "country",
-                                "excluded": False, "key": "BR"}]}
-    assert classify.is_brazil(ad)
-
-
-def test_is_brazil_by_target_location_string():
-    # The API has shipped this field as bare strings too; handle both shapes.
-    ad = {"languages": ["en"],
-          "ad_creative_link_captions": ["algo.com"],
-          "target_locations": ["BR"]}
-    assert classify.is_brazil(ad)
-
-
-def test_excluded_brazil_target_is_not_brazil():
-    ad = {"languages": ["en"],
-          "ad_creative_link_captions": ["algo.com"],
-          "target_locations": [{"name": "Brazil", "key": "BR", "excluded": True}]}
-    assert not classify.is_brazil(ad)
-
-
-def test_english_eu_ad_is_not_brazil():
-    assert not classify.is_brazil({"languages": ["en"],
-                                   "ad_creative_link_captions": ["solocoach.co.uk"]})
+# "pt" alone is what the API usually sends; the regional tags show up too.
+PT_LANGUAGES = frozenset({"pt", "pt_BR", "pt-BR", "pt_PT", "pt-PT"})
 ```
 
-- [ ] **Step 2: Rodar e ver falhar**
+`BR_COUNTRY` sai de vez: a regra que o usava foi removida, porque a coleta só
+pede países da UE e do Reino Unido — um anúncio mirando o Brasil nunca chega.
+
+- [ ] **Step 2: Ajustar o teste da config**
+
+Em `scripts/radar/tests/test_config.py`, trocar as referências antigas:
+
+```python
+def test_domain_lists_do_not_overlap():
+    assert not (config.FUNNEL_DOMAINS & config.ECOMMERCE_DOMAINS)
+    assert not (config.FUNNEL_DOMAINS & config.PT_PLATFORM_DOMAINS)
+    assert not (config.ECOMMERCE_DOMAINS & config.PT_PLATFORM_DOMAINS)
+```
+
+- [ ] **Step 3: Escrever os testes do rótulo**
+
+Acrescentar ao fim de `scripts/radar/tests/test_classify.py`:
+
+```python
+def test_is_lusophone_by_language():
+    assert classify.is_lusophone({"languages": ["pt"],
+                                  "ad_creative_link_captions": ["algo.com"]})
+
+
+def test_is_lusophone_by_platform_domain():
+    # English copy on Hotmart is still a lusophone operation.
+    assert classify.is_lusophone({"languages": ["en"],
+                                  "ad_creative_link_captions": ["pay.hotmart.com"]})
+
+
+def test_is_lusophone_accepts_regional_language_tags():
+    for tag in ("pt_BR", "pt-BR", "pt_PT", "pt-PT"):
+        assert classify.is_lusophone({"languages": [tag],
+                                      "ad_creative_link_captions": ["algo.com"]})
+
+
+def test_english_ad_on_a_generic_domain_is_not_lusophone():
+    assert not classify.is_lusophone({"languages": ["en"],
+                                      "ad_creative_link_captions": ["solocoach.co.uk"]})
+```
+
+- [ ] **Step 4: Rodar e ver falhar**
 
 Run: `scripts/.venv-radar/bin/python -m pytest scripts/radar/tests/test_classify.py -v`
-Expected: FAIL com `AttributeError: module 'radar.classify' has no attribute 'is_brazil'`
+Expected: FAIL com `AttributeError: module 'radar.classify' has no attribute 'is_lusophone'`
 
-- [ ] **Step 3: Implementar**
+- [ ] **Step 5: Implementar**
 
-Acrescentar ao fim de `scripts/radar/classify.py`:
-
-```python
-def _targets_brazil(ad: dict) -> bool:
-    """True when BR is an *included* target.
-
-    `target_locations` has shipped as both a list of dicts and a list of bare
-    country codes. An entry flagged `excluded` means the advertiser is keeping
-    Brazil out, which is the opposite of targeting it.
-    """
-    for entry in ad.get("target_locations") or []:
-        if isinstance(entry, dict):
-            if entry.get("excluded"):
-                continue
-            values = {str(entry.get("key", "")), str(entry.get("name", ""))}
-        else:
-            values = {str(entry)}
-        if config.BR_COUNTRY in {v.upper() for v in values} or "BRAZIL" in {
-            v.upper() for v in values
-        }:
-            return True
-    return False
-
-
-def is_brazil(ad: dict) -> bool:
-    """Brazil is out by owner decision — three independent signals catch it."""
-    if set(ad.get("languages") or []) & config.BR_LANGUAGES:
-        return True
-    if _targets_brazil(ad):
-        return True
-    host = extract_domain(ad)
-    if host and host_matches(host, config.BR_DOMAINS):
-        return True
-    return False
-```
-
-E acrescentar o import no topo do arquivo, logo abaixo de `from typing import ...`:
+Acrescentar o import no topo de `scripts/radar/classify.py`, logo abaixo de
+`from typing import ...`:
 
 ```python
 from radar import config
 ```
 
-- [ ] **Step 4: Rodar e ver passar**
+E acrescentar ao fim do arquivo:
 
-Run: `scripts/.venv-radar/bin/python -m pytest scripts/radar/tests/test_classify.py -v`
-Expected: 14 passed.
+```python
+def is_lusophone(ad: dict) -> bool:
+    """True when the offer speaks Portuguese — Brazilian or Portuguese.
 
-- [ ] **Step 5: Commit**
+    This is a LABEL, not a filter. Nothing is dropped for being lusophone; the
+    run note marks it, because an offer the owner reads without friction is
+    worth more to him than one he has to translate.
+
+    Deliberately not called `is_brazilian`: the `pt` language tag covers
+    Portugal too, and the platform list cannot tell a São Paulo seller from a
+    Lisbon one.
+    """
+    if set(ad.get("languages") or []) & config.PT_LANGUAGES:
+        return True
+    host = extract_domain(ad)
+    return bool(host and host_matches(host, config.PT_PLATFORM_DOMAINS))
+```
+
+- [ ] **Step 6: Rodar e ver passar**
+
+Run: `scripts/.venv-radar/bin/python -m pytest scripts/radar/tests -v`
+Expected: 23 passed (12 classify + 7 config + 3 fixture + 1 smoke).
+
+- [ ] **Step 7: Commit**
 
 ```bash
-git add scripts/radar/classify.py scripts/radar/tests/test_classify.py
-git commit -m "feat(radar): exclusao de Brasil por idioma, alvo e plataforma"
+git add scripts/radar/config.py scripts/radar/classify.py \
+        scripts/radar/tests/test_config.py scripts/radar/tests/test_classify.py
+git commit -m "feat(radar): rotulo lusofono no lugar da exclusao de Brasil"
+```
+
+Corpo da mensagem:
+
+```
+A decisao original excluia Brasil. Revertida pelo dono: o infoprodutor
+lusofono que anuncia na Europa e a cunha de menor atrito para ele.
+
+BR_DOMAINS vira PT_PLATFORM_DOMAINS e passa a contar como plataforma de
+funil, que e o que Hotmart e Kiwify sempre foram. BR_COUNTRY sai: a coleta
+so pede UE e Reino Unido, entao anuncio mirando o Brasil nunca chega.
+
+O rotulo e "lusofono", nao "brasileiro" — o idioma pt pega Portugal tambem.
 ```
 
 ---
@@ -919,6 +945,14 @@ def load_ads():
 def test_funnel_platform_is_infoproduct():
     ad = {"ad_creative_link_captions": ["exemplo.kajabi.com"],
           "ad_creative_bodies": ["anything at all"]}
+    assert classify.is_infoproduct(ad)
+
+
+def test_lusophone_platform_is_infoproduct():
+    # Hotmart is one of the largest infoproduct platforms in the world. It is
+    # positive evidence, not a reason to drop the ad.
+    ad = {"ad_creative_link_captions": ["pay.hotmart.com"],
+          "ad_creative_bodies": ["Masterclass gratuita."]}
     assert classify.is_infoproduct(ad)
 
 
@@ -954,15 +988,22 @@ def test_ad_without_caption_is_not_infoproduct():
 def test_keep_infoproducts_filters_the_fixture():
     kept = classify.keep_infoproducts(load_ads())
     kept_ids = {ad["id"] for ad in kept}
-    # kajabi x3, own-domain coach, skool
-    assert kept_ids == {"1001", "1002", "1003", "4001", "6001"}
+    # kajabi x3, hotmart, own-domain coach, skool. Dropped: the shopify store
+    # and the software consultancy.
+    assert kept_ids == {"1001", "1002", "1003", "3001", "4001", "6001"}
 
 
 def test_keep_infoproducts_reports_why_it_dropped_things():
     kept, stats = classify.keep_infoproducts(load_ads(), with_stats=True)
-    assert len(kept) == 5
-    assert stats["brazil"] == 1        # hotmart / pt
+    assert len(kept) == 6
     assert stats["not_infoproduct"] == 2  # shopify store, software consultancy
+    assert stats["no_domain"] == 0
+    assert stats["lusophone"] == 1        # counted, NOT dropped
+
+
+def test_keep_infoproducts_never_drops_a_lusophone_ad():
+    kept = classify.keep_infoproducts(load_ads())
+    assert any(ad["id"] == "3001" for ad in kept)
 ```
 
 - [ ] **Step 2: Rodar e ver falhar**
@@ -999,33 +1040,33 @@ def is_infoproduct(ad: dict) -> bool:
         return False
     if host_matches(host, config.FUNNEL_DOMAINS):
         return True
+    if host_matches(host, config.PT_PLATFORM_DOMAINS):
+        return True
     if host_matches(host, config.ECOMMERCE_DOMAINS):
-        return False
-    if host_matches(host, config.BR_DOMAINS):
         return False
     text = ad_text(ad)
     return any(term in text for term in config.SEARCH_TERMS)
 
 
 def keep_infoproducts(ads: list[dict], *, with_stats: bool = False) -> Any:
-    """Filter to non-Brazilian infoproduct ads.
+    """Filter to infoproduct ads. Nothing is dropped for language.
 
-    With `with_stats`, also returns a counter of why ads were dropped — the
-    run summary uses it, and a spike in one bucket is how a broken filter
-    announces itself.
+    With `with_stats`, also returns a counter of what happened — the run
+    summary uses it, and a spike in one bucket is how a broken filter
+    announces itself. `lusophone` counts ads KEPT and labelled, not dropped.
     """
     kept: list[dict] = []
-    stats = {"total": len(ads), "brazil": 0, "not_infoproduct": 0, "no_domain": 0}
+    stats = {"total": len(ads), "not_infoproduct": 0, "no_domain": 0,
+             "lusophone": 0}
     for ad in ads:
         if not extract_domain(ad):
             stats["no_domain"] += 1
             continue
-        if is_brazil(ad):
-            stats["brazil"] += 1
-            continue
         if not is_infoproduct(ad):
             stats["not_infoproduct"] += 1
             continue
+        if is_lusophone(ad):
+            stats["lusophone"] += 1
         kept.append(ad)
     stats["kept"] = len(kept)
     return (kept, stats) if with_stats else kept
@@ -1035,6 +1076,8 @@ def keep_infoproducts(ads: list[dict], *, with_stats: bool = False) -> Any:
 
 Run: `scripts/.venv-radar/bin/python -m pytest scripts/radar/tests/test_classify.py -v`
 Expected: 22 passed.
+
+Suite inteira: 33 passed.
 
 - [ ] **Step 5: Commit**
 
@@ -1111,6 +1154,14 @@ def test_page_name_and_domain_survive_grouping():
     assert academy["domain"] == "exemplo.kajabi.com"
 
 
+def test_lusophone_flag_is_true_when_any_ad_in_the_group_is():
+    grouped = offers.group(load_kept(), today=TODAY)
+    hotmart = next(o for o in grouped if o["key"] == "700|pay.hotmart.com")
+    academy = next(o for o in grouped if o["key"] == "500|exemplo.kajabi.com")
+    assert hotmart["lusofono"] is True
+    assert academy["lusofono"] is False
+
+
 def test_countries_are_unioned_and_tolerate_the_field_being_absent():
     # Ad 1003 has no total_reach_by_location at all; 1001 and 1002 carry
     # Germany and Spain. The union must be both, with no crash on the third.
@@ -1177,9 +1228,10 @@ def _as_int(value: object) -> int:
 def _countries(ads: list[dict]) -> list[str]:
     """Where the offer actually reached people, from total_reach_by_location.
 
-    Shape-tolerant for the same reason `classify._targets_brazil` is: the API
-    has shipped this as a list of dicts and as a list of bare strings, and the
-    field is simply absent on ads the archive has not filled in.
+    Shape-tolerant on purpose: the API has shipped this as a list of dicts and
+    as a list of bare strings, the dict key has been seen as `region` and as
+    `name`, and the field is simply absent on ads the archive has not filled
+    in. Task 1 confirms which shape is live; until then, handle all of them.
     """
     found: set[str] = set()
     for ad in ads:
@@ -1220,6 +1272,7 @@ def group(ads: list[dict], *, today: date) -> list[dict]:
             "total_creatives": len(group_ads),
             "reach": sum(_as_int(a.get("eu_total_reach")) for a in group_ads),
             "countries": _countries(group_ads),
+            "lusofono": any(classify.is_lusophone(a) for a in group_ads),
             "sample_copy": bodies[:3],
             "snapshot_urls": [a["ad_snapshot_url"] for a in group_ads[:5]
                               if a.get("ad_snapshot_url")],
@@ -1230,7 +1283,7 @@ def group(ads: list[dict], *, today: date) -> list[dict]:
 - [ ] **Step 4: Rodar e ver passar**
 
 Run: `scripts/.venv-radar/bin/python -m pytest scripts/radar/tests/test_offers.py -v`
-Expected: 8 passed.
+Expected: 9 passed.
 
 - [ ] **Step 5: Commit**
 
@@ -1355,7 +1408,7 @@ def partition(all_offers: list[dict]) -> tuple[list[dict], list[dict]]:
 - [ ] **Step 4: Rodar e ver passar**
 
 Run: `scripts/.venv-radar/bin/python -m pytest scripts/radar/tests/test_offers.py -v`
-Expected: 15 passed.
+Expected: 16 passed.
 
 Se `test_score_is_a_known_value` falhar, conferir a aritmética antes de mexer no código: com os pesos 0.5/0.3/0.2 e os tetos 180/50/1.000.000, o valor esperado é `100 * (0.5*(165/180) + 0.3*log10(23)/log10(51) + 0.2*log10(480001)/log10(1000001))`.
 
@@ -1591,14 +1644,14 @@ def offer(key="500|exemplo.kajabi.com", score=88.69, days_live=165):
             "domain": key.split("|")[1], "days_live": days_live,
             "active_creatives": 22, "total_creatives": 30, "reach": 480000,
             "earliest_ad_start": "2026-03-02", "score": score,
-            "countries": ["Germany", "Spain"],
+            "countries": ["Germany", "Spain"], "lusofono": False,
             "sample_copy": ["Join the free masterclass and learn the system."],
             "snapshot_urls": ["https://facebook.com/ads/archive/render_ad/?id=1001"]}
 
 
 EMPTY_DIFF = {"new": [], "survived": [], "died": []}
-STATS = {"total": 100, "kept": 40, "brazil": 5, "not_infoproduct": 50,
-         "no_domain": 5}
+STATS = {"total": 100, "kept": 40, "not_infoproduct": 55, "no_domain": 5,
+         "lusophone": 8}
 
 
 def test_note_starts_with_valid_frontmatter():
@@ -1627,6 +1680,17 @@ def test_profile_renders_a_dash_when_no_country_is_known():
     blank = dict(offer(), countries=[])
     note = render.build_note([blank], [], EMPTY_DIFF, STATS, run_date="2026-08-14")
     assert "- Países: —" in note
+
+
+def test_lusophone_offer_is_marked_in_ranking_and_profile():
+    pt = dict(offer(key="700|pay.hotmart.com"), lusofono=True)
+    note = render.build_note([pt], [], EMPTY_DIFF, STATS, run_date="2026-08-14")
+    assert "| PT |" in note
+    assert "- Idioma: lusófono" in note
+    en = render.build_note([offer()], [], EMPTY_DIFF, STATS,
+                           run_date="2026-08-14")
+    assert "| EN |" in en
+    assert "- Idioma: inglês" in en
 
 
 def test_emerging_section_appears_only_when_there_are_emerging_offers():
@@ -1660,8 +1724,8 @@ def test_summary_reports_the_filter_stats():
 
 def test_empty_run_still_produces_a_valid_note():
     note = render.build_note([], [], EMPTY_DIFF,
-                             {"total": 0, "kept": 0, "brazil": 0,
-                              "not_infoproduct": 0, "no_domain": 0},
+                             {"total": 0, "kept": 0, "not_infoproduct": 0,
+                              "no_domain": 0, "lusophone": 0},
                              run_date="2026-08-14")
     assert note.startswith("---\n")
     assert "Nenhuma oferta madura" in note
@@ -1697,6 +1761,12 @@ def _fmt_int(value: int) -> str:
     return f"{value:,}".replace(",", ".")
 
 
+def _lang(offer: dict) -> str:
+    """Language marker. Lusophone offers are the low-friction ones for the
+    owner to read and model, so they earn a mark of their own."""
+    return "PT" if offer.get("lusofono") else "EN"
+
+
 def _frontmatter(run_date: str) -> str:
     return (
         "---\n"
@@ -1716,9 +1786,9 @@ def _summary(stats: dict, mature: list[dict], emerging: list[dict],
         f"# Radar Infoproduto — rodada de {stats.get('run_date', '')}\n\n"
         "## Resumo\n\n"
         f"- Anúncios coletados: **{_fmt_int(stats['total'])}**\n"
-        f"- Passaram no filtro: **{_fmt_int(stats['kept'])}**\n"
+        f"- Passaram no filtro: **{_fmt_int(stats['kept'])}**"
+        f" — {_fmt_int(stats['lusophone'])} lusófonos\n"
         f"- Descartados: {_fmt_int(stats['not_infoproduct'])} não-infoproduto, "
-        f"{_fmt_int(stats['brazil'])} Brasil, "
         f"{_fmt_int(stats['no_domain'])} sem domínio\n"
         f"- Ofertas maduras: **{len(mature)}** | emergentes: {len(emerging)}\n"
         f"- Novas: {len(diff['new'])} | sobreviveram: {len(diff['survived'])} "
@@ -1731,11 +1801,13 @@ def _ranking(mature: list[dict]) -> str:
         return ("## Ranking\n\n"
                 "Nenhuma oferta madura nesta rodada.\n\n")
     lines = ["## Ranking\n",
-             "| # | Anunciante | Domínio | Dias no ar | Criativos | Alcance | Score |",
-             "|---|---|---|---|---|---|---|"]
+             "| # | Anunciante | Domínio | Idioma | Dias no ar | Criativos "
+             "| Alcance | Score |",
+             "|---|---|---|---|---|---|---|---|"]
     for i, o in enumerate(mature, start=1):
         lines.append(
-            f"| {i} | {o['page_name']} | `{o['domain']}` | {o['days_live']} | "
+            f"| {i} | {o['page_name']} | `{o['domain']}` | {_lang(o)} | "
+            f"{o['days_live']} | "
             f"{o['active_creatives']}/{o['total_creatives']} | "
             f"{_fmt_int(o['reach'])} | {o['score']:.2f} |"
         )
@@ -1755,6 +1827,7 @@ def _profiles(mature: list[dict]) -> str:
             f"{o['total_creatives']} totais\n"
             f"- Alcance UE: {_fmt_int(o['reach'])}\n"
             f"- Países: {', '.join(o['countries']) or '—'}\n"
+            f"- Idioma: {'lusófono' if o.get('lusofono') else 'inglês'}\n"
         )
         if o["sample_copy"]:
             out.append("\n**Promessa:**\n")
@@ -1817,7 +1890,7 @@ def write_note(mature: list[dict], emerging: list[dict], diff: dict,
 - [ ] **Step 4: Rodar e ver passar**
 
 Run: `scripts/.venv-radar/bin/python -m pytest scripts/radar/tests/test_render.py -v`
-Expected: 9 passed.
+Expected: 10 passed.
 
 - [ ] **Step 5: Commit**
 
@@ -2069,10 +2142,26 @@ def test_full_pipeline_from_raw_ads_to_note(tmp_path):
     assert "Exemplo Academy" in note        # kajabi offer ranked
     assert "Solo Coach" in note             # own-domain offer ranked
     assert "Nova Oferta" in note            # skool offer, emerging (9 days)
+    assert "Curso BR" in note               # hotmart offer, kept and marked PT
     assert "Loja Legal" not in note         # e-commerce filtered out
-    assert "Curso BR" not in note           # Brazil filtered out
     assert "Consultoria Qualquer" not in note  # no offer term
     assert history_path.is_file()
+
+
+def test_pipeline_marks_the_lusophone_offer_without_dropping_it(tmp_path):
+    """The reversal of the original Brazil exclusion, pinned end to end."""
+    raw = json.loads(FIXTURE.read_text(encoding="utf-8"))
+
+    kept, stats = classify.keep_infoproducts(raw, with_stats=True)
+    grouped = offers.group(kept, today=date(2026, 8, 14))
+    mature, emerging = offers.partition(grouped)
+
+    note = render.build_note(mature, emerging, {"new": [], "survived": [],
+                                                "died": []},
+                             stats, run_date="2026-08-14")
+    assert stats["lusophone"] == 1
+    assert "Curso BR" in note
+    assert "| PT |" in note
 ```
 
 - [ ] **Step 2: Rodar e ver falhar**
@@ -2171,7 +2260,7 @@ E acrescentar `import json` ao bloco de imports no topo do arquivo.
 - [ ] **Step 4: Rodar a suíte inteira**
 
 Run: `scripts/.venv-radar/bin/python -m pytest scripts/radar/tests -v`
-Expected: 72 passed, 0 failed.
+Expected: 76 passed, 0 failed.
 
 - [ ] **Step 5: Verificar a guarda de países na prática**
 
@@ -2260,15 +2349,15 @@ TikTok e Trends; cobertura dos EUA; download de landing page; idiomas além do
 inglês; execução agendada.
 
 **Consistência de nomes entre tasks:** `extract_domain`, `host_matches`,
-`is_brazil`, `ad_text`, `is_infoproduct`, `keep_infoproducts` (classify);
+`is_lusophone`, `ad_text`, `is_infoproduct`, `keep_infoproducts` (classify);
 `offer_key`, `group`, `score`, `partition` (offers); `load`, `save`, `merge`
 (store); `build_note`, `write_note` (render); `assert_countries_supported`,
 `build_params`, `next_page`, `fetch_term`, `fetch_all` (meta_client). Os nomes
 usados nas Tasks 13 e 14 batem com os definidos nas Tasks 5 a 12.
 
 **Contagem de testes esperada ao fim:** 1 (smoke) + 7 (config) + 3 (fixture) +
-20 (classify) + 15 (offers) + 7 (store) + 9 (render) + 7 (meta_client) + 1
-(pipeline) = **70**, o número conferido na Task 13 Step 4.
+22 (classify) + 16 (offers) + 7 (store) + 10 (render) + 7 (meta_client) + 2
+(pipeline) = **76**, o número conferido na Task 13 Step 4.
 
 **Correções feitas nas revisões:**
 1. `store.merge` chamava `_latest_run_before` dentro da compreensão, uma vez
@@ -2285,6 +2374,17 @@ usados nas Tasks 13 e 14 batem com os definidos nas Tasks 5 a 12.
    site genéricos, e listá-los excluía justamente o coach solo que o radar
    procura. `thinkific` e `learnworlds` entraram em `FUNNEL_DOMAINS` — as duas
    são grandes na Europa e faltavam.
+5. `host_matches` só tinha teste do caso positivo do domínio pontuado.
+   Adicionado o negativo, que é a razão de a função existir.
+
+**Mudança de escopo pedida pelo dono em 15/08/2026:** a exclusão de Brasil
+caiu. As Tasks 6 e 7 foram reescritas — `BR_DOMAINS` virou
+`PT_PLATFORM_DOMAINS` e passa a contar como plataforma de funil (que é o que
+Hotmart e Kiwify sempre foram), `is_brazil` virou `is_lusophone` e serve só de
+rótulo, e `BR_COUNTRY` saiu junto com a regra de `target_locations` que nunca
+poderia disparar. A nota ganha coluna de idioma. **Isso não dá acesso ao
+mercado brasileiro** — anúncio entregue no Brasil não existe no acervo
+comercial da API. O que aparece é o infoprodutor lusófono anunciando na Europa.
 
 ---
 **See also:** [[Radar Infoproduto]] | [[Guilherme Figueredo]]
