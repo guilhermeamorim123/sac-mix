@@ -249,6 +249,31 @@ Longevidade pesa mais porque é o único dos três que é difícil de fingir.
 principal. Vai para uma seção separada, "Emergentes" — pode estar em teste e
 morrer semana que vem. Os pesos e o portão vivem em `config.py`.
 
+### Duas consequências do desenho, medidas antes da primeira rodada
+
+Uma sondagem com oito ofertas cobrindo o espaço plausível (25 a 400 dias, 1 a
+55 criativos, 500 a 5 milhões de alcance) expôs dois comportamentos que são
+consequência direta dos pesos, não defeitos. Ficam registrados porque são as
+duas alavancas a mexer **depois** da primeira rodada real, com dado na mão —
+calibrar agora seria no escuro.
+
+**1. Saturação no teto de longevidade.** Três das oito bateram os 180 dias. No
+teto, o sinal dominante para de discriminar: uma oferta de 185 dias e uma de
+400 empatam nos 0,5 de peso, e o ranking entre elas passa a ser decidido só
+pelos 0,3 de criativos e 0,2 de alcance. Defensável — passados seis meses,
+provado é provado, e o acervo só guarda ~12 meses de qualquer forma. Mas se o
+topo da lista vier monótono, subir `LONGEVITY_CAP_DAYS` para 365 é o primeiro
+ajuste.
+
+**2. A oferta velha e minúscula sobe demais.** Uma com 400 dias, **1** criativo
+ativo e 500 de alcance pontuou 64, acima de uma com 30 dias, 55 criativos e 5
+milhões de alcance (58). Isso é a tese funcionando como escrita — longevidade
+é o sinal difícil de fingir — mas uma oferta com um criativo e 500 pessoas
+alcançadas talvez nem seja uma operação: pode ser hobby ou campanha esquecida
+que nunca foi desligada. Se aparecerem muitas assim no top 20, o conserto é um
+piso mínimo de atividade (por exemplo, exigir 3 criativos ativos para entrar no
+ranking), não mexer nos pesos.
+
 ## Histórico
 
 `data/history.json`, versionado no git:
