@@ -87,14 +87,16 @@ ECOMMERCE_DOMAINS = frozenset({
     "bigcartel", "shopee", "aliexpress",
 })
 
-# Brazilian infoproduct platforms — excluded by owner decision.
-BR_DOMAINS = frozenset({
+# Portuguese-language infoproduct platforms. These are funnel platforms exactly
+# like the ones above and count as POSITIVE evidence — the list exists only so
+# an offer can be LABELLED lusophone, never to drop it.
+PT_PLATFORM_DOMAINS = frozenset({
     "hotmart", "eduzz", "kiwify", "braip", "monetizze", "ticto",
     "perfectpay", "cakto", "greenn", "herospark",
 })
 
-BR_LANGUAGES = frozenset({"pt", "pt_BR", "pt-BR"})
-BR_COUNTRY = "BR"
+# "pt" alone is what the API usually sends; the regional tags show up too.
+PT_LANGUAGES = frozenset({"pt", "pt_BR", "pt-BR", "pt_PT", "pt-PT"})
 
 # --------------------------------------------------------------------------
 # Score

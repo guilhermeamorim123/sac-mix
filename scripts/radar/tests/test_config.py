@@ -28,8 +28,8 @@ def test_score_weights_sum_to_one():
 
 def test_domain_lists_do_not_overlap():
     assert not (config.FUNNEL_DOMAINS & config.ECOMMERCE_DOMAINS)
-    assert not (config.FUNNEL_DOMAINS & config.BR_DOMAINS)
-    assert not (config.ECOMMERCE_DOMAINS & config.BR_DOMAINS)
+    assert not (config.FUNNEL_DOMAINS & config.PT_PLATFORM_DOMAINS)
+    assert not (config.ECOMMERCE_DOMAINS & config.PT_PLATFORM_DOMAINS)
 
 
 def test_search_terms_are_lowercase_and_unique():

@@ -1,4 +1,4 @@
-"""Decide whether an ad is an infoproduct, and whether it is Brazilian.
+"""Decide whether an ad is an infoproduct, and whether it is lusophone.
 
 Pure functions over the raw ad dict the API returns. No network, no I/O.
 This is the highest-leverage module in the radar: a wrong call here poisons
@@ -8,6 +8,8 @@ every downstream number.
 from __future__ import annotations
 
 from typing import Any, Iterable
+
+from radar import config
 
 
 def extract_domain(ad: dict) -> str | None:
@@ -48,3 +50,20 @@ def host_matches(host: str, needles: Iterable[str]) -> bool:
         if host == needle or host.endswith("." + needle) or needle in labels:
             return True
     return False
+
+
+def is_lusophone(ad: dict) -> bool:
+    """True when the offer speaks Portuguese — Brazilian or Portuguese.
+
+    This is a LABEL, not a filter. Nothing is dropped for being lusophone; the
+    run note marks it, because an offer the owner reads without friction is
+    worth more to him than one he has to translate.
+
+    Deliberately not called `is_brazilian`: the `pt` language tag covers
+    Portugal too, and the platform list cannot tell a São Paulo seller from a
+    Lisbon one.
+    """
+    if set(ad.get("languages") or []) & config.PT_LANGUAGES:
+        return True
+    host = extract_domain(ad)
+    return bool(host and host_matches(host, config.PT_PLATFORM_DOMAINS))
