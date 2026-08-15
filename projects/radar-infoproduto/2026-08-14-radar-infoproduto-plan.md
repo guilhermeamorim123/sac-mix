@@ -28,6 +28,7 @@ tags:
 
 - **Todo commit** termina com a linha `Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>`. Os comandos abaixo omitem a linha para não repetir; adicione sempre.
 - Mensagem de commit em pt-BR sem acento, prefixo `feat(radar):` / `test(radar):` / `chore(radar):`, seguindo o histórico do repositório.
+- **Atenção:** a regra de "sem acento" vale **só para mensagem de commit**. Toda string pt-BR que o usuário lê — `print`, `sys.exit`, texto da nota markdown — vai **com acentuação correta**, como em `scripts/transcrever_audio.py`. Copie os blocos de código deste plano literalmente; eles já estão acentuados.
 - Comandos rodam da raiz do vault: `/Users/sergiogpngmail.com/Chief of Staff`.
 - Depois da Task 2, o interpretador dos testes é `scripts/.venv-radar/bin/python`.
 - **Nunca commitar** `projects/radar-infoproduto/data/runs/` — é cache regenerável e entra no `.gitignore` na Task 2.
@@ -197,12 +198,12 @@ def ensure_venv() -> None:
 
     if os.environ.get("_RADAR_REEXEC"):
         sys.exit(
-            "Erro: requests nao importa nem dentro do venv.\n"
+            "Erro: requests não importa nem dentro do venv.\n"
             f"Tente apagar {VENV} e rodar de novo."
         )
 
     if not VENV_PY.exists():
-        print(f"Criando ambiente em {VENV.relative_to(VAULT)} (so na primeira vez)...")
+        print(f"Criando ambiente em {VENV.relative_to(VAULT)} (só na primeira vez)...")
         subprocess.run([sys.executable, "-m", "venv", str(VENV)], check=True)
         subprocess.run([str(VENV_PY), "-m", "pip", "install", "-q", "--upgrade", "pip"],
                        check=True)
@@ -216,7 +217,7 @@ def ensure_venv() -> None:
 
 
 def main() -> None:
-    print("Radar Infoproduto — esqueleto. Orquestracao entra na Task 12.")
+    print("Radar Infoproduto — esqueleto. A orquestração entra nas próximas tasks.")
 
 
 if __name__ == "__main__":
@@ -1605,11 +1606,11 @@ def _summary(stats: dict, mature: list[dict], emerging: list[dict],
     return (
         f"# Radar Infoproduto — rodada de {stats.get('run_date', '')}\n\n"
         "## Resumo\n\n"
-        f"- Anuncios coletados: **{_fmt_int(stats['total'])}**\n"
+        f"- Anúncios coletados: **{_fmt_int(stats['total'])}**\n"
         f"- Passaram no filtro: **{_fmt_int(stats['kept'])}**\n"
-        f"- Descartados: {_fmt_int(stats['not_infoproduct'])} nao-infoproduto, "
+        f"- Descartados: {_fmt_int(stats['not_infoproduct'])} não-infoproduto, "
         f"{_fmt_int(stats['brazil'])} Brasil, "
-        f"{_fmt_int(stats['no_domain'])} sem dominio\n"
+        f"{_fmt_int(stats['no_domain'])} sem domínio\n"
         f"- Ofertas maduras: **{len(mature)}** | emergentes: {len(emerging)}\n"
         f"- Novas: {len(diff['new'])} | sobreviveram: {len(diff['survived'])} "
         f"| morreram: {len(diff['died'])}\n\n"
@@ -1621,7 +1622,7 @@ def _ranking(mature: list[dict]) -> str:
         return ("## Ranking\n\n"
                 "Nenhuma oferta madura nesta rodada.\n\n")
     lines = ["## Ranking\n",
-             "| # | Anunciante | Dominio | Dias no ar | Criativos | Alcance | Score |",
+             "| # | Anunciante | Domínio | Dias no ar | Criativos | Alcance | Score |",
              "|---|---|---|---|---|---|---|"]
     for i, o in enumerate(mature, start=1):
         lines.append(
@@ -1639,7 +1640,7 @@ def _profiles(mature: list[dict]) -> str:
     for i, o in enumerate(mature[:config.TOP_N_PROFILES], start=1):
         out.append(f"### {i}. {o['page_name']} — score {o['score']:.2f}\n")
         out.append(
-            f"- Dominio: https://{o['domain']}\n"
+            f"- Domínio: https://{o['domain']}\n"
             f"- No ar desde {o['earliest_ad_start']} ({o['days_live']} dias)\n"
             f"- Criativos ativos: {o['active_creatives']} de "
             f"{o['total_creatives']} totais\n"
@@ -1662,7 +1663,7 @@ def _emerging(emerging: list[dict]) -> str:
         return ""
     lines = [f"## Emergentes (menos de {config.MATURITY_GATE_DAYS} dias)\n",
              "Sem ranking — podem ser teste e morrer semana que vem.\n",
-             "| Anunciante | Dominio | Dias no ar | Criativos |",
+             "| Anunciante | Domínio | Dias no ar | Criativos |",
              "|---|---|---|---|"]
     for o in emerging:
         lines.append(f"| {o['page_name']} | `{o['domain']}` | {o['days_live']} "
@@ -1674,7 +1675,7 @@ def _died(diff: dict) -> str:
     if not diff["died"]:
         return ""
     lines = ["## Mortas nesta rodada\n",
-             "Estavam na rodada anterior e sumiram. Oferta que nao sustentou.\n"]
+             "Estavam na rodada anterior e sumiram. Oferta que não sustentou.\n"]
     for key in diff["died"]:
         lines.append(f"- `{key}`")
     return "\n".join(lines) + "\n\n"
@@ -1815,9 +1816,9 @@ def assert_countries_supported(countries: list[str]) -> None:
     bad = sorted(set(countries) - SUPPORTED)
     if bad:
         sys.exit(
-            f"Erro: {', '.join(bad)} nao e um pais da UE nem o Reino Unido.\n"
-            "A Ad Library so devolve anuncio comercial para UE + UK. Com outro "
-            "pais na lista a API responde so anuncio politico, sem avisar.\n"
+            f"Erro: {', '.join(bad)} não é país da UE nem o Reino Unido.\n"
+            "A Ad Library só devolve anúncio comercial para UE + UK. Com outro "
+            "país na lista, a API responde só anúncio político, sem avisar.\n"
             "Corrija COUNTRIES em scripts/radar/config.py."
         )
 
@@ -1900,7 +1901,7 @@ def fetch_all(token: str, terms: list[str], countries: list[str]) -> tuple[list[
         fresh = [ad for ad in found if ad.get("id") not in seen]
         seen.update(ad["id"] for ad in found if ad.get("id"))
         ads.extend(fresh)
-        print(f"{len(found)} anuncios ({len(fresh)} novos)")
+        print(f"{len(found)} anúncios ({len(fresh)} novos)")
     return ads, failed
 ```
 
@@ -1985,8 +1986,8 @@ def load_token() -> str:
             if line.strip().startswith("META_AD_LIBRARY_TOKEN="):
                 return line.split("=", 1)[1].strip().strip('"').strip("'")
     sys.exit(
-        "Erro: META_AD_LIBRARY_TOKEN nao encontrado.\n"
-        "Gere um token em developers.facebook.com (app com acesso a Ad Library) "
+        "Erro: META_AD_LIBRARY_TOKEN não encontrado.\n"
+        "Gere um token em developers.facebook.com (app com acesso à Ad Library) "
         "e exporte:\n"
         '  export META_AD_LIBRARY_TOKEN="<token>"\n'
         "Ou coloque a linha META_AD_LIBRARY_TOKEN=<token> no .env da raiz do vault."
@@ -2002,7 +2003,7 @@ def main() -> None:
 
     parser = argparse.ArgumentParser(
         description="Radar de infoproduto em alta na UE e no Reino Unido.")
-    parser.add_argument("--date", help="data da rodada (YYYY-MM-DD); padrao: hoje")
+    parser.add_argument("--date", help="data da rodada (YYYY-MM-DD); padrão: hoje")
     parser.add_argument("--force", action="store_true",
                         help="ignora o cache bruto e coleta de novo")
     parser.add_argument("--render-only", action="store_true",
@@ -2024,10 +2025,10 @@ def main() -> None:
         failed: list[str] = []
     elif args.render_only:
         sys.exit(f"Erro: --render-only exige o cache em "
-                 f"{raw_path.relative_to(VAULT)}, que nao existe.")
+                 f"{raw_path.relative_to(VAULT)}, que não existe.")
     else:
         print(f"Coletando {len(config.SEARCH_TERMS)} termos em "
-              f"{len(config.COUNTRIES)} paises...")
+              f"{len(config.COUNTRIES)} países...")
         raw, failed = meta_client.fetch_all(load_token(), config.SEARCH_TERMS,
                                             config.COUNTRIES)
         raw_path.parent.mkdir(parents=True, exist_ok=True)
@@ -2045,7 +2046,7 @@ def main() -> None:
     note_path = render.write_note(mature, emerging, diff, stats,
                                   run_date=run_date, runs_dir=runs_dir)
 
-    print(f"\n{stats['total']} anuncios, {stats['kept']} passaram no filtro")
+    print(f"\n{stats['total']} anúncios, {stats['kept']} passaram no filtro")
     print(f"{len(mature)} ofertas maduras, {len(emerging)} emergentes")
     print(f"{len(diff['new'])} novas, {len(diff['survived'])} sobreviveram, "
           f"{len(diff['died'])} morreram")
@@ -2067,7 +2068,7 @@ Expected: 66 passed, 0 failed.
 Trocar temporariamente `"GB"` por `"US"` em `config.COUNTRIES`, então:
 
 Run: `python3 scripts/radar_infoproduto.py`
-Expected: sai com a mensagem `Erro: US nao e um pais da UE nem o Reino Unido...`
+Expected: sai com a mensagem `Erro: US não é país da UE nem o Reino Unido...`
 
 Desfazer a troca.
 

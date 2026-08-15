@@ -35,12 +35,12 @@ def ensure_venv() -> None:
 
     if os.environ.get("_RADAR_REEXEC"):
         sys.exit(
-            "Erro: requests nao importa nem dentro do venv.\n"
+            "Erro: requests não importa nem dentro do venv.\n"
             f"Tente apagar {VENV} e rodar de novo."
         )
 
     if not VENV_PY.exists():
-        print(f"Criando ambiente em {VENV.relative_to(VAULT)} (so na primeira vez)...")
+        print(f"Criando ambiente em {VENV.relative_to(VAULT)} (só na primeira vez)...")
         subprocess.run([sys.executable, "-m", "venv", str(VENV)], check=True)
         subprocess.run([str(VENV_PY), "-m", "pip", "install", "-q", "--upgrade", "pip"],
                        check=True)
@@ -54,7 +54,7 @@ def ensure_venv() -> None:
 
 
 def main() -> None:
-    print("Radar Infoproduto — esqueleto. Orquestracao entra na Task 12.")
+    print("Radar Infoproduto — esqueleto. A orquestração entra nas próximas tasks.")
 
 
 if __name__ == "__main__":
