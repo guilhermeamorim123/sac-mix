@@ -15,7 +15,12 @@ def extract_domain(ad: dict) -> str | None:
 
     Captions arrive in several shapes: a bare host, an uppercase host, or a
     full URL with path and query. Everything is folded to a lowercase host
-    with no scheme, no path and no leading "www.".
+    with no scheme, no path, no port and no leading "www.".
+
+    Takes the FIRST usable caption. An ad can carry several, but in this API
+    they are the same link repeated across creative variants with cosmetic
+    differences in case and format — not different destinations. If that ever
+    stops holding, this is the assumption to revisit.
     """
     captions = ad.get("ad_creative_link_captions") or []
     for caption in captions:
