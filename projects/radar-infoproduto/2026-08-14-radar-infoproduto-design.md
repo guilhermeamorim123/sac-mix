@@ -140,18 +140,23 @@ e a maior parte do marketing digital europeu, e cada idioma novo multiplica a
 cota consumida.
 
 **Domínios de plataforma de funil** — a impressão digital que identifica
-infoproduto: `kajabi`, `clickfunnels`, `teachable`, `systeme.io`, `kartra`,
-`whop`, `skool`, `thrivecart`, `samcart`, `podia`, `circle.so`,
-`mightynetworks`, `gumroad`, `stan.store`, `everwebinar`, `webinarjam`,
-`demio`, `msgsndr` (GoHighLevel).
+infoproduto: `kajabi`, `clickfunnels`, `teachable`, `thinkific`,
+`learnworlds`, `systeme.io`, `kartra`, `whop`, `skool`, `thrivecart`,
+`samcart`, `podia`, `circle.so`, `mightynetworks`, `gumroad`, `stan.store`,
+`everwebinar`, `webinarjam`, `demio`, `msgsndr` (GoHighLevel).
 
 **Blocklist Brasil** — `hotmart`, `eduzz`, `kiwify`, `braip`, `monetizze`,
 `ticto`, `perfectpay`, `cakto`, `greenn`, `herospark`.
 
 **Plataformas de e-commerce** — usadas para *excluir*, não para incluir:
 `shopify`, `myshopify`, `amazon`, `etsy`, `ebay`, `woocommerce`, `bigcartel`,
-`squarespace`, `wix`, `shopee`, `aliexpress`. Anúncio que aponta para uma delas
-é loja, não infoproduto.
+`shopee`, `aliexpress`. Anúncio que aponta para uma delas é loja, não
+infoproduto.
+
+Construtor de site genérico (`squarespace`, `wix`) fica **fora** desta lista de
+propósito: o coach solo que roda o funil inteiro num deles é exatamente quem o
+radar procura, e listá-los o excluiria de saída. Eles caem na regra 2, que
+exige termo de oferta — a afirmação mais fraca, que é a correta aqui.
 
 **Modo de busca** — a API aceita `search_type` (`KEYWORD_UNORDERED` ou
 `KEYWORD_EXACT_PHRASE`). O padrão desordenado infla o volume com falso positivo

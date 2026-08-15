@@ -81,7 +81,7 @@ curl -s -G "https://graph.facebook.com/vXX.0/ads_archive" \
   --data-urlencode "ad_reached_countries=[\"DE\",\"GB\",\"ES\"]" \
   --data-urlencode "search_terms=masterclass" \
   --data-urlencode "limit=25" \
-  --data-urlencode "fields=id,page_id,page_name,ad_creative_bodies,ad_creative_link_captions,ad_creative_link_titles,ad_delivery_start_time,ad_delivery_stop_time,ad_snapshot_url,languages,publisher_platforms,eu_total_reach,target_locations" \
+  --data-urlencode "fields=id,page_id,page_name,ad_creative_bodies,ad_creative_link_captions,ad_creative_link_titles,ad_delivery_start_time,ad_delivery_stop_time,ad_snapshot_url,languages,publisher_platforms,eu_total_reach,total_reach_by_location,target_locations" \
   > /tmp/radar_probe.json
 
 python3 -c "import json;d=json.load(open('/tmp/radar_probe.json'));print(json.dumps(d,indent=2)[:3000])"
@@ -94,6 +94,7 @@ Confirmar na saída:
 1. Existe `data` com anúncios **comerciais** (não só político). Se vier só político, a lista de países está errada — tem que ser UE/UK.
 2. `eu_total_reach` vem preenchido em pelo menos parte dos anúncios.
 3. `ad_creative_link_captions` vem preenchido — é o campo do qual todo o filtro depende.
+4. **A forma exata de `total_reach_by_location` e de `target_locations`.** O código trata as duas possibilidades (lista de dicionários ou lista de strings), mas anote qual delas a API realmente devolve e quais chaves cada dicionário tem (`region`? `name`? `key`?). Se a forma for uma terceira, as funções `_targets_brazil` (Task 6) e `_countries` (Task 8) precisam de um ajuste — é a única coisa neste plano escrita contra um formato não confirmado.
 
 Testar também o modo de busca:
 
@@ -307,6 +308,24 @@ def test_domain_lists_do_not_overlap():
 def test_search_terms_are_lowercase_and_unique():
     assert all(term == term.lower() for term in config.SEARCH_TERMS)
     assert len(config.SEARCH_TERMS) == len(set(config.SEARCH_TERMS))
+
+
+def test_fields_include_every_signal_downstream_reads():
+    # Dropping one of these breaks a downstream module silently — the column
+    # comes back empty instead of raising. This is the guard against that.
+    required = {
+        "ad_creative_link_captions",  # classify: the whole domain filter
+        "ad_creative_bodies",         # classify: copy match; render: promise
+        "ad_delivery_start_time",     # offers: days_live
+        "ad_delivery_stop_time",      # offers: active vs stopped
+        "eu_total_reach",             # offers: reach
+        "total_reach_by_location",    # offers: countries
+        "languages",                  # classify: Brazil exclusion
+        "target_locations",           # classify: Brazil exclusion
+        "page_id",                    # offers: half the identity key
+        "ad_snapshot_url",            # render: creative links
+    }
+    assert required <= set(config.FIELDS)
 ```
 
 - [ ] **Step 2: Rodar e ver falhar**
@@ -349,13 +368,15 @@ COUNTRIES = [
     "SI", "ES", "SE", "GB",
 ]
 
+# Every field a downstream module reads. Dropping one here breaks that module
+# silently, with an empty column rather than an error — test_config guards it.
 FIELDS = [
     "id", "page_id", "page_name",
     "ad_creative_bodies", "ad_creative_link_captions",
     "ad_creative_link_titles", "ad_creative_link_descriptions",
     "ad_delivery_start_time", "ad_delivery_stop_time",
     "ad_snapshot_url", "languages", "publisher_platforms",
-    "eu_total_reach", "target_locations",
+    "eu_total_reach", "total_reach_by_location", "target_locations",
 ]
 
 PAGE_SIZE = 100
@@ -386,16 +407,24 @@ SEARCH_TERMS = [
 ]
 
 # Landing on one of these is near-proof of an infoproduct.
+# Boundary cases kept deliberately: gumroad, whop and stan.store also host
+# plain digital goods, but their volume is overwhelmingly info — course,
+# template, ebook, community. Treated as funnel on purpose.
 FUNNEL_DOMAINS = frozenset({
-    "kajabi", "clickfunnels", "teachable", "systeme.io", "kartra", "whop",
-    "skool", "thrivecart", "samcart", "podia", "circle.so", "mightynetworks",
-    "gumroad", "stan.store", "everwebinar", "webinarjam", "demio", "msgsndr",
+    "kajabi", "clickfunnels", "teachable", "thinkific", "learnworlds",
+    "systeme.io", "kartra", "whop", "skool", "thrivecart", "samcart",
+    "podia", "circle.so", "mightynetworks", "gumroad", "stan.store",
+    "everwebinar", "webinarjam", "demio", "msgsndr",
 })
 
 # Landing on one of these means it is a store, not an infoproduct.
+# General website builders (squarespace, wix) are deliberately NOT here: a solo
+# coach running a whole funnel on one is exactly who this radar is looking for,
+# and listing them would exclude that person outright. They fall through to the
+# copy-based rule instead, which is the correct, weaker claim.
 ECOMMERCE_DOMAINS = frozenset({
     "shopify", "myshopify", "amazon", "etsy", "ebay", "woocommerce",
-    "bigcartel", "squarespace", "wix", "shopee", "aliexpress",
+    "bigcartel", "shopee", "aliexpress",
 })
 
 # Brazilian infoproduct platforms — excluded by owner decision.
@@ -411,11 +440,17 @@ BR_COUNTRY = "BR"
 # Score
 # --------------------------------------------------------------------------
 
+# Longevity leads because it is the only one of the three that is hard to
+# fake: nobody burns media budget for months at a loss. Reach and creative
+# count confirm the size of the operation, they do not prove it works.
 WEIGHT_LONGEVITY = 0.5
 WEIGHT_CREATIVES = 0.3
 WEIGHT_REACH = 0.2
 
-# Caps: past these, more stops meaning more.
+# Caps: past these, more stops meaning more. Note the two kinds differ —
+# LONGEVITY_CAP_DAYS is a hard linear clamp (min(days, cap) / cap), while
+# CREATIVES_CAP and REACH_CAP are log10 denominators in offers._log_ratio.
+# Doubling a log cap moves the score far less than doubling the linear one.
 LONGEVITY_CAP_DAYS = 180
 CREATIVES_CAP = 50
 REACH_CAP = 1_000_000
@@ -423,13 +458,15 @@ REACH_CAP = 1_000_000
 # Below this, an offer may still be a test that dies next week.
 MATURITY_GATE_DAYS = 21
 
+# How many ranked offers get a full profile (copy, reach, snapshot links) in
+# the run note. Past ~20 the note stops being readable in one sitting.
 TOP_N_PROFILES = 20
 ```
 
 - [ ] **Step 4: Rodar e ver passar**
 
 Run: `scripts/.venv-radar/bin/python -m pytest scripts/radar/tests/test_config.py -v`
-Expected: 6 passed.
+Expected: 7 passed.
 
 - [ ] **Step 5: Commit**
 
@@ -464,6 +501,7 @@ Todo teste daqui pra frente lê desta fixture. Ela cobre de propósito um caso d
     "ad_snapshot_url": "https://facebook.com/ads/archive/render_ad/?id=1001",
     "languages": ["en"],
     "eu_total_reach": 300000,
+    "total_reach_by_location": [{"region": "Germany", "reach": 300000}],
     "target_locations": [{"name": "Germany", "type": "country", "excluded": false}]
   },
   {
@@ -476,6 +514,7 @@ Todo teste daqui pra frente lê desta fixture. Ela cobre de propósito um caso d
     "ad_snapshot_url": "https://facebook.com/ads/archive/render_ad/?id=1002",
     "languages": ["en"],
     "eu_total_reach": 180000,
+    "total_reach_by_location": [{"region": "Spain", "reach": 180000}],
     "target_locations": [{"name": "Spain", "type": "country", "excluded": false}]
   },
   {
@@ -525,6 +564,7 @@ Todo teste daqui pra frente lê desta fixture. Ela cobre de propósito um caso d
     "ad_snapshot_url": "https://facebook.com/ads/archive/render_ad/?id=4001",
     "languages": ["en"],
     "eu_total_reach": 150000,
+    "total_reach_by_location": [{"region": "United Kingdom", "reach": 150000}],
     "target_locations": [{"name": "United Kingdom", "type": "country", "excluded": false}]
   },
   {
@@ -549,6 +589,7 @@ Todo teste daqui pra frente lê desta fixture. Ela cobre de propósito um caso d
     "ad_snapshot_url": "https://facebook.com/ads/archive/render_ad/?id=6001",
     "languages": ["en"],
     "eu_total_reach": 12000,
+    "total_reach_by_location": [{"region": "Ireland", "reach": 12000}],
     "target_locations": [{"name": "Ireland", "type": "country", "excluded": false}]
   }
 ]
@@ -580,12 +621,22 @@ def test_fixture_covers_every_classification_case():
     assert "consultoria.example.com" in captions  # own domain, no offer term
     assert any("pt" in ad.get("languages", []) for ad in ads)
     assert any("ad_delivery_stop_time" in ad for ad in ads)
+
+
+def test_fixture_has_one_ad_missing_reach_by_location():
+    # Ad 1003 deliberately omits total_reach_by_location, so the country
+    # aggregation in Task 8 is forced to tolerate the field being absent —
+    # which it will be, for any ad the API has not filled in.
+    ads = json.loads(FIXTURE.read_text(encoding="utf-8"))
+    academy = [ad for ad in ads if ad["page_id"] == "500"]
+    assert any("total_reach_by_location" not in ad for ad in academy)
+    assert any("total_reach_by_location" in ad for ad in academy)
 ```
 
 - [ ] **Step 3: Rodar e ver passar**
 
 Run: `scripts/.venv-radar/bin/python -m pytest scripts/radar/tests/test_fixture.py -v`
-Expected: 2 passed.
+Expected: 3 passed.
 
 - [ ] **Step 4: Commit**
 
@@ -1038,6 +1089,14 @@ def test_page_name_and_domain_survive_grouping():
     assert academy["domain"] == "exemplo.kajabi.com"
 
 
+def test_countries_are_unioned_and_tolerate_the_field_being_absent():
+    # Ad 1003 has no total_reach_by_location at all; 1001 and 1002 carry
+    # Germany and Spain. The union must be both, with no crash on the third.
+    grouped = offers.group(load_kept(), today=TODAY)
+    academy = next(o for o in grouped if o["key"] == "500|exemplo.kajabi.com")
+    assert academy["countries"] == ["Germany", "Spain"]
+
+
 def test_start_time_with_timestamp_is_parsed():
     ads = [{"id": "1", "page_id": "1", "page_name": "X",
             "ad_creative_link_captions": ["x.kajabi.com"],
@@ -1093,6 +1152,25 @@ def _as_int(value: object) -> int:
         return 0
 
 
+def _countries(ads: list[dict]) -> list[str]:
+    """Where the offer actually reached people, from total_reach_by_location.
+
+    Shape-tolerant for the same reason `classify._targets_brazil` is: the API
+    has shipped this as a list of dicts and as a list of bare strings, and the
+    field is simply absent on ads the archive has not filled in.
+    """
+    found: set[str] = set()
+    for ad in ads:
+        for entry in ad.get("total_reach_by_location") or []:
+            if isinstance(entry, dict):
+                label = entry.get("region") or entry.get("name") or entry.get("key")
+            else:
+                label = entry
+            if label:
+                found.add(str(label))
+    return sorted(found)
+
+
 def group(ads: list[dict], *, today: date) -> list[dict]:
     """Collapse ads into offers, aggregating the fields the score needs."""
     buckets: dict[str, list[dict]] = {}
@@ -1119,6 +1197,7 @@ def group(ads: list[dict], *, today: date) -> list[dict]:
             "active_creatives": len(active),
             "total_creatives": len(group_ads),
             "reach": sum(_as_int(a.get("eu_total_reach")) for a in group_ads),
+            "countries": _countries(group_ads),
             "sample_copy": bodies[:3],
             "snapshot_urls": [a["ad_snapshot_url"] for a in group_ads[:5]
                               if a.get("ad_snapshot_url")],
@@ -1129,7 +1208,7 @@ def group(ads: list[dict], *, today: date) -> list[dict]:
 - [ ] **Step 4: Rodar e ver passar**
 
 Run: `scripts/.venv-radar/bin/python -m pytest scripts/radar/tests/test_offers.py -v`
-Expected: 7 passed.
+Expected: 8 passed.
 
 - [ ] **Step 5: Commit**
 
@@ -1254,7 +1333,7 @@ def partition(all_offers: list[dict]) -> tuple[list[dict], list[dict]]:
 - [ ] **Step 4: Rodar e ver passar**
 
 Run: `scripts/.venv-radar/bin/python -m pytest scripts/radar/tests/test_offers.py -v`
-Expected: 14 passed.
+Expected: 15 passed.
 
 Se `test_score_is_a_known_value` falhar, conferir a aritmética antes de mexer no código: com os pesos 0.5/0.3/0.2 e os tetos 180/50/1.000.000, o valor esperado é `100 * (0.5*(165/180) + 0.3*log10(23)/log10(51) + 0.2*log10(480001)/log10(1000001))`.
 
@@ -1490,6 +1569,7 @@ def offer(key="500|exemplo.kajabi.com", score=88.69, days_live=165):
             "domain": key.split("|")[1], "days_live": days_live,
             "active_creatives": 22, "total_creatives": 30, "reach": 480000,
             "earliest_ad_start": "2026-03-02", "score": score,
+            "countries": ["Germany", "Spain"],
             "sample_copy": ["Join the free masterclass and learn the system."],
             "snapshot_urls": ["https://facebook.com/ads/archive/render_ad/?id=1001"]}
 
@@ -1514,10 +1594,17 @@ def test_ranking_lists_the_mature_offer():
     assert "88.69" in note
 
 
-def test_profile_includes_copy_and_snapshot():
+def test_profile_includes_copy_snapshot_and_countries():
     note = render.build_note([offer()], [], EMPTY_DIFF, STATS, run_date="2026-08-14")
     assert "Join the free masterclass" in note
     assert "render_ad/?id=1001" in note
+    assert "Germany, Spain" in note
+
+
+def test_profile_renders_a_dash_when_no_country_is_known():
+    blank = dict(offer(), countries=[])
+    note = render.build_note([blank], [], EMPTY_DIFF, STATS, run_date="2026-08-14")
+    assert "- Países: —" in note
 
 
 def test_emerging_section_appears_only_when_there_are_emerging_offers():
@@ -1645,6 +1732,7 @@ def _profiles(mature: list[dict]) -> str:
             f"- Criativos ativos: {o['active_creatives']} de "
             f"{o['total_creatives']} totais\n"
             f"- Alcance UE: {_fmt_int(o['reach'])}\n"
+            f"- Países: {', '.join(o['countries']) or '—'}\n"
         )
         if o["sample_copy"]:
             out.append("\n**Promessa:**\n")
@@ -1707,7 +1795,7 @@ def write_note(mature: list[dict], emerging: list[dict], diff: dict,
 - [ ] **Step 4: Rodar e ver passar**
 
 Run: `scripts/.venv-radar/bin/python -m pytest scripts/radar/tests/test_render.py -v`
-Expected: 8 passed.
+Expected: 9 passed.
 
 - [ ] **Step 5: Commit**
 
@@ -2061,7 +2149,7 @@ E acrescentar `import json` ao bloco de imports no topo do arquivo.
 - [ ] **Step 4: Rodar a suíte inteira**
 
 Run: `scripts/.venv-radar/bin/python -m pytest scripts/radar/tests -v`
-Expected: 66 passed, 0 failed.
+Expected: 70 passed, 0 failed.
 
 - [ ] **Step 5: Verificar a guarda de países na prática**
 
@@ -2156,13 +2244,25 @@ inglês; execução agendada.
 `build_params`, `next_page`, `fetch_term`, `fetch_all` (meta_client). Os nomes
 usados nas Tasks 13 e 14 batem com os definidos nas Tasks 5 a 12.
 
-**Contagem de testes esperada ao fim:** 1 (smoke) + 6 (config) + 2 (fixture) +
-20 (classify) + 14 (offers) + 7 (store) + 8 (render) + 7 (meta_client) + 1
-(pipeline) = **66**, o número conferido na Task 13 Step 4.
+**Contagem de testes esperada ao fim:** 1 (smoke) + 7 (config) + 3 (fixture) +
+20 (classify) + 15 (offers) + 7 (store) + 9 (render) + 7 (meta_client) + 1
+(pipeline) = **70**, o número conferido na Task 13 Step 4.
 
-**Correções feitas nesta revisão:** `store.merge` chamava
-`_latest_run_before` dentro da compreensão, uma vez por oferta — içado para
-fora, e a condição de "morta" ficou mais legível no processo.
+**Correções feitas nas revisões:**
+1. `store.merge` chamava `_latest_run_before` dentro da compreensão, uma vez
+   por oferta — içado para fora, e a condição de "morta" ficou mais legível.
+2. Todas as strings pt-BR estavam sem acento, por aplicação equivocada da
+   convenção de mensagem de commit ao texto que o usuário lê. Corrigidas, e a
+   regra ficou explícita na seção de convenções.
+3. **`countries` estava prometido no spec e nunca chegava.** `FIELDS` não pedia
+   `total_reach_by_location`, e `offers.group` não agregava o campo — a ficha
+   sairia sem os países toda semana, sem erro nenhum. Adicionados o campo, o
+   helper `_countries` tolerante a formato, a linha na ficha, e um teste em
+   `test_config` que trava a lista de `FIELDS` contra remoção acidental.
+4. `squarespace` e `wix` saíram de `ECOMMERCE_DOMAINS`: são construtores de
+   site genéricos, e listá-los excluía justamente o coach solo que o radar
+   procura. `thinkific` e `learnworlds` entraram em `FUNNEL_DOMAINS` — as duas
+   são grandes na Europa e faltavam.
 
 ---
 **See also:** [[Radar Infoproduto]] | [[Guilherme Figueredo]]
