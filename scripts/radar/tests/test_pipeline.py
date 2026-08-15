@@ -2,7 +2,7 @@ import json
 from datetime import date
 from pathlib import Path
 
-from radar import classify, offers, render, store
+from radar import classify, dashboard, offers, render, store
 
 FIXTURE = Path(__file__).parent / "fixtures" / "ads_sample.json"
 
@@ -22,6 +22,8 @@ def test_full_pipeline_from_raw_ads_to_note(tmp_path):
 
     note_path = render.write_note(mature, emerging, diff, stats,
                                   run_date="2026-08-14", runs_dir=tmp_path)
+    panel_path = dashboard.write_dashboard(history, tmp_path / "Painel.md",
+                                           generated_on="2026-08-14")
 
     note = note_path.read_text(encoding="utf-8")
     assert "Exemplo Academy" in note        # kajabi offer ranked
@@ -31,6 +33,14 @@ def test_full_pipeline_from_raw_ads_to_note(tmp_path):
     assert "Loja Legal" not in note         # e-commerce filtered out
     assert "Consultoria Qualquer" not in note  # no offer term
     assert history_path.is_file()
+
+    # The panel is the last thing main() writes. Leaving it out of this test
+    # would make the docstring above a lie: the tested chain has to be the
+    # shipped chain, or the untested step is exactly where a seam breaks.
+    panel = panel_path.read_text(encoding="utf-8")
+    assert "type: radar-panel" in panel
+    assert "Exemplo Academy" in panel
+    assert "Curso BR" in panel
 
 
 def test_pipeline_marks_the_lusophone_offer_without_dropping_it(tmp_path):
