@@ -671,6 +671,13 @@ def test_extract_domain_strips_scheme_path_and_www():
     assert classify.extract_domain(ad) == "exemplo.com"
 
 
+def test_extract_domain_strips_port_and_protocol_relative_scheme():
+    port = {"ad_creative_link_captions": ["example.com:8080/path"]}
+    relative = {"ad_creative_link_captions": ["//example.com/x"]}
+    assert classify.extract_domain(port) == "example.com"
+    assert classify.extract_domain(relative) == "example.com"
+
+
 def test_extract_domain_returns_none_when_caption_missing():
     assert classify.extract_domain({}) is None
     assert classify.extract_domain({"ad_creative_link_captions": []}) is None
@@ -688,6 +695,16 @@ def test_host_matches_on_dotted_needle():
 def test_host_matches_rejects_substring_of_a_label():
     # "wix" must not match "wixyzstore.com" — that is a different company.
     assert not classify.host_matches("wixyzstore.com", frozenset({"wix"}))
+
+
+def test_host_matches_rejects_a_near_miss_dotted_needle():
+    # The whole reason this function is not a substring check. Both of these
+    # contain "systeme.io" as a substring and neither is that company. If a
+    # future simplification swaps the label logic for `needle in host`, this
+    # is the test that catches it.
+    assert not classify.host_matches("notsysteme.io", frozenset({"systeme.io"}))
+    assert not classify.host_matches("systeme.io.evil.com",
+                                     frozenset({"systeme.io"}))
 ```
 
 - [ ] **Step 2: Rodar e ver falhar**
@@ -717,7 +734,12 @@ def extract_domain(ad: dict) -> str | None:
 
     Captions arrive in several shapes: a bare host, an uppercase host, or a
     full URL with path and query. Everything is folded to a lowercase host
-    with no scheme, no path and no leading "www.".
+    with no scheme, no path, no port and no leading "www.".
+
+    Takes the FIRST usable caption. An ad can carry several, but in this API
+    they are the same link repeated across creative variants with cosmetic
+    differences in case and format — not different destinations. If that ever
+    stops holding, this is the assumption to revisit.
     """
     captions = ad.get("ad_creative_link_captions") or []
     for caption in captions:
@@ -750,7 +772,7 @@ def host_matches(host: str, needles: Iterable[str]) -> bool:
 - [ ] **Step 4: Rodar e ver passar**
 
 Run: `scripts/.venv-radar/bin/python -m pytest scripts/radar/tests/test_classify.py -v`
-Expected: 6 passed.
+Expected: 8 passed.
 
 - [ ] **Step 5: Commit**
 
@@ -862,7 +884,7 @@ from radar import config
 - [ ] **Step 4: Rodar e ver passar**
 
 Run: `scripts/.venv-radar/bin/python -m pytest scripts/radar/tests/test_classify.py -v`
-Expected: 12 passed.
+Expected: 14 passed.
 
 - [ ] **Step 5: Commit**
 
@@ -1012,7 +1034,7 @@ def keep_infoproducts(ads: list[dict], *, with_stats: bool = False) -> Any:
 - [ ] **Step 4: Rodar e ver passar**
 
 Run: `scripts/.venv-radar/bin/python -m pytest scripts/radar/tests/test_classify.py -v`
-Expected: 20 passed.
+Expected: 22 passed.
 
 - [ ] **Step 5: Commit**
 
@@ -2149,7 +2171,7 @@ E acrescentar `import json` ao bloco de imports no topo do arquivo.
 - [ ] **Step 4: Rodar a suíte inteira**
 
 Run: `scripts/.venv-radar/bin/python -m pytest scripts/radar/tests -v`
-Expected: 70 passed, 0 failed.
+Expected: 72 passed, 0 failed.
 
 - [ ] **Step 5: Verificar a guarda de países na prática**
 
