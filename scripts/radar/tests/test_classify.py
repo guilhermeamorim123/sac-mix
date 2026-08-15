@@ -1,3 +1,6 @@
+import json
+from pathlib import Path
+
 from radar import classify
 
 
@@ -69,9 +72,6 @@ def test_english_ad_on_a_generic_domain_is_not_lusophone():
                                       "ad_creative_link_captions": ["solocoach.co.uk"]})
 
 
-import json
-from pathlib import Path
-
 FIXTURE = Path(__file__).parent / "fixtures" / "ads_sample.json"
 
 
@@ -141,3 +141,36 @@ def test_keep_infoproducts_reports_why_it_dropped_things():
 def test_keep_infoproducts_never_drops_a_lusophone_ad():
     kept = classify.keep_infoproducts(load_ads())
     assert any(ad["id"] == "3001" for ad in kept)
+
+
+def test_keep_infoproducts_counts_an_ad_with_no_domain():
+    # The fixture has no domainless ad, so without this test the `no_domain`
+    # counter is never executed and a typo in its key would pass the suite.
+    # The stats dict is described as how a broken filter announces itself —
+    # the announcement channel needs its own proof.
+    ads = [{"id": "x", "ad_creative_bodies": ["masterclass"]}]
+    kept, stats = classify.keep_infoproducts(ads, with_stats=True)
+    assert kept == []
+    assert stats["no_domain"] == 1
+    assert stats["total"] == stats["kept"] + stats["not_infoproduct"] \
+        + stats["no_domain"]
+
+
+def test_generic_copy_on_an_own_domain_is_a_known_false_positive():
+    # Documents the weakness rather than pretending it is not there: the bare
+    # nouns in SEARCH_TERMS ("bootcamp", "templates", "certification") match
+    # ordinary business copy. A gym's 6am bootcamp passes layer 2. The guard
+    # against this is the manual top-20 audit, not the classifier.
+    gym = {"ad_creative_link_captions": ["academia.example.com"],
+           "ad_creative_bodies": ["Join our 6am bootcamp, first week free."]}
+    assert classify.is_infoproduct(gym) is True
+
+
+def test_multi_word_term_does_not_match_across_two_copy_fields():
+    # "free training" exists in neither field on its own. Joining the fields
+    # with a space would manufacture it.
+    ad = {"ad_creative_link_captions": ["algo.example.com"],
+          "ad_creative_bodies": ["Join the free"],
+          "ad_creative_link_titles": ["training now"]}
+    assert "free training" not in classify.ad_text(ad)
+    assert not classify.is_infoproduct(ad)

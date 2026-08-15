@@ -74,19 +74,37 @@ _TEXT_FIELDS = ("ad_creative_bodies", "ad_creative_link_titles",
 
 
 def ad_text(ad: dict) -> str:
-    """Every piece of copy in the ad, lowercased into one searchable blob."""
+    """Every piece of copy in the ad, lowercased into one searchable blob.
+
+    Fields are joined with a pipe, not a space, so a two-word term cannot
+    match by straddling the boundary between two independent copy items —
+    "Join the free" + "training now" must not read as "free training". Nine
+    of the sixteen search terms are multi-word, so this is not hypothetical.
+    """
     parts: list[str] = []
     for field in _TEXT_FIELDS:
         parts.extend(str(v) for v in (ad.get(field) or []))
-    return " ".join(parts).lower()
+    return " | ".join(parts).lower()
 
 
 def is_infoproduct(ad: dict) -> bool:
     """Two layers: platform fingerprint first, then copy on an own domain.
 
-    Layer 1 is near-proof and needs nothing else. Layer 2 is the false-positive
-    prone one, so it demands both an offer term AND a domain that appears in
-    none of the known lists.
+    Layer 1 — the domain is a known funnel platform — is near-proof and needs
+    nothing else.
+
+    Layer 2 is weaker than it looks, and the weakness is worth stating. In
+    production every ad in the corpus is here BECAUSE Meta matched one of
+    these same `SEARCH_TERMS` against it at collection time, so the copy check
+    is nearly always satisfied by construction. What layer 2 actually rejects
+    is the narrow case of an own-domain ad with no matching copy at all —
+    typically an image-only creative. The real guards on this branch are
+    `ECOMMERCE_DOMAINS` and the manual top-20 audit after each run, not this
+    condition.
+
+    Splitting the terms into a broad collection list and a narrow, unambiguous
+    classification list would restore genuine discrimination here. That is a
+    v2 change, deliberately not made now.
     """
     host = extract_domain(ad)
     if not host:
