@@ -1987,7 +1987,7 @@ def _ranking(mature: list[dict]) -> str:
 def _profiles(mature: list[dict]) -> str:
     if not mature:
         return ""
-    out = [f"## Fichas — top {min(config.TOP_N_PROFILES, len(mature))}\n"]
+    out = [f"## Fichas — top {min(config.TOP_N_PROFILES, len(mature))}\n\n"]
     for i, o in enumerate(mature[:config.TOP_N_PROFILES], start=1):
         out.append(f"### {i}. {o['page_name']} — score {o['score']:.2f}\n")
         out.append(
