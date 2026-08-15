@@ -99,3 +99,44 @@ def group(ads: list[dict], *, today: date) -> list[dict]:
             "snapshot_urls": [a["ad_snapshot_url"] for a in recent[:5]],
         })
     return out
+
+
+def _log_ratio(value: int, cap: int) -> float:
+    """Log-normalize into 0..1. Creatives and reach both have fat tails —
+    without the log, one giant offer flattens the whole ranking."""
+    if value <= 0:
+        return 0.0
+    return min(1.0, math.log10(1 + value) / math.log10(1 + cap))
+
+
+def score(offer: dict) -> float:
+    """0..100. Longevity leads because it is the hardest signal to fake."""
+    longevity = min(offer["days_live"], config.LONGEVITY_CAP_DAYS) / \
+        config.LONGEVITY_CAP_DAYS
+    longevity = max(0.0, min(1.0, longevity))
+    creatives = _log_ratio(offer["active_creatives"], config.CREATIVES_CAP)
+    reach = _log_ratio(offer["reach"], config.REACH_CAP)
+    return round(100 * (
+        config.WEIGHT_LONGEVITY * longevity
+        + config.WEIGHT_CREATIVES * creatives
+        + config.WEIGHT_REACH * reach
+    ), 2)
+
+
+def partition(all_offers: list[dict]) -> tuple[list[dict], list[dict]]:
+    """Split into (mature, emerging), scoring and sorting the mature ones.
+
+    An offer younger than the gate may still be a test that dies next week —
+    ranking it next to a 6-month survivor would be a lie.
+    """
+    mature: list[dict] = []
+    emerging: list[dict] = []
+    for offer in all_offers:
+        enriched = dict(offer, score=score(offer))
+        if enriched["days_live"] >= config.MATURITY_GATE_DAYS:
+            mature.append(enriched)
+        else:
+            emerging.append(enriched)
+    mature.sort(key=lambda o: o["score"], reverse=True)
+    emerging.sort(key=lambda o: o["days_live"], reverse=True)
+    return mature, emerging

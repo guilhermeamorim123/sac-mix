@@ -2,6 +2,8 @@ import json
 from datetime import date
 from pathlib import Path
 
+import pytest
+
 from radar import classify, offers
 
 FIXTURE = Path(__file__).parent / "fixtures" / "ads_sample.json"
@@ -110,3 +112,50 @@ def test_sample_copy_takes_the_three_longest_bodies():
     ads = [_dated_ad("2026-01-01", n) for n in (5, 40, 1, 20, 30)]
     grouped = offers.group(ads, today=TODAY)
     assert grouped[0]["sample_copy"] == ["b" * 40, "b" * 30, "b" * 20]
+
+
+def make_offer(days_live, active_creatives, reach):
+    return {"days_live": days_live, "active_creatives": active_creatives,
+            "reach": reach}
+
+
+def test_score_of_an_empty_offer_is_zero():
+    assert offers.score(make_offer(0, 0, 0)) == 0.0
+
+
+def test_score_of_a_maxed_offer_is_one_hundred():
+    assert offers.score(make_offer(180, 50, 1_000_000)) == 100.0
+
+
+def test_score_caps_do_not_reward_going_past_them():
+    assert offers.score(make_offer(400, 500, 50_000_000)) == 100.0
+
+
+def test_longevity_outweighs_reach_and_creatives():
+    # This is the whole thesis of the radar: an old, modest offer beats a
+    # loud, brand-new one. If this flips, the weights are wrong.
+    old_and_small = offers.score(make_offer(180, 1, 0))
+    new_and_loud = offers.score(make_offer(10, 50, 1_000_000))
+    assert old_and_small > new_and_loud
+
+
+def test_score_is_a_known_value():
+    assert offers.score(make_offer(165, 22, 480_000)) == pytest.approx(88.69, abs=0.05)
+
+
+def test_maturity_gate_splits_mature_from_emerging():
+    mature, emerging = offers.partition([
+        {"key": "a", "days_live": 90, "active_creatives": 5, "reach": 1000},
+        {"key": "b", "days_live": 5, "active_creatives": 5, "reach": 1000},
+    ])
+    assert [o["key"] for o in mature] == ["a"]
+    assert [o["key"] for o in emerging] == ["b"]
+
+
+def test_partition_sorts_mature_by_score_descending():
+    mature, _ = offers.partition([
+        {"key": "low", "days_live": 30, "active_creatives": 1, "reach": 100},
+        {"key": "high", "days_live": 170, "active_creatives": 40, "reach": 900_000},
+    ])
+    assert [o["key"] for o in mature] == ["high", "low"]
+    assert mature[0]["score"] > mature[1]["score"]
