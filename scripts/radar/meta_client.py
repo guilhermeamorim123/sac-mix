@@ -17,7 +17,17 @@ from radar import config
 BASE = "https://graph.facebook.com"
 
 # EU 27 + UK — the only countries for which the API returns commercial ads.
-SUPPORTED = frozenset(config.COUNTRIES)
+#
+# Hard-coded here on purpose, NOT derived from config.COUNTRIES. Deriving it
+# would compare the config against itself: the guard below could never fire,
+# no matter what someone put in the config, while its unit test kept passing
+# on literal inputs. An inert guard is worse than no guard, because it looks
+# like protection.
+SUPPORTED = frozenset({
+    "AT", "BE", "BG", "HR", "CY", "CZ", "DK", "EE", "FI", "FR", "DE", "GR",
+    "HU", "IE", "IT", "LV", "LT", "LU", "MT", "NL", "PL", "PT", "RO", "SK",
+    "SI", "ES", "SE", "GB",
+})
 
 
 def assert_countries_supported(countries: list[str]) -> None:
