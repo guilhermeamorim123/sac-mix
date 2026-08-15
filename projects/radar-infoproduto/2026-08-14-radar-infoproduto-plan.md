@@ -1012,6 +1012,39 @@ def test_keep_infoproducts_reports_why_it_dropped_things():
 def test_keep_infoproducts_never_drops_a_lusophone_ad():
     kept = classify.keep_infoproducts(load_ads())
     assert any(ad["id"] == "3001" for ad in kept)
+
+
+def test_keep_infoproducts_counts_an_ad_with_no_domain():
+    # The fixture has no domainless ad, so without this test the `no_domain`
+    # counter is never executed and a typo in its key would pass the suite.
+    # The stats dict is described as how a broken filter announces itself —
+    # the announcement channel needs its own proof.
+    ads = [{"id": "x", "ad_creative_bodies": ["masterclass"]}]
+    kept, stats = classify.keep_infoproducts(ads, with_stats=True)
+    assert kept == []
+    assert stats["no_domain"] == 1
+    assert stats["total"] == stats["kept"] + stats["not_infoproduct"] \
+        + stats["no_domain"]
+
+
+def test_generic_copy_on_an_own_domain_is_a_known_false_positive():
+    # Documents the weakness rather than pretending it is not there: the bare
+    # nouns in SEARCH_TERMS ("bootcamp", "templates", "certification") match
+    # ordinary business copy. A gym's 6am bootcamp passes layer 2. The guard
+    # against this is the manual top-20 audit, not the classifier.
+    gym = {"ad_creative_link_captions": ["academia.example.com"],
+           "ad_creative_bodies": ["Join our 6am bootcamp, first week free."]}
+    assert classify.is_infoproduct(gym) is True
+
+
+def test_multi_word_term_does_not_match_across_two_copy_fields():
+    # "free training" exists in neither field on its own. Joining the fields
+    # with a space would manufacture it.
+    ad = {"ad_creative_link_captions": ["algo.example.com"],
+          "ad_creative_bodies": ["Join the free"],
+          "ad_creative_link_titles": ["training now"]}
+    assert "free training" not in classify.ad_text(ad)
+    assert not classify.is_infoproduct(ad)
 ```
 
 - [ ] **Step 2: Rodar e ver falhar**
@@ -1029,19 +1062,37 @@ _TEXT_FIELDS = ("ad_creative_bodies", "ad_creative_link_titles",
 
 
 def ad_text(ad: dict) -> str:
-    """Every piece of copy in the ad, lowercased into one searchable blob."""
+    """Every piece of copy in the ad, lowercased into one searchable blob.
+
+    Fields are joined with a pipe, not a space, so a two-word term cannot
+    match by straddling the boundary between two independent copy items —
+    "Join the free" + "training now" must not read as "free training". Nine
+    of the sixteen search terms are multi-word, so this is not hypothetical.
+    """
     parts: list[str] = []
     for field in _TEXT_FIELDS:
         parts.extend(str(v) for v in (ad.get(field) or []))
-    return " ".join(parts).lower()
+    return " | ".join(parts).lower()
 
 
 def is_infoproduct(ad: dict) -> bool:
     """Two layers: platform fingerprint first, then copy on an own domain.
 
-    Layer 1 is near-proof and needs nothing else. Layer 2 is the false-positive
-    prone one, so it demands both an offer term AND a domain that appears in
-    none of the known lists.
+    Layer 1 — the domain is a known funnel platform — is near-proof and needs
+    nothing else.
+
+    Layer 2 is weaker than it looks, and the weakness is worth stating. In
+    production every ad in the corpus is here BECAUSE Meta matched one of
+    these same `SEARCH_TERMS` against it at collection time, so the copy check
+    is nearly always satisfied by construction. What layer 2 actually rejects
+    is the narrow case of an own-domain ad with no matching copy at all —
+    typically an image-only creative. The real guards on this branch are
+    `ECOMMERCE_DOMAINS` and the manual top-20 audit after each run, not this
+    condition.
+
+    Splitting the terms into a broad collection list and a narrow, unambiguous
+    classification list would restore genuine discrimination here. That is a
+    v2 change, deliberately not made now.
     """
     host = extract_domain(ad)
     if not host:
@@ -1083,9 +1134,9 @@ def keep_infoproducts(ads: list[dict], *, with_stats: bool = False) -> Any:
 - [ ] **Step 4: Rodar e ver passar**
 
 Run: `scripts/.venv-radar/bin/python -m pytest scripts/radar/tests/test_classify.py -v`
-Expected: 22 passed.
+Expected: 26 passed.
 
-Suite inteira: 34 passed.
+Suite inteira: 38 passed.
 
 - [ ] **Step 5: Commit**
 
@@ -2268,7 +2319,7 @@ E acrescentar `import json` ao bloco de imports no topo do arquivo.
 - [ ] **Step 4: Rodar a suíte inteira**
 
 Run: `scripts/.venv-radar/bin/python -m pytest scripts/radar/tests -v`
-Expected: 77 passed, 0 failed.
+Expected: 81 passed, 0 failed.
 
 - [ ] **Step 5: Verificar a guarda de países na prática**
 
@@ -2313,7 +2364,25 @@ Expected: coleta os 16 termos, imprime o progresso por termo, e escreve
 
 Abrir a nota gerada. Para cada uma das 20 fichas, abrir o domínio e responder: **é infoproduto de verdade?**
 
-Se mais de 3 das 20 forem falso positivo, o filtro está frouxo. O ajuste é em `config.py` — acrescentar o domínio ofensor a `ECOMMERCE_DOMAINS`, ou remover o termo que trouxe o lixo de `SEARCH_TERMS`. Depois:
+Se mais de 3 das 20 forem falso positivo, o filtro está frouxo.
+
+**Cuidado com o ajuste óbvio.** `SEARCH_TERMS` serve a dois donos: é o que se
+manda para a API **e** o que a camada 2 procura na copy. Tirar um termo de lá
+não só afrouxa a classificação — encolhe a coleta, e a oferta boa que só
+aparecia por aquele termo some junto. Prefira, nesta ordem:
+
+1. Acrescentar o domínio ofensor a `ECOMMERCE_DOMAINS` — cirúrgico, não mexe
+   na coleta
+2. Acrescentar a plataforma legítima que faltou a `FUNNEL_DOMAINS`
+3. Só então mexer em `SEARCH_TERMS`, sabendo que perde volume
+
+Se o padrão de falso positivo for sempre o mesmo — substantivo genérico
+(`bootcamp`, `templates`, `certification`) em domínio próprio — o conserto
+certo não é nenhum dos três: é separar `SEARCH_TERMS` em `COLLECT_TERMS`
+(amplo, para a API) e `CLASSIFY_TERMS` (só termos compostos e inequívocos,
+para a camada 2). Isso é v2, e esta rodada é que decide se vale.
+
+Depois:
 
 ```bash
 python3 scripts/radar_infoproduto.py --render-only
@@ -2364,8 +2433,8 @@ inglês; execução agendada.
 usados nas Tasks 13 e 14 batem com os definidos nas Tasks 5 a 12.
 
 **Contagem de testes esperada ao fim:** 1 (smoke) + 8 (config) + 3 (fixture) +
-22 (classify) + 16 (offers) + 7 (store) + 10 (render) + 7 (meta_client) + 2
-(pipeline) = **77**, o número conferido na Task 13 Step 4.
+26 (classify) + 16 (offers) + 7 (store) + 10 (render) + 7 (meta_client) + 2
+(pipeline) = **81**, o número conferido na Task 13 Step 4.
 
 **Correções feitas nas revisões:**
 1. `store.merge` chamava `_latest_run_before` dentro da compreensão, uma vez
