@@ -1609,7 +1609,41 @@ def test_save_then_load_round_trips(tmp_path):
     store.merge(history, [offer("1|a.com")], run_date="2026-08-14")
     store.save(history, path)
     assert json.loads(path.read_text(encoding="utf-8")) == history
+
+
+def test_an_older_run_date_does_not_invert_first_and_last_seen(tmp_path):
+    # `--date` accepts any date, so a backfill can arrive after a newer run.
+    # Plain assignment would leave first_seen AFTER last_seen.
+    history = store.load(tmp_path / "history.json")
+    store.merge(history, [offer("1|a.com")], run_date="2026-08-21")
+    store.merge(history, [offer("1|a.com")], run_date="2026-08-01")
+    entry = history["offers"]["1|a.com"]
+    assert entry["first_seen_run"] == "2026-08-01"
+    assert entry["last_seen_run"] == "2026-08-21"
+    assert entry["first_seen_run"] <= entry["last_seen_run"]
+    assert [r["date"] for r in entry["runs"]] == ["2026-08-01", "2026-08-21"]
+
+
+def test_load_explains_a_git_merge_conflict(tmp_path):
+    # The likeliest corruption in this vault: two machines write the history
+    # in the same week and git leaves conflict markers in the file.
+    path = tmp_path / "history.json"
+    path.write_text('<<<<<<< HEAD\n{"offers": {}}\n=======\n{"offers": {}}\n'
+                    '>>>>>>> other\n', encoding="utf-8")
+    with pytest.raises(SystemExit) as exc:
+        store.load(path)
+    assert "conflito de merge" in str(exc.value)
+
+
+def test_load_rejects_valid_json_that_is_not_an_object(tmp_path):
+    path = tmp_path / "history.json"
+    path.write_text("[]", encoding="utf-8")
+    with pytest.raises(SystemExit) as exc:
+        store.load(path)
+    assert "objeto JSON" in str(exc.value)
 ```
+
+Acrescentar `import pytest` aos imports no topo do arquivo.
 
 - [ ] **Step 2: Rodar e ver falhar**
 
@@ -1644,9 +1678,36 @@ _RUN_FIELDS = ("days_live", "active_creatives", "total_creatives", "reach", "sco
 
 
 def load(path: Path) -> dict:
+    """Read the history, failing legibly when the file is not what we expect.
+
+    The likeliest way this file breaks is a git merge conflict: the vault
+    syncs between machines over git, and two machines running the radar in the
+    same week produce competing rewrites. A raw JSONDecodeError there tells
+    the owner nothing useful, so conflict markers get their own message.
+    """
     if not path.is_file():
         return {"schema_version": SCHEMA_VERSION, "offers": {}}
-    data = json.loads(path.read_text(encoding="utf-8"))
+    text = path.read_text(encoding="utf-8")
+    if "<<<<<<<" in text or ">>>>>>>" in text:
+        raise SystemExit(
+            f"Erro: {path} tem marcador de conflito de merge do git.\n"
+            "Duas máquinas gravaram o histórico na mesma semana. Resolva o "
+            "conflito no arquivo (ou recupere uma versão com `git checkout "
+            "--theirs`) e rode de novo."
+        )
+    try:
+        data = json.loads(text)
+    except json.JSONDecodeError as exc:
+        raise SystemExit(
+            f"Erro: {path} não é JSON válido ({exc}).\n"
+            "O histórico é versionado no git — `git log -- <arquivo>` mostra "
+            "a última versão boa."
+        )
+    if not isinstance(data, dict):
+        raise SystemExit(
+            f"Erro: {path} deveria conter um objeto JSON, mas contém "
+            f"{type(data).__name__}."
+        )
     data.setdefault("schema_version", SCHEMA_VERSION)
     data.setdefault("offers", {})
     return data
@@ -1693,7 +1754,11 @@ def merge(history: dict, current: list[dict], *, run_date: str) -> dict:
             }
             diff["new"].append(key)
         else:
-            entry["last_seen_run"] = run_date
+            # min/max, not plain assignment: `--date` with an older date is
+            # allowed, and assigning blindly would leave first_seen AFTER
+            # last_seen — an incoherent summary over a correct runs array.
+            entry["first_seen_run"] = min(entry["first_seen_run"], run_date)
+            entry["last_seen_run"] = max(entry["last_seen_run"], run_date)
             entry["page_name"] = offer["page_name"]
             entry["earliest_ad_start"] = offer["earliest_ad_start"]
             entry["runs"] = [r for r in entry["runs"] if r["date"] != run_date]
@@ -1719,7 +1784,7 @@ def _latest_run_before(known: dict, run_date: str) -> str | None:
 - [ ] **Step 4: Rodar e ver passar**
 
 Run: `scripts/.venv-radar/bin/python -m pytest scripts/radar/tests/test_store.py -v`
-Expected: 7 passed.
+Expected: 10 passed.
 
 - [ ] **Step 5: Commit**
 
@@ -2365,7 +2430,7 @@ E acrescentar `import json` ao bloco de imports no topo do arquivo.
 - [ ] **Step 4: Rodar a suíte inteira**
 
 Run: `scripts/.venv-radar/bin/python -m pytest scripts/radar/tests -v`
-Expected: 82 passed, 0 failed.
+Expected: 85 passed, 0 failed.
 
 - [ ] **Step 5: Verificar a guarda de países na prática**
 
@@ -2479,8 +2544,8 @@ inglês; execução agendada.
 usados nas Tasks 13 e 14 batem com os definidos nas Tasks 5 a 12.
 
 **Contagem de testes esperada ao fim:** 1 (smoke) + 8 (config) + 3 (fixture) +
-25 (classify) + 19 (offers) + 7 (store) + 10 (render) + 7 (meta_client) + 2
-(pipeline) = **82**, o número conferido na Task 13 Step 4.
+25 (classify) + 19 (offers) + 10 (store) + 10 (render) + 7 (meta_client) + 2
+(pipeline) = **85**, o número conferido na Task 13 Step 4.
 
 **Correções feitas nas revisões:**
 1. `store.merge` chamava `_latest_run_before` dentro da compreensão, uma vez
