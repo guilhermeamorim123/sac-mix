@@ -1134,9 +1134,9 @@ def keep_infoproducts(ads: list[dict], *, with_stats: bool = False) -> Any:
 - [ ] **Step 4: Rodar e ver passar**
 
 Run: `scripts/.venv-radar/bin/python -m pytest scripts/radar/tests/test_classify.py -v`
-Expected: 26 passed.
+Expected: 25 passed.
 
-Suite inteira: 38 passed.
+Suite inteira: 37 passed.
 
 - [ ] **Step 5: Commit**
 
@@ -2319,7 +2319,7 @@ E acrescentar `import json` ao bloco de imports no topo do arquivo.
 - [ ] **Step 4: Rodar a suíte inteira**
 
 Run: `scripts/.venv-radar/bin/python -m pytest scripts/radar/tests -v`
-Expected: 81 passed, 0 failed.
+Expected: 79 passed, 0 failed.
 
 - [ ] **Step 5: Verificar a guarda de países na prática**
 
@@ -2433,8 +2433,8 @@ inglês; execução agendada.
 usados nas Tasks 13 e 14 batem com os definidos nas Tasks 5 a 12.
 
 **Contagem de testes esperada ao fim:** 1 (smoke) + 8 (config) + 3 (fixture) +
-26 (classify) + 16 (offers) + 7 (store) + 10 (render) + 7 (meta_client) + 2
-(pipeline) = **81**, o número conferido na Task 13 Step 4.
+25 (classify) + 16 (offers) + 7 (store) + 10 (render) + 7 (meta_client) + 2
+(pipeline) = **79**, o número conferido na Task 13 Step 4.
 
 **Correções feitas nas revisões:**
 1. `store.merge` chamava `_latest_run_before` dentro da compreensão, uma vez
