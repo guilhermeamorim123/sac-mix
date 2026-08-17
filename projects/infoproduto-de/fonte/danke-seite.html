@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vielen Dank — Das Selbstversorger-Jahr</title>
+<style>
+  :root {
+    --paper: #E9EAE3;
+    --card: #F2F3EC;
+    --ink: #1A231C;
+    --ink-soft: #4B5750;
+    --ink-faint: #7D877E;
+    --rule: #C8CCBF;
+    --beet: #7A2231;
+    --moss: #4A5D3A;
+    --display: ui-sans-serif, system-ui, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+    --body: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper: #141A14; --card: #1C231C; --ink: #E4E7DE; --ink-soft: #AAB3A7;
+      --ink-faint: #79837A; --rule: #2E382F; --beet: #D06B7C; --moss: #8FA87A;
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper: #141A14; --card: #1C231C; --ink: #E4E7DE; --ink-soft: #AAB3A7;
+    --ink-faint: #79837A; --rule: #2E382F; --beet: #D06B7C; --moss: #8FA87A;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--paper); color: var(--ink);
+    font-family: var(--body); font-size: 1.0625rem; line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 40rem; margin: 0 auto; padding: clamp(3rem, 9vw, 6rem) clamp(1.25rem, 5vw, 2rem); }
+  .eyebrow {
+    font-family: var(--display); font-size: 0.75rem; font-weight: 600;
+    letter-spacing: 0.16em; text-transform: uppercase; color: var(--moss);
+    margin: 0 0 1rem;
+  }
+  h1 {
+    font-family: var(--display); font-size: clamp(2rem, 5.5vw, 2.9rem);
+    line-height: 1.06; letter-spacing: -0.03em; font-weight: 700;
+    margin: 0 0 1rem; text-wrap: balance;
+  }
+  h2 {
+    font-family: var(--display); font-size: 1.1rem; font-weight: 650;
+    letter-spacing: -0.01em; margin: 2.5rem 0 0.6rem;
+  }
+  p { margin: 0 0 1.1rem; }
+  .lede { font-size: 1.15rem; color: var(--ink-soft); }
+
+  .download {
+    border: 1px solid var(--ink); background: var(--card);
+    padding: clamp(1.4rem, 4vw, 2rem); margin: 2rem 0;
+  }
+  .download__file {
+    font-family: var(--display); font-weight: 650; font-size: 1.05rem;
+    margin: 0 0 0.2rem;
+  }
+  .download__meta { color: var(--ink-faint); font-size: 0.9rem; margin: 0 0 1.2rem; }
+  .btn {
+    display: inline-block; background: var(--beet); color: #FFF6F2;
+    font-family: var(--display); font-size: 1rem; font-weight: 650;
+    padding: 0.85rem 1.7rem; border: 1px solid var(--beet); text-decoration: none;
+  }
+  .btn:hover { background: #9C3345; border-color: #9C3345; }
+  .btn:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; }
+  .note { font-size: 0.875rem; color: var(--ink-faint); margin: 1rem 0 0; }
+
+  ol { padding-left: 1.2rem; margin: 0 0 1.2rem; }
+  li { margin-bottom: 0.55rem; }
+
+  .next {
+    border-top: 1px solid var(--rule); margin-top: 2.5rem; padding-top: 1.5rem;
+  }
+  .legal {
+    border-top: 1px solid var(--rule); margin-top: 2.5rem; padding-top: 1.5rem;
+    font-size: 0.82rem; color: var(--ink-faint); line-height: 1.6;
+  }
+  a { color: var(--beet); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <p class="eyebrow">Bestellung abgeschlossen</p>
+  <h1>Vielen Dank. Hier ist Ihr Plan.</h1>
+  <p class="lede">Die Bestellbestätigung mit Rechnung ist unterwegs in Ihr
+    E-Mail-Postfach. Den Download starten Sie direkt hier.</p>
+
+  <div class="download">
+    <p class="download__file">Das Selbstversorger-Jahr</p>
+    <p class="download__meta">PDF · 11 Seiten · A4, zum Ausdrucken eingerichtet</p>
+    <a class="btn" href="{{DOWNLOAD_LINK}}">PDF herunterladen</a>
+    <p class="note">Der Link bleibt 30 Tage gültig. Speichern Sie die Datei
+      am besten gleich ab.</p>
+  </div>
+
+  <h2>Womit Sie anfangen</h2>
+  <p>Nicht vorne. Drei Schritte, in dieser Reihenfolge:</p>
+  <ol>
+    <li><strong>Kapitel 8 zuerst lesen</strong> — auch wenn Sie schon Erfahrung
+      haben. Es legt fest, wie groß Sie in diesem Jahr anfangen.</li>
+    <li><strong>Seite 4 ausdrucken</strong> und die Beete abmessen, bevor Sie
+      Saatgut bestellen. Die Fläche entscheidet über die Sortenliste, nicht
+      umgekehrt.</li>
+    <li><strong>Den Aussaatkalender auf Seite 6 ausdrucken</strong> und in die
+      Gartenhütte hängen. Er ist dafür gesetzt.</li>
+  </ol>
+
+  <div class="next">
+    <h2>Wenn der Download nicht startet</h2>
+    <p>Antworten Sie einfach auf die Bestellbestätigung — die E-Mail enthält
+      Ihre Bestellnummer, damit ist es schnell geklärt.</p>
+  </div>
+
+  <div class="legal">
+    <p><strong>Vor Veröffentlichung ersetzen:</strong> <code>{{DOWNLOAD_LINK}}</code>
+      durch den vom Zahlungsanbieter erzeugten, zeitlich begrenzten Link.
+      Niemals eine feste, öffentlich erreichbare Datei-URL verwenden — die wird
+      weitergegeben.</p>
+    <p>Diese Seite braucht denselben Footer wie der Rest der Website:
+      Impressum, Datenschutzerklärung, AGB und Widerrufsbelehrung.</p>
+  </div>
+</div>
+</body>
+</html>
