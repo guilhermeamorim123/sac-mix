@@ -1,0 +1,507 @@
+<title>Das Selbstversorger-Jahr</title>
+
+<style>
+  :root {
+    --paper:      #E9EAE3;
+    --paper-sunk: #DFE1D7;
+    --card:       #F2F3EC;
+    --ink:        #1A231C;
+    --ink-soft:   #4B5750;
+    --ink-faint:  #7D877E;
+    --rule:       #C8CCBF;
+    --beet:       #7A2231;
+    --beet-soft:  #9C3345;
+    --wheat:      #A8862F;
+    --moss:       #4A5D3A;
+
+    --display: ui-sans-serif, system-ui, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+    --body: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+
+    --measure: 34rem;
+    --gutter: clamp(1.25rem, 4vw, 3rem);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper:      #141A14;
+      --paper-sunk: #0E130F;
+      --card:       #1C231C;
+      --ink:        #E4E7DE;
+      --ink-soft:   #AAB3A7;
+      --ink-faint:  #79837A;
+      --rule:       #2E382F;
+      --beet:       #D06B7C;
+      --beet-soft:  #E08A99;
+      --wheat:      #D4B45E;
+      --moss:       #8FA87A;
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --paper:      #141A14;
+    --paper-sunk: #0E130F;
+    --card:       #1C231C;
+    --ink:        #E4E7DE;
+    --ink-soft:   #AAB3A7;
+    --ink-faint:  #79837A;
+    --rule:       #2E382F;
+    --beet:       #D06B7C;
+    --beet-soft:  #E08A99;
+    --wheat:      #D4B45E;
+    --moss:       #8FA87A;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--body);
+    font-size: 1.0625rem;
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap {
+    max-width: 62rem;
+    margin: 0 auto;
+    padding: 0 var(--gutter);
+  }
+
+  section { padding-block: clamp(3rem, 7vw, 5.5rem); }
+  section + section { border-top: 1px solid var(--rule); }
+
+  h1, h2, h3, .eyebrow, .btn, .month__name, .price__num {
+    font-family: var(--display);
+    text-wrap: balance;
+  }
+
+  .eyebrow {
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--beet);
+    margin: 0 0 1rem;
+  }
+
+  h1 {
+    font-size: clamp(2.4rem, 6.5vw, 4.25rem);
+    line-height: 1.02;
+    letter-spacing: -0.03em;
+    font-weight: 700;
+    margin: 0 0 1.25rem;
+  }
+
+  h2 {
+    font-size: clamp(1.6rem, 3.4vw, 2.35rem);
+    line-height: 1.12;
+    letter-spacing: -0.02em;
+    font-weight: 700;
+    margin: 0 0 1.5rem;
+  }
+
+  h3 {
+    font-size: 1.0625rem;
+    letter-spacing: -0.01em;
+    font-weight: 650;
+    margin: 0 0 0.4rem;
+  }
+
+  p { margin: 0 0 1.1rem; max-width: var(--measure); }
+  .lede { font-size: 1.2rem; line-height: 1.55; color: var(--ink-soft); }
+  strong { font-weight: 600; }
+
+  /* ---------- Hero ---------- */
+  .hero { padding-block: clamp(3.5rem, 9vw, 7rem) clamp(2.5rem, 6vw, 4rem); }
+
+  .hero__grid {
+    display: grid;
+    gap: clamp(2rem, 5vw, 3.5rem);
+    grid-template-columns: 1fr;
+  }
+  @media (min-width: 56rem) {
+    .hero__grid { grid-template-columns: 1.35fr 1fr; align-items: end; }
+  }
+
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1px;
+    background: var(--rule);
+    border: 1px solid var(--rule);
+  }
+  .stat { background: var(--card); padding: 1.1rem 1.2rem; }
+  .stat__num {
+    font-family: var(--display);
+    font-size: 1.85rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    font-variant-numeric: tabular-nums;
+    display: block;
+    line-height: 1.1;
+  }
+  .stat__label {
+    font-family: var(--display);
+    font-size: 0.72rem;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+  }
+
+  /* ---------- Year band ---------- */
+  .band { background: var(--paper-sunk); }
+  .band__scroll { overflow-x: auto; padding-bottom: 0.5rem; }
+  .months {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(11.5rem, 1fr);
+    gap: 1px;
+    background: var(--rule);
+    border: 1px solid var(--rule);
+    min-width: 100%;
+  }
+  .month { background: var(--card); padding: 1rem 1rem 1.2rem; }
+  .month__name {
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--wheat);
+    display: block;
+    margin-bottom: 0.5rem;
+  }
+  .month__task { font-size: 0.9rem; line-height: 1.45; color: var(--ink-soft); margin: 0; }
+  .month--peak { background: var(--card); box-shadow: inset 0 3px 0 var(--moss); }
+
+  /* ---------- Chapters ---------- */
+  .chapters {
+    display: grid;
+    gap: 1px;
+    background: var(--rule);
+    border: 1px solid var(--rule);
+    grid-template-columns: 1fr;
+  }
+  @media (min-width: 44rem) { .chapters { grid-template-columns: 1fr 1fr; } }
+  .chapter {
+    background: var(--card);
+    padding: 1.35rem 1.4rem;
+    display: grid;
+    grid-template-columns: 2.2rem 1fr;
+    gap: 0 0.5rem;
+  }
+  .chapter__no {
+    font-family: var(--mono);
+    font-size: 0.8rem;
+    color: var(--beet);
+    font-variant-numeric: tabular-nums;
+    padding-top: 0.15rem;
+  }
+  .chapter p { font-size: 0.925rem; color: var(--ink-soft); margin: 0; }
+
+  /* ---------- Two-column lists ---------- */
+  .split {
+    display: grid;
+    gap: clamp(1.5rem, 4vw, 3rem);
+    grid-template-columns: 1fr;
+  }
+  @media (min-width: 48rem) { .split { grid-template-columns: 1fr 1fr; } }
+
+  .ticks { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.7rem; }
+  .ticks li {
+    padding-left: 1.6rem;
+    position: relative;
+    font-size: 0.975rem;
+    line-height: 1.5;
+  }
+  .ticks li::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0.62em;
+    width: 0.7rem;
+    height: 1px;
+    background: var(--moss);
+  }
+  .ticks--no li::before { background: var(--beet); }
+
+  /* ---------- Placeholder blocks ---------- */
+  .todo {
+    border: 1px dashed var(--beet);
+    background: color-mix(in srgb, var(--beet) 7%, var(--card));
+    padding: 1.2rem 1.3rem;
+    margin-bottom: 1rem;
+  }
+  .todo__tag {
+    font-family: var(--mono);
+    font-size: 0.68rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--beet);
+    display: block;
+    margin-bottom: 0.45rem;
+  }
+  .todo p { font-size: 0.925rem; color: var(--ink-soft); margin: 0; max-width: none; }
+
+  /* ---------- Offer ---------- */
+  .offer {
+    border: 1px solid var(--ink);
+    background: var(--card);
+    padding: clamp(1.5rem, 4vw, 2.5rem);
+    max-width: 34rem;
+  }
+  .price {
+    display: flex;
+    align-items: baseline;
+    gap: 0.6rem;
+    margin-bottom: 0.3rem;
+  }
+  .price__num {
+    font-size: 3.2rem;
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+  .price__note { color: var(--ink-faint); font-size: 0.9rem; }
+
+  .btn {
+    display: inline-block;
+    background: var(--beet);
+    color: #FFF6F2;
+    font-size: 1rem;
+    font-weight: 650;
+    letter-spacing: -0.005em;
+    padding: 0.9rem 1.8rem;
+    border: 1px solid var(--beet);
+    text-decoration: none;
+    margin-top: 1.2rem;
+  }
+  .btn:hover { background: var(--beet-soft); border-color: var(--beet-soft); }
+  .btn:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; }
+
+  .bump {
+    border-top: 1px solid var(--rule);
+    margin-top: 1.5rem;
+    padding-top: 1.2rem;
+    font-size: 0.925rem;
+    color: var(--ink-soft);
+  }
+
+  /* ---------- FAQ ---------- */
+  details {
+    border-bottom: 1px solid var(--rule);
+    padding: 1rem 0;
+  }
+  summary {
+    font-family: var(--display);
+    font-weight: 600;
+    font-size: 1rem;
+    cursor: pointer;
+    list-style: none;
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+  summary::-webkit-details-marker { display: none; }
+  summary::after { content: "+"; color: var(--beet); font-weight: 400; }
+  details[open] summary::after { content: "–"; }
+  details p { margin: 0.8rem 0 0; font-size: 0.95rem; color: var(--ink-soft); }
+  summary:focus-visible { outline: 2px solid var(--beet); outline-offset: 3px; }
+
+  .legal {
+    font-size: 0.82rem;
+    color: var(--ink-faint);
+    max-width: 46rem;
+    line-height: 1.6;
+  }
+  .legal a { color: var(--ink-soft); }
+
+  footer { padding-block: 2.5rem 3.5rem; border-top: 1px solid var(--rule); }
+</style>
+
+<section class="hero">
+  <div class="wrap">
+    <p class="eyebrow">Anbauplan &amp; Vorratssystem für 12 Monate</p>
+    <div class="hero__grid">
+      <div>
+        <h1>Das Selbstversorger&#8209;Jahr</h1>
+        <p class="lede">
+          Die meisten Gärten liefern von Juni bis September — und von Oktober bis Mai nichts.
+          Dieser Plan schließt die Lücke: <strong>40&nbsp;m², zwölf Monate, ein durchgehender Erntekalender.</strong>
+        </p>
+        <p>
+          Kein Aussteiger&shy;programm, keine Krisen&shy;vorsorge. Ein nüchterner Anbau- und
+          Einlagerungs&shy;plan für Leute mit Schrebergarten, Reihenhausgarten oder
+          Hochbeet, die im Februar noch eigenes Gemüse essen wollen.
+        </p>
+        <a class="btn" href="#angebot">Plan ansehen — 37&nbsp;€</a>
+      </div>
+      <div class="stats">
+        <div class="stat"><span class="stat__num">40</span><span class="stat__label">m² Fläche</span></div>
+        <div class="stat"><span class="stat__num">12</span><span class="stat__label">Monate Ernte</span></div>
+        <div class="stat"><span class="stat__num">31</span><span class="stat__label">Kulturen</span></div>
+        <div class="stat"><span class="stat__num">8</span><span class="stat__label">Kapitel</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="band">
+  <div class="wrap">
+    <p class="eyebrow">Das Gartenjahr</p>
+    <h2>Jeder Monat hat eine Aufgabe</h2>
+    <p>
+      Der häufigste Fehler ist nicht falsches Gießen — es ist ein Beet, das im April
+      komplett bepflanzt wird und im Oktober leer steht. Der Plan verteilt Aussaat,
+      Ernte und Einlagerung über das ganze Jahr.
+    </p>
+  </div>
+  <div class="wrap">
+    <div class="band__scroll">
+      <div class="months">
+        <div class="month"><span class="month__name">Jan</span><p class="month__task">Planung, Saatgut bestellen. Chili und Paprika auf der Fensterbank vorziehen.</p></div>
+        <div class="month"><span class="month__name">Feb</span><p class="month__task">Tomaten vorkultivieren. Frühbeet vorbereiten, Boden abdecken.</p></div>
+        <div class="month"><span class="month__name">Mär</span><p class="month__task">Radieschen, Spinat und Erbsen direkt säen. Kartoffeln vorkeimen.</p></div>
+        <div class="month"><span class="month__name">Apr</span><p class="month__task">Kohl auspflanzen. Möhren und Salat säen. Erste Reihenfolge im Beet festlegen.</p></div>
+        <div class="month month--peak"><span class="month__name">Mai</span><p class="month__task">Nach den Eisheiligen: Tomaten, Gurken und Zucchini ins Freiland.</p></div>
+        <div class="month month--peak"><span class="month__name">Jun</span><p class="month__task">Erste Ernte — Salat, Radieschen, Erbsen. Sofort nachsäen, nicht warten.</p></div>
+        <div class="month month--peak"><span class="month__name">Jul</span><p class="month__task">Bohnen und Zucchini. Einkochen beginnt, solange die Küche noch Zeit hat.</p></div>
+        <div class="month month--peak"><span class="month__name">Aug</span><p class="month__task">Hauptsaison: Tomaten und Gurken. Fermentieren statt wegwerfen.</p></div>
+        <div class="month"><span class="month__name">Sep</span><p class="month__task">Kartoffeln und Kürbis ernten. Wintergemüse säen — jetzt oder nie.</p></div>
+        <div class="month"><span class="month__name">Okt</span><p class="month__task">Vorratskeller füllen. Feldsalat säen, Beete abdecken.</p></div>
+        <div class="month"><span class="month__name">Nov</span><p class="month__task">Wintergemüse ernten. Boden ruhen lassen, Kompost ansetzen.</p></div>
+        <div class="month"><span class="month__name">Dez</span><p class="month__task">Grünkohl nach dem ersten Frost. Auswertung und Planung fürs nächste Jahr.</p></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <p class="eyebrow">Inhalt</p>
+    <h2>Acht Kapitel, kein Füllmaterial</h2>
+    <div class="chapters">
+      <div class="chapter"><span class="chapter__no">01</span><div><h3>Die Fläche einteilen</h3><p>Wie 40&nbsp;m² in Beete, Wege und Fruchtfolge aufgehen — mit Maßplan zum Nachbauen.</p></div></div>
+      <div class="chapter"><span class="chapter__no">02</span><div><h3>Der Aussaatkalender</h3><p>Woche für Woche, was gesät, gepflanzt und geerntet wird. Als Druckvorlage für die Gartenhütte.</p></div></div>
+      <div class="chapter"><span class="chapter__no">03</span><div><h3>Fruchtfolge ohne Tabelle im Kopf</h3><p>Vier Beete, vier Jahre, ein Rotationsschema. Boden bleibt gesund, ohne Rechnerei.</p></div></div>
+      <div class="chapter"><span class="chapter__no">04</span><div><h3>Nachsaat: die eigentliche Verdopplung</h3><p>Dieselbe Fläche trägt zweimal. Welche Kultur nach welcher kommt und wann genau.</p></div></div>
+      <div class="chapter"><span class="chapter__no">05</span><div><h3>Wintergemüse</h3><p>Grünkohl, Feldsalat, Pastinake, Porree. Was draußen bleibt und was abgedeckt wird.</p></div></div>
+      <div class="chapter"><span class="chapter__no">06</span><div><h3>Einlagern statt wegwerfen</h3><p>Sandkiste, Miete, Keller. Welche Temperatur welche Kultur wie lange hält.</p></div></div>
+      <div class="chapter"><span class="chapter__no">07</span><div><h3>Einkochen und Fermentieren</h3><p>Die Grundverfahren mit Zeiten und Temperaturen — ohne Rezeptbuch-Umweg.</p></div></div>
+      <div class="chapter"><span class="chapter__no">08</span><div><h3>Das erste Jahr realistisch</h3><p>Was im Jahr eins wirklich klappt, was scheitert, und wo Anfänger Geld verbrennen.</p></div></div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="split">
+      <div>
+        <p class="eyebrow">Passt</p>
+        <h2>Für wen der Plan gemacht ist</h2>
+        <ul class="ticks">
+          <li>Sie haben zwischen 20 und 80&nbsp;m² — Schrebergarten, Reihenhaus oder mehrere Hochbeete.</li>
+          <li>Sie haben schon einmal angebaut und im Winter trotzdem alles im Supermarkt gekauft.</li>
+          <li>Sie wollen einen Plan, den Sie ausdrucken und abarbeiten, keine Sammlung von Tipps.</li>
+          <li>Sie kochen selbst und würden einlagern, wenn Sie wüssten wie.</li>
+        </ul>
+      </div>
+      <div>
+        <p class="eyebrow">Passt nicht</p>
+        <h2>Für wen nicht</h2>
+        <ul class="ticks ticks--no">
+          <li>Sie suchen Krisenvorsorge oder Prepper-Inhalte. Das ist hier nicht das Thema.</li>
+          <li>Sie wollen sich vollständig selbst versorgen. Auf 40&nbsp;m² geht das nicht, und niemand sollte das behaupten.</li>
+          <li>Sie haben nur einen Balkon. Der Plan setzt Bodenfläche voraus.</li>
+          <li>Sie möchten Videos. Das hier ist ein PDF zum Ausdrucken und Mitnehmen.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <p class="eyebrow">Vor dem Start auszufüllen</p>
+    <h2>Hier gehören echte Belege hin</h2>
+    <div class="todo">
+      <span class="todo__tag">Platzhalter — Autorenvorstellung</span>
+      <p>Wer schreibt das, und warum sollte man ihm glauben? Jahre Gartenerfahrung, Größe der Fläche, Region. Ein Foto vom eigenen Beet wirkt hier stärker als jeder Titel.</p>
+    </div>
+    <div class="todo">
+      <span class="todo__tag">Platzhalter — Kundenstimmen</span>
+      <p>Drei bis fünf echte Rückmeldungen mit Vorname, Region und, wenn möglich, Foto der eigenen Ernte.</p>
+    </div>
+    <div class="todo">
+      <span class="todo__tag">Platzhalter — Bildmaterial</span>
+      <p>Fotos der Beete über das Jahr, ein Blick in den gefüllten Vorratskeller, eine Seite aus dem Kalender.</p>
+    </div>
+    <p class="legal">
+      Diese Felder bleiben absichtlich leer. Erfundene Kundenstimmen sind in Deutschland
+      nach dem Gesetz gegen den unlauteren Wettbewerb (UWG) eine unlautere geschäftliche
+      Handlung und abmahnfähig — mit Fotos oder erfundenen Namen wird daraus schnell teuer.
+      Ohne echte Belege lieber gar kein Abschnitt als ein erfundener.
+    </p>
+  </div>
+</section>
+
+<section id="angebot">
+  <div class="wrap">
+    <p class="eyebrow">Angebot</p>
+    <h2>Das Selbstversorger-Jahr</h2>
+    <div class="offer">
+      <div class="price">
+        <span class="price__num">37&nbsp;€</span>
+        <span class="price__note">einmalig, inkl. MwSt.</span>
+      </div>
+      <p style="color: var(--ink-soft); font-size: 0.95rem;">
+        PDF mit 8 Kapiteln, Aussaatkalender als Druckvorlage, Maßplan für 40&nbsp;m²
+        und Checklisten für Einlagerung und Einkochen. Sofortiger Download.
+      </p>
+      <a class="btn" href="#">Jetzt herunterladen</a>
+      <div class="bump">
+        <strong>Dazu buchbar:</strong> „Einkochen &amp; Fermentieren&nbsp;— die Grundverfahren“
+        mit Zeiten- und Temperaturtabellen für 12 Kulturen. <strong>+&nbsp;17&nbsp;€</strong>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <p class="eyebrow">Fragen</p>
+    <h2>Was Käufer vorher wissen wollen</h2>
+    <details>
+      <summary>Funktioniert das auch in meiner Region?</summary>
+      <p>Der Kalender ist auf das deutsche Mittelgebirgsklima ausgelegt. Für Norddeutschland und die Alpenregion liegt eine Verschiebungstabelle bei — meist ein bis zwei Wochen später beziehungsweise früher.</p>
+    </details>
+    <details>
+      <summary>Ich habe noch nie etwas angebaut. Ist das zu viel?</summary>
+      <p>Kapitel 8 ist genau dafür da. Es beschreibt ein reduziertes erstes Jahr mit sieben Kulturen statt einunddreißig — und was Sie im Jahr eins bewusst weglassen.</p>
+    </details>
+    <details>
+      <summary>Bekomme ich ein gedrucktes Buch?</summary>
+      <p>Nein. Sie erhalten ein PDF, das auf A4 zum Ausdrucken eingerichtet ist. Der Kalender und die Checklisten sind so gesetzt, dass sie einzeln ausgedruckt in der Gartenhütte hängen können.</p>
+    </details>
+    <details>
+      <summary>Wie ist das mit dem Widerruf bei einem Download?</summary>
+      <p>Sie haben grundsätzlich 14 Tage Widerrufsrecht. Bei digitalen Inhalten erlischt es, sobald Sie dem sofortigen Download ausdrücklich zustimmen und bestätigen, dass Sie dadurch Ihr Widerrufsrecht verlieren. Diese Zustimmung wird beim Kauf abgefragt.</p>
+    </details>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <p class="legal">
+      <strong>Vor Veröffentlichung zu ergänzen:</strong> Impressum, Datenschutz&shy;erklärung,
+      Widerrufsbelehrung und AGB sind in Deutschland Pflicht — ein fehlendes Impressum ist
+      der häufigste Abmahngrund überhaupt. Dazu ein Cookie-Banner mit echter Einwilligung,
+      bevor der Meta-Pixel lädt. Für den Verkauf an Verbraucher in der EU muss außerdem
+      geklärt sein, wer Umsatzsteuer schuldet: bei Stripe sind Sie das selbst, bei einem
+      Merchant of Record wie Lemon Squeezy oder Digistore24 nicht.
+    </p>
+  </div>
+</footer>
