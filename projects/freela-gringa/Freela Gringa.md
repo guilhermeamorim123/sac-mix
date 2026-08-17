@@ -96,6 +96,34 @@ Sem histórico você compete com quem tem 200 avaliações. O que funciona:
 | 4 | Prometer prazo e não entregar com a escola | Média | Prazo de entrega com folga: 5 dias no Basic, não 2 |
 | 5 | Primeiro trabalho não vir nunca | Média | Se em 3 semanas não vier pedido, revisar anúncio e preço antes de desistir |
 
+## Ideia parada de propósito: multicanal
+
+Guilherme levantou em 17/08 a ideia de o mesmo agente atender **todos os
+canais**, puxando as APIs dos marketplaces além do WhatsApp — e ele mesmo
+decidiu parar no WhatsApp por enquanto. A decisão está certa e fica registrada
+como tal.
+
+**Por que a ideia é mais real do que parece:** ele já fez isso. O
+[[project-clientia|CLIENTIA]] é app de pós e pré-venda de Mercado Livre com
+IA e auto-resposta, e o SAC Outops mexeu em endpoint do ML. Integração de
+marketplace não é território novo.
+
+**Por que vale como v2, não como v1:**
+
+- Ticket muito maior. Atendimento multicanal é serviço de US$ 1.500 a 3.000,
+  não de US$ 340
+- Mais grudento. Quem centraliza atendimento não troca de fornecedor
+- Na Europa os canais são outros: Amazon, eBay, Etsy, **Allegro** (Polônia),
+  **Bol.com** (Holanda), **Cdiscount** (França), Zalando
+
+**Por que não agora:** exige entender a API de cada marketplace, cada uma com
+sua aprovação e seu limite. É semanas de trabalho antes da primeira venda —
+o mesmo erro que já custou o dia de hoje. Um canal, uma venda, uma avaliação.
+Depois o segundo canal, cobrando mais.
+
+O gatilho para retomar: **depois da terceira venda no Fiverr.** Aí existe
+avaliação, existe caixa, e existe prova de que alguém paga.
+
 ## Próximos passos
 
 - [ ] Confirmar idade e definir em nome de quem fica a conta 📅 2026-08-18 #task
