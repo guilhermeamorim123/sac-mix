@@ -1,0 +1,431 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>The 4-Hour Listing Week</title>
+<style>
+  @page { size: A4; margin: 22mm 20mm 20mm; }
+  @page :first { margin: 0; }
+
+  :root {
+    --ink: #16202B;
+    --soft: #4A5866;
+    --faint: #7C8894;
+    --rule: #C7CFD6;
+    --brand: #0E5C7A;
+    --accent: #B5541F;
+    --sunk: #EEF2F4;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; color: var(--ink);
+    font-family: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+    font-size: 10.5pt; line-height: 1.55;
+  }
+  h1,h2,h3,h4,.label,th,.cover__meta,.toc__no,.prompt__tag,.time {
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  }
+
+  .cover {
+    height: 297mm; padding: 30mm 22mm; background: var(--ink); color: #EDF1F3;
+    display: flex; flex-direction: column; justify-content: space-between;
+    page-break-after: always;
+  }
+  .cover__eyebrow {
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-size: 8.5pt; letter-spacing: 0.22em; text-transform: uppercase;
+    color: #E08B4E;
+  }
+  .cover h1 { font-size: 46pt; line-height: 0.98; letter-spacing: -0.035em; margin: 0 0 8mm; font-weight: 700; }
+  .cover__sub { font-size: 14pt; line-height: 1.35; color: #A9B6C1; max-width: 122mm; margin: 0; }
+  .cover__rule { height: 2px; background: var(--accent); width: 40mm; margin: 10mm 0; }
+  .cover__meta { font-size: 9pt; color: #7E8D99; letter-spacing: 0.04em; }
+
+  .module { page-break-before: always; }
+  h2 { font-size: 20pt; line-height: 1.12; letter-spacing: -0.02em; margin: 0 0 2mm; font-weight: 700; }
+  .label { font-size: 8pt; letter-spacing: 0.18em; text-transform: uppercase; color: var(--accent); margin: 0 0 3mm; display: block; }
+  h3 { font-size: 11.5pt; font-weight: 700; margin: 7mm 0 2mm; letter-spacing: -0.01em; }
+  h4 { font-size: 10pt; font-weight: 700; margin: 5mm 0 1.5mm; color: var(--soft); }
+  p { margin: 0 0 3.2mm; }
+  .intro { font-size: 11.5pt; color: var(--soft); line-height: 1.5; margin-bottom: 5mm; }
+  .time {
+    display: inline-block; font-size: 7.5pt; letter-spacing: 0.1em;
+    text-transform: uppercase; color: var(--brand);
+    border: 1px solid var(--brand); padding: 0.8mm 2mm; margin-bottom: 4mm;
+  }
+  ul, ol { margin: 0 0 3.5mm; padding-left: 5mm; }
+  li { margin-bottom: 1.4mm; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 9pt; margin: 3mm 0 5mm; page-break-inside: avoid; }
+  th { text-align: left; font-size: 7.5pt; letter-spacing: 0.1em; text-transform: uppercase;
+       color: var(--faint); border-bottom: 1.5px solid var(--ink); padding: 1.5mm 2mm 1.5mm 0; font-weight: 600; }
+  td { padding: 1.6mm 2mm 1.6mm 0; border-bottom: 1px solid var(--rule); vertical-align: top; }
+  tbody tr:last-child td { border-bottom: 1.5px solid var(--ink); }
+
+  .prompt {
+    background: var(--sunk); border-left: 2.5px solid var(--brand);
+    padding: 4mm 5mm; margin: 3mm 0 5mm; page-break-inside: avoid;
+    font-family: "SF Mono", Menlo, Consolas, monospace; font-size: 8.5pt; line-height: 1.5;
+  }
+  .prompt__tag {
+    font-size: 7.5pt; letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--brand); display: block; margin-bottom: 2.5mm;
+  }
+  .prompt p { margin: 0 0 2mm; }
+  .prompt p:last-child { margin: 0; }
+
+  .box { background: var(--sunk); border-left: 2.5px solid var(--accent); padding: 4mm 5mm; margin: 4mm 0 5mm; page-break-inside: avoid; }
+  .box__title { font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; font-size: 8pt;
+    letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent); display: block; margin-bottom: 2mm; }
+  .box p:last-child { margin-bottom: 0; }
+
+  .toc { page-break-after: always; }
+  .toc ol { list-style: none; padding: 0; margin: 6mm 0 0; }
+  .toc li { display: grid; grid-template-columns: 10mm 1fr 20mm; gap: 0 3mm;
+    padding: 2.8mm 0; border-bottom: 1px solid var(--rule); }
+  .toc__no { font-size: 9pt; color: var(--accent); font-variant-numeric: tabular-nums; padding-top: 0.6mm; }
+  .toc__t { font-weight: 600; font-size: 10.5pt; }
+  .toc__d { color: var(--faint); font-size: 9pt; display: block; }
+  .toc__m { font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; font-size: 8pt;
+    color: var(--brand); text-align: right; padding-top: 1mm; }
+</style>
+</head>
+<body>
+
+<div class="cover">
+  <div><p class="cover__eyebrow">AI Workflows for Real Estate Agents</p></div>
+  <div>
+    <h1>The 4&#8209;Hour Listing Week</h1>
+    <div class="cover__rule"></div>
+    <p class="cover__sub">Cut the writing out of your week. Eight workflows,
+      forty-one prompts, and a system that sounds like you — not like a robot.</p>
+  </div>
+  <div><p class="cover__meta">8 modules · 41 copy-paste prompts · Works with ChatGPT, Claude or Gemini</p></div>
+</div>
+
+<div class="toc">
+  <span class="label">Contents</span>
+  <h2>What you will build</h2>
+  <p class="intro">Each module is one workflow you set up once and reuse forever.
+    Do them in order — Module 1 makes every other module sound like you.</p>
+  <ol>
+    <li><span class="toc__no">01</span><span><span class="toc__t">Your Voice File</span>
+      <span class="toc__d">The 20-minute setup that stops AI writing sounding generic</span></span><span class="toc__m">20 min</span></li>
+    <li><span class="toc__no">02</span><span><span class="toc__t">Listing Descriptions</span>
+      <span class="toc__d">From property facts to a finished description in 90 seconds</span></span><span class="toc__m">15 min</span></li>
+    <li><span class="toc__no">03</span><span><span class="toc__t">The Follow-Up Engine</span>
+      <span class="toc__d">Seven touchpoints written once, personalised per lead</span></span><span class="toc__m">30 min</span></li>
+    <li><span class="toc__no">04</span><span><span class="toc__t">Social Posts from One Listing</span>
+      <span class="toc__d">One property, twelve posts, four platforms</span></span><span class="toc__m">20 min</span></li>
+    <li><span class="toc__no">05</span><span><span class="toc__t">The Neighbourhood Guide</span>
+      <span class="toc__d">The asset that makes you the local expert, built in an hour</span></span><span class="toc__m">45 min</span></li>
+    <li><span class="toc__no">06</span><span><span class="toc__t">Objection Scripts</span>
+      <span class="toc__d">Your real objections, answered in your words, ready to send</span></span><span class="toc__m">25 min</span></li>
+    <li><span class="toc__no">07</span><span><span class="toc__t">Listing Presentation Prep</span>
+      <span class="toc__d">Research a seller and their street before you knock</span></span><span class="toc__m">20 min</span></li>
+    <li><span class="toc__no">08</span><span><span class="toc__t">The Weekly Hour</span>
+      <span class="toc__d">Running all of it in sixty minutes every Monday</span></span><span class="toc__m">10 min</span></li>
+  </ol>
+</div>
+
+<div class="module">
+  <span class="label">Module 01</span>
+  <h2>Your Voice File</h2>
+  <span class="time">20 minutes · do this first</span>
+  <p class="intro">Every agent who tries AI and quits does so for the same reason:
+    it writes like a brochure. This module fixes that permanently, and everything
+    afterwards depends on it.</p>
+
+  <h3>Why generic output happens</h3>
+  <p>An AI with no information about you writes the average of every real estate
+    listing ever published. That average is "Welcome to this stunning
+    residence" — which is exactly what your competitors' listings say, because
+    they are also using the average.</p>
+  <p>The fix is not a better prompt. It is giving the model a sample of you.</p>
+
+  <h3>Build the file</h3>
+  <p>Open a blank document. Paste in:</p>
+  <ul>
+    <li><strong>Three listings you wrote yourself</strong> and were happy with —
+      before you ever used AI</li>
+    <li><strong>Two client emails</strong> you sent that got a good reply</li>
+    <li><strong>Your market</strong>: city, typical price band, who your buyers
+      usually are</li>
+    <li><strong>Five words you never use</strong> — most agents list "stunning",
+      "nestled", "boasts", "dream home", "must see"</li>
+  </ul>
+  <p>Save it. You will paste this at the top of a conversation once, and
+    everything in that conversation inherits it.</p>
+
+  <div class="prompt">
+    <span class="prompt__tag">Prompt 1 · Voice extraction</span>
+    <p>Below are samples of my own writing as a real estate agent. Read them and
+    describe my voice in a short profile I can reuse: sentence length, how formal
+    I am, whether I lead with the property or the buyer, words and phrases I
+    actually use, and words I clearly avoid.</p>
+    <p>Do not flatter the writing. If it is plain, say plain. I want an accurate
+    profile, not a compliment.</p>
+    <p>[paste your samples]</p>
+  </div>
+
+  <p>Keep what it gives you. That profile is now the first thing you paste into
+    every workflow in this course.</p>
+
+  <div class="box">
+    <span class="box__title">The five-word rule</span>
+    <p>The single highest-return line in your voice file is the list of words you
+      never use. Banning "stunning", "nestled" and "boasts" removes most of what
+      makes AI writing detectable at a glance.</p>
+  </div>
+</div>
+
+<div class="module">
+  <span class="label">Module 02</span>
+  <h2>Listing Descriptions</h2>
+  <span class="time">15 minutes to set up · 90 seconds per listing after</span>
+  <p class="intro">The task you do most and enjoy least. Set this up once and a
+    description takes the time it takes to paste the facts.</p>
+
+  <h3>Facts in, description out</h3>
+  <p>The mistake is asking for a description without giving anything specific to
+    work with. The model then invents adjectives to fill the gap. Give it facts
+    and it has no reason to invent.</p>
+
+  <div class="prompt">
+    <span class="prompt__tag">Prompt 2 · The listing description</span>
+    <p>[paste your voice profile]</p>
+    <p>Write a listing description using only the facts below. Rules:</p>
+    <p>- Open with the single most unusual thing about this property, not with a greeting<br>
+    - No adjective that is not supported by a fact I gave you<br>
+    - 140 to 170 words<br>
+    - Last line is a concrete next step, not "schedule your showing today"<br>
+    - If a fact is missing that you need, ask me instead of guessing</p>
+    <p>FACTS:<br>
+    [beds / baths / sqft / year / lot]<br>
+    [three things a buyer would notice walking in]<br>
+    [one honest drawback]<br>
+    [who this home actually suits]</p>
+  </div>
+
+  <h3>Why you include the drawback</h3>
+  <p>Two reasons, and the second matters more. First, a description that admits
+    something reads as honest and holds attention longer. Second, it forces the
+    model to write around a real constraint, which kills the generic template.</p>
+  <p>You are not publishing the drawback. You are giving the writer something
+    true to work with, and you cut that line before posting if you want.</p>
+
+  <div class="box">
+    <span class="box__title">Fair housing</span>
+    <p>Never describe the people a neighbourhood suits — describe the property.
+      "Great for families", "perfect for young professionals" and anything about
+      schools, churches or demographics can breach fair housing rules. This is
+      not an AI problem; it is the same rule as always. But AI will produce those
+      phrases happily if you let it, so add them to your never-use list.</p>
+  </div>
+</div>
+
+<div class="module">
+  <span class="label">Module 03</span>
+  <h2>The Follow-Up Engine</h2>
+  <span class="time">30 minutes to build · reused forever</span>
+  <p class="intro">Most leads are lost to silence, not to a competitor. This
+    module writes seven touchpoints once, then personalises them per lead in
+    seconds.</p>
+
+  <h3>The sequence</h3>
+  <table>
+    <thead><tr><th>When</th><th>Purpose</th><th>Length</th></tr></thead>
+    <tbody>
+      <tr><td>Same day</td><td>Confirm you exist and what happens next</td><td>3 lines</td></tr>
+      <tr><td>Day 2</td><td>One useful thing about their specific search</td><td>5 lines</td></tr>
+      <tr><td>Day 5</td><td>A property they did not ask about but should see</td><td>4 lines</td></tr>
+      <tr><td>Day 10</td><td>Market observation, no ask</td><td>4 lines</td></tr>
+      <tr><td>Day 18</td><td>Direct question: still looking?</td><td>2 lines</td></tr>
+      <tr><td>Day 30</td><td>Something genuinely useful, no ask</td><td>4 lines</td></tr>
+      <tr><td>Day 60</td><td>The permission-to-close email</td><td>3 lines</td></tr>
+    </tbody>
+  </table>
+
+  <div class="prompt">
+    <span class="prompt__tag">Prompt 3 · The sequence</span>
+    <p>[paste your voice profile]</p>
+    <p>Write a seven-email follow-up sequence for a buyer lead who enquired and
+    then went quiet. Use the timing and purpose below. Constraints:</p>
+    <p>- No email longer than five lines<br>
+    - Only one of the seven may contain a direct ask<br>
+    - Never use "just checking in" or "touching base"<br>
+    - Write each so it makes sense even if they read no previous one<br>
+    - Leave [SQUARE BRACKETS] wherever a detail about this specific lead belongs</p>
+    <p>[paste the table]</p>
+  </div>
+
+  <div class="prompt">
+    <span class="prompt__tag">Prompt 4 · Personalising one lead</span>
+    <p>Here is my sequence and here is what I know about this lead. Fill every
+    bracket using only what I have told you. If you cannot fill a bracket from
+    what I gave you, delete that sentence rather than inventing a detail.</p>
+    <p>LEAD: [what they enquired about, budget, timeline, anything they said]</p>
+  </div>
+
+  <div class="box">
+    <span class="box__title">The instruction that matters most</span>
+    <p>"Delete rather than invent" is the line that makes this safe to send. Without
+      it the model will confidently write that the lead mentioned a growing family
+      when they never did — and you will not notice until they do.</p>
+  </div>
+</div>
+
+<div class="module">
+  <span class="label">Module 04</span>
+  <h2>Social Posts from One Listing</h2>
+  <span class="time">20 minutes</span>
+  <p class="intro">You already did the work of understanding the property. This
+    turns that one effort into twelve posts across four platforms.</p>
+
+  <div class="prompt">
+    <span class="prompt__tag">Prompt 5 · The multiplier</span>
+    <p>[paste your voice profile]</p>
+    <p>From the listing below, write twelve social posts:</p>
+    <p>- 3 for Instagram (caption plus 5 hashtags, first line must work as a hook alone)<br>
+    - 3 for Facebook (longer, conversational, one question at the end)<br>
+    - 3 for LinkedIn (angle: market insight, property as the example)<br>
+    - 3 short scripts for a 20-second video, written to be spoken aloud</p>
+    <p>Each of the twelve must lead with a different angle: the price, the
+    feature, the location, the buyer's problem it solves. Do not repeat the
+    opening structure.</p>
+    <p>LISTING: [paste your description from Module 2]</p>
+  </div>
+
+  <h3>The angle rule</h3>
+  <p>Twelve posts about the same house become annoying if they say the same thing
+    twelve times. Forcing a different opening angle each time is what makes a
+    single property carry two weeks of content.</p>
+</div>
+
+<div class="module">
+  <span class="label">Module 05</span>
+  <h2>The Neighbourhood Guide</h2>
+  <span class="time">45 minutes · the highest-value hour in this course</span>
+  <p class="intro">A guide to one neighbourhood is the asset that makes you the
+    obvious local agent. It works as a lead magnet, an email attachment and a
+    listing appointment leave-behind.</p>
+
+  <div class="prompt">
+    <span class="prompt__tag">Prompt 6 · The outline</span>
+    <p>I am building a buyer's guide to [NEIGHBOURHOOD, CITY]. Outline it in
+    sections. For each section, tell me exactly what local facts you need from me
+    — I will supply them, you will not guess.</p>
+    <p>Assume the reader is deciding between this neighbourhood and two others,
+    and wants the honest trade-offs, not a brochure.</p>
+  </div>
+
+  <div class="box">
+    <span class="box__title">Do not let it invent local facts</span>
+    <p>This is the module where AI will most confidently make things up: schools
+      that do not exist, a farmers market on the wrong day, a commute time it
+      guessed. Every local fact comes from you. The model writes; it does not
+      research. Publishing an invented local detail is how a local expert stops
+      being believed.</p>
+  </div>
+
+  <div class="prompt">
+    <span class="prompt__tag">Prompt 7 · The draft</span>
+    <p>[paste your voice profile]</p>
+    <p>Write the guide from the outline and the facts below. Rules: every factual
+    claim traces to a fact I gave you. Where a trade-off exists, name it plainly.
+    Include one section on who this neighbourhood does not suit.</p>
+    <p>FACTS: [paste yours]</p>
+  </div>
+</div>
+
+<div class="module">
+  <span class="label">Module 06</span>
+  <h2>Objection Scripts</h2>
+  <span class="time">25 minutes</span>
+  <p class="intro">Not generic objection handling. Your actual objections, in your
+    words, ready to paste into a reply.</p>
+
+  <h3>Start from your inbox</h3>
+  <p>Open your sent folder and find the last ten times a client pushed back.
+    Those are your objections. Generic lists from a sales book are not.</p>
+
+  <div class="prompt">
+    <span class="prompt__tag">Prompt 8 · Your objections</span>
+    <p>[paste your voice profile]</p>
+    <p>Below are real objections I have received. For each, write a reply that:</p>
+    <p>- Acknowledges the concern as reasonable, in one line, without flattery<br>
+    - Gives one concrete piece of information that addresses it<br>
+    - Ends by returning the decision to them, not by pushing<br>
+    - Is under 90 words and sounds like an email, not a script</p>
+    <p>Do not write anything that promises an outcome I cannot control — no
+    predictions about prices, rates or how fast something will sell.</p>
+    <p>OBJECTIONS: [paste yours]</p>
+  </div>
+
+  <div class="box">
+    <span class="box__title">The line that keeps you out of trouble</span>
+    <p>"Do not promise an outcome I cannot control" belongs in every prompt where
+      the output goes to a client. Left out, the model will happily write that
+      rates are about to drop or the home will sell in two weeks. In writing,
+      from you, that is a problem.</p>
+  </div>
+</div>
+
+<div class="module">
+  <span class="label">Module 07</span>
+  <h2>Listing Presentation Prep</h2>
+  <span class="time">20 minutes per appointment</span>
+  <p class="intro">Walking in knowing the street, the comparable sales and the
+    likely objection is the difference between presenting and winning.</p>
+
+  <div class="prompt">
+    <span class="prompt__tag">Prompt 9 · The prep brief</span>
+    <p>I have a listing appointment. Below is what I know about the property, the
+    seller and three comparable sales. Give me:</p>
+    <p>1. The three questions this seller is most likely to ask, based on what I told you<br>
+    2. The strongest argument for my pricing, in plain language<br>
+    3. The weakest point in my position, stated honestly, and how I would address it<br>
+    4. One question I should ask them that most agents will not</p>
+    <p>Do not invent market data. Use only the comparables I gave you.</p>
+    <p>DETAILS: [paste yours]</p>
+  </div>
+
+  <p>Point 3 is the one to read twice. The model is better at finding the hole in
+    your own position than you are, because it is not attached to it.</p>
+</div>
+
+<div class="module">
+  <span class="label">Module 08</span>
+  <h2>The Weekly Hour</h2>
+  <span class="time">60 minutes, once a week</span>
+  <p class="intro">Everything above collapses into one hour on Monday morning.
+    This is the module that makes the rest stick.</p>
+
+  <table>
+    <thead><tr><th>Minutes</th><th>What you do</th><th>Module</th></tr></thead>
+    <tbody>
+      <tr><td>0–10</td><td>New listings: facts in, descriptions out</td><td>02</td></tr>
+      <tr><td>10–25</td><td>Social posts for the week, scheduled</td><td>04</td></tr>
+      <tr><td>25–40</td><td>Personalise follow-ups for every live lead</td><td>03</td></tr>
+      <tr><td>40–50</td><td>Prep any listing appointment booked this week</td><td>07</td></tr>
+      <tr><td>50–60</td><td>Add anything new to your voice file</td><td>01</td></tr>
+    </tbody>
+  </table>
+
+  <h3>The part everyone skips</h3>
+  <p>The last ten minutes. Every week, paste back into your voice file the one
+    thing the AI wrote that you edited most heavily, along with your edit. Within
+    a month the profile stops producing writing you have to fix, because it has
+    learned the corrections you keep making.</p>
+
+  <div class="box">
+    <span class="box__title">What this course does not do</span>
+    <p>It does not get you leads, and no prompt will. It takes the writing out of
+      your week so the hours go to the two things that actually close business:
+      talking to people and being in front of property. If you use the time you
+      save to do more admin, you have gained nothing.</p>
+  </div>
+</div>
+
+</body>
+</html>
