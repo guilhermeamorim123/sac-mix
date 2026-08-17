@@ -1,0 +1,8 @@
+{
+  "functions": {
+    "api/download.js": {
+      "includeFiles": "product.pdf"
+    }
+  },
+  "cleanUrls": true
+}
