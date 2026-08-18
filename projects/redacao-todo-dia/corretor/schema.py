@@ -63,14 +63,11 @@ AVALIACAO_SCHEMA = {
                 "additionalProperties": False,
             },
         },
-        "linhas": {"type": "integer"},
-        "linhas_copiadas": {"type": "integer"},
         "enquadramento": {"type": "string", "enum": list(ENQUADRAMENTOS)},
         "fere_direitos_humanos": {"type": "boolean"},
         "resumo": {"type": "string"},
     },
-    "required": ["competencias", "linhas", "linhas_copiadas", "enquadramento",
-                 "fere_direitos_humanos", "resumo"],
+    "required": ["competencias", "enquadramento", "fere_direitos_humanos", "resumo"],
     "additionalProperties": False,
 }
 
@@ -119,6 +116,11 @@ def normaliza(avaliacao: dict) -> dict:
             f"Esperado um de {list(ENQUADRAMENTOS)}"
         )
 
+    if "linhas" not in avaliacao:
+        raise ValueError(
+            "avaliação sem 'linhas' — o número vem da transcrição, não do "
+            "modelo avaliador; api.avaliar() precisa injetá-lo"
+        )
     linhas = _valida_contagem(avaliacao, "linhas")
     copiadas = _valida_contagem(avaliacao, "linhas_copiadas")
     if copiadas > linhas:

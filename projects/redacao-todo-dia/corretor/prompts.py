@@ -113,22 +113,21 @@ destinado a isso.
 não dar para avaliar.
 - `em_branco`: não há texto.
 
-# Contagens que você informa
-- `linhas`: quantas linhas escritas o texto tem.
-- `linhas_copiadas`: quantas dessas linhas contêm, integral ou parcialmente, \
-cópia dos textos motivadores ou do enunciado. Conte a linha inteira mesmo que \
-só parte dela seja cópia. Se não houver cópia, devolva 0.
+# Julgamento que só você pode fazer
 - `fere_direitos_humanos`: true apenas se a proposta de intervenção defender \
 algo que viole direitos humanos (pena de morte, justiça com as próprias mãos, \
 tortura, discriminação). Uma proposta ruim ou vaga não fere direitos humanos \
 — só devolva true se houver violação de fato.
 
+Você NÃO conta linhas. Você recebe o texto já transcrito e não vê a folha; a \
+contagem vem de quem leu a foto. Não invente esse número e não o mencione.
+
 # Regras da sua saída
 - Não some as notas. Não devolva nota total. A soma é feita fora daqui.
-- Não aplique zeramentos, tetos ou descontos. Você informa `enquadramento`, \
-`linhas`, `linhas_copiadas` e `fere_direitos_humanos`; quem anula, trava e \
-desconta é o código que recebe sua resposta. Dê a cada competência a nota que \
-o texto merece pelo mérito dela, como se nenhuma dessas regras existisse.
+- Não aplique zeramentos, tetos ou descontos. Você informa `enquadramento` e \
+`fere_direitos_humanos`; quem anula, trava e desconta é o código que recebe \
+sua resposta. Dê a cada competência a nota que o texto merece pelo mérito \
+dela, como se nenhuma dessas regras existisse.
 - Em `justificativa`, diga o que o texto fez, citando trecho quando ajudar. \
 Não repita a descrição da competência.
 - Em `melhorias`, dê exatamente duas ações concretas que o aluno faria na \

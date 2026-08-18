@@ -95,12 +95,11 @@ def test_transcrever_levanta_erro_em_recusa(tmp_path):
         api.transcrever(cliente, foto_falsa(tmp_path))
 
 
-def test_transcrever_aceita_texto_sem_cabecalho_de_linhas(tmp_path):
-    """Se o modelo esquecer o cabeçalho, contamos as linhas nós mesmos."""
+def test_transcrever_recusa_texto_sem_cabecalho_de_linhas(tmp_path):
+    """Contar parágrafos como linhas produziria anulação falsa."""
     cliente = FakeClient(resposta("primeira linha\nsegunda linha"))
-    resultado, _ = api.transcrever(cliente, foto_falsa(tmp_path))
-    assert resultado.linhas == 2
-    assert resultado.texto == "primeira linha\nsegunda linha"
+    with pytest.raises(api.TranscricaoSemContagem):
+        api.transcrever(cliente, foto_falsa(tmp_path))
 
 
 # --- avaliar -------------------------------------------------------------
@@ -111,15 +110,12 @@ import prompts
 import schema
 
 
-def avaliacao_json(nota=160, enquadramento="ok", linhas=25, linhas_copiadas=0,
-                   fere_direitos_humanos=False):
+def avaliacao_json(nota=160, enquadramento="ok", fere_direitos_humanos=False):
     return json.dumps({
         "competencias": [
             {"numero": n, "nota": nota, "justificativa": "j", "melhorias": ["a", "b"]}
             for n in (1, 2, 3, 4, 5)
         ],
-        "linhas": linhas,
-        "linhas_copiadas": linhas_copiadas,
         "enquadramento": enquadramento,
         "fere_direitos_humanos": fere_direitos_humanos,
         "resumo": "r",
@@ -128,27 +124,27 @@ def avaliacao_json(nota=160, enquadramento="ok", linhas=25, linhas_copiadas=0,
 
 def test_avaliar_devolve_avaliacao_normalizada():
     cliente = FakeClient(resposta(avaliacao_json(nota=160)))
-    resultado, _ = api.avaliar(cliente, "texto da redação", "Tema qualquer")
+    resultado, _ = api.avaliar(cliente, "texto da redação", "Tema qualquer", linhas=25)
     assert resultado["nota_total"] == 800
     assert resultado["penalidades"] == []
 
 
 def test_avaliar_aplica_as_regras_de_anulacao():
     cliente = FakeClient(resposta(avaliacao_json(nota=200, enquadramento="fuga_total")))
-    resultado, _ = api.avaliar(cliente, "texto", "Tema")
+    resultado, _ = api.avaliar(cliente, "texto", "Tema", linhas=25)
     assert resultado["nota_total"] == 0
     assert resultado["anulada"] is True
 
 
 def test_avaliar_aplica_o_teto_do_tangenciamento():
     cliente = FakeClient(resposta(avaliacao_json(nota=200, enquadramento="tangenciamento")))
-    resultado, _ = api.avaliar(cliente, "texto", "Tema")
+    resultado, _ = api.avaliar(cliente, "texto", "Tema", linhas=25)
     assert [c["nota"] for c in resultado["competencias"]] == [200, 40, 40, 200, 40]
 
 
 def test_avaliar_exige_saida_estruturada():
     cliente = FakeClient(resposta(avaliacao_json()))
-    api.avaliar(cliente, "texto", "Tema")
+    api.avaliar(cliente, "texto", "Tema", linhas=25)
     enviado = cliente.messages.chamada
     assert enviado["output_config"]["format"]["type"] == "json_schema"
     assert enviado["output_config"]["format"]["schema"] == schema.AVALIACAO_SCHEMA
@@ -156,7 +152,7 @@ def test_avaliar_exige_saida_estruturada():
 
 def test_avaliar_cacheia_a_rubrica():
     cliente = FakeClient(resposta(avaliacao_json()))
-    api.avaliar(cliente, "texto", "Tema")
+    api.avaliar(cliente, "texto", "Tema", linhas=25)
     bloco_sistema = cliente.messages.chamada["system"][0]
     assert bloco_sistema["text"] == prompts.RUBRICA
     assert bloco_sistema["cache_control"] == {"type": "ephemeral"}
@@ -164,7 +160,7 @@ def test_avaliar_cacheia_a_rubrica():
 
 def test_avaliar_manda_o_tema_junto():
     cliente = FakeClient(resposta(avaliacao_json()))
-    api.avaliar(cliente, "texto da redação", "Desafios da mobilidade urbana")
+    api.avaliar(cliente, "texto da redação", "Desafios da mobilidade urbana", linhas=25)
     conteudo = cliente.messages.chamada["messages"][0]["content"]
     assert "Desafios da mobilidade urbana" in conteudo
     assert "texto da redação" in conteudo
@@ -173,7 +169,21 @@ def test_avaliar_manda_o_tema_junto():
 def test_avaliar_levanta_erro_em_recusa():
     cliente = FakeClient(resposta("", stop_reason="refusal"))
     with pytest.raises(api.RecusaDaAPI):
-        api.avaliar(cliente, "texto", "Tema")
+        api.avaliar(cliente, "texto", "Tema", linhas=25)
+
+
+def test_avaliar_injeta_as_linhas_da_transcricao():
+    """O avaliador não vê a foto; quem conta linhas é a etapa anterior."""
+    cliente = FakeClient(resposta(avaliacao_json(nota=160)))
+    resultado, _ = api.avaliar(cliente, "texto", "Tema", linhas=25)
+    assert resultado["linhas"] == 25
+    assert resultado["nota_total"] == 800
+
+
+def test_avaliar_com_poucas_linhas_anula_pelo_numero_da_transcricao():
+    cliente = FakeClient(resposta(avaliacao_json(nota=200)))
+    resultado, _ = api.avaliar(cliente, "texto", "Tema", linhas=5)
+    assert resultado["nota_total"] == 0
 
 
 # --- custo ---------------------------------------------------------------

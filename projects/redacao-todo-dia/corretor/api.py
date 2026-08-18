@@ -20,6 +20,12 @@ import schema
 MODELO = "claude-opus-5"
 MAX_TOKENS = 16000
 
+# O thinking do Opus 5 vem ligado e conta para max_tokens e para o custo.
+# Transcrição é OCR, não raciocínio — roda barato. Avaliação é julgamento.
+# Estes dois são a alavanca de custo mais direta: meça antes de baixar.
+EFFORT_TRANSCRICAO = "low"
+EFFORT_AVALIACAO = "high"
+
 FORMATOS_ACEITOS = {"image/jpeg", "image/png", "image/webp", "image/gif"}
 
 
@@ -33,6 +39,10 @@ class FotoIlegivel(ValueError):
 
 class RespostaSemTexto(RuntimeError):
     """A resposta não trouxe bloco de texto — normalmente max_tokens curto."""
+
+
+class TranscricaoSemContagem(RuntimeError):
+    """A transcrição não trouxe o cabeçalho LINHAS: — sem ele não dá para avaliar."""
 
 
 @dataclass
@@ -84,12 +94,14 @@ def transcrever(cliente, caminho):
         raise FotoIlegivel(f"o modelo não conseguiu ler {Path(caminho).name}")
 
     cabecalho = re.match(r"^LINHAS:\s*(\d+)\s*\n+", bruto)
-    if cabecalho:
-        linhas = int(cabecalho.group(1))
-        texto = bruto[cabecalho.end():].strip()
-    else:
-        texto = bruto
-        linhas = len([linha for linha in texto.splitlines() if linha.strip()])
+    if not cabecalho:
+        raise TranscricaoSemContagem(
+            "a transcrição veio sem o cabeçalho 'LINHAS: <n>'. Esse número "
+            "dispara a regra de anulação por texto insuficiente — sem ele, "
+            "avaliar produziria nota errada. Tente de novo."
+        )
+    linhas = int(cabecalho.group(1))
+    texto = bruto[cabecalho.end():].strip()
 
     return Transcricao(texto=texto, linhas=linhas), resposta.usage
 
@@ -101,11 +113,21 @@ FATOR_ESCRITA_CACHE = 1.25
 FATOR_LEITURA_CACHE = 0.10
 
 
-def avaliar(cliente, texto: str, tema: str):
-    """Avalia o texto transcrito. Devolve (avaliação normalizada, usage)."""
+def avaliar(cliente, texto: str, tema: str, linhas: int, linhas_copiadas: int = 0):
+    """Avalia o texto transcrito. Devolve (avaliação normalizada, usage).
+
+    `linhas` vem da transcrição, não do modelo avaliador — ele não vê a foto,
+    e esse número dispara a regra de anulação por texto insuficiente.
+    `linhas_copiadas` só é diferente de zero quando quem chama tem os textos
+    motivadores para comparar; o harness não tem, o app terá.
+    """
     resposta = cliente.messages.create(
         model=MODELO,
         max_tokens=MAX_TOKENS,
+        output_config={
+            "effort": EFFORT_AVALIACAO,
+            "format": {"type": "json_schema", "schema": schema.AVALIACAO_SCHEMA},
+        },
         system=[{
             "type": "text",
             "text": prompts.RUBRICA,
@@ -118,11 +140,10 @@ def avaliar(cliente, texto: str, tema: str):
                 f"REDAÇÃO DO ALUNO (transcrita da foto):\n{texto}"
             ),
         }],
-        output_config={
-            "format": {"type": "json_schema", "schema": schema.AVALIACAO_SCHEMA}
-        },
     )
     crua = json.loads(_texto_da_resposta(resposta))
+    crua["linhas"] = linhas
+    crua["linhas_copiadas"] = linhas_copiadas
     return schema.normaliza(crua), resposta.usage
 
 

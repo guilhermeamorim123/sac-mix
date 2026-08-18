@@ -20,8 +20,8 @@ def test_rubrica_separa_fuga_total_de_tangenciamento():
     assert "fuga total" in prompts.RUBRICA.lower()
 
 
-def test_rubrica_pede_as_linhas_copiadas():
-    assert "linhas_copiadas" in prompts.RUBRICA
+def test_rubrica_proibe_o_modelo_de_contar_linhas():
+    assert "não conta linhas" in prompts.RUBRICA.lower()
 
 
 def test_rubrica_pede_o_juizo_de_direitos_humanos():

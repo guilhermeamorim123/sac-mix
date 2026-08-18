@@ -229,10 +229,16 @@ def test_schema_nao_pede_nota_total_ao_modelo():
     assert "nota_total" not in schema.AVALIACAO_SCHEMA["properties"]
 
 
-def test_schema_pede_tudo_que_normaliza_usa():
+def test_schema_pede_tudo_que_o_modelo_pode_julgar():
     exigido = set(schema.AVALIACAO_SCHEMA["required"])
-    assert {"competencias", "linhas", "linhas_copiadas", "enquadramento",
-            "fere_direitos_humanos", "resumo"} <= exigido
+    assert {"competencias", "enquadramento", "fere_direitos_humanos",
+            "resumo"} <= exigido
+
+
+def test_schema_nao_pede_contagem_de_linhas_ao_modelo():
+    """O avaliador não vê a foto — quem conta linhas é a transcrição."""
+    assert "linhas" not in schema.AVALIACAO_SCHEMA["properties"]
+    assert "linhas_copiadas" not in schema.AVALIACAO_SCHEMA["properties"]
 
 
 def test_enum_do_schema_nao_e_o_mesmo_objeto_das_constantes():
@@ -240,3 +246,11 @@ def test_enum_do_schema_nao_e_o_mesmo_objeto_das_constantes():
     enum_notas = schema.AVALIACAO_SCHEMA["properties"]["competencias"]["items"] \
         ["properties"]["nota"]["enum"]
     assert enum_notas is not schema.NOTAS_VALIDAS
+
+
+def test_avaliacao_sem_linhas_e_recusada():
+    """Falha alto: sem linhas, o default 0 anularia tudo em silêncio."""
+    crua = avaliacao()
+    del crua["linhas"]
+    with pytest.raises(ValueError, match="linhas"):
+        schema.normaliza(crua)
