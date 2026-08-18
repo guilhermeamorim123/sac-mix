@@ -73,3 +73,6 @@ projects/radar-infoproduto/data/runs/
 /projects/redacao-todo-dia/corretor/dataset/*
 !/projects/redacao-todo-dia/corretor/dataset/.gitkeep
 /projects/redacao-todo-dia/corretor/.venv/
+
+# --- O app do Redacao Todo Dia vive em repositorio proprio (~/dev/redacao-todo-dia) ---
+/projects/redacao-todo-dia/app/

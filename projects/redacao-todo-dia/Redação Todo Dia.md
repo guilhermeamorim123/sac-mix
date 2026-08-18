@@ -33,7 +33,7 @@ Plano da semana 1 em [[003-redacao-todo-dia-corretor]].
 | Harness de calibração (CLI Python) | **Construído**, 93 testes passando, branch `feat/redacao-todo-dia-corretor` |
 | Calibração contra nota conhecida | **Bloqueada** — falta a chave da API e o conjunto de 20 redações |
 | Varredura de `effort` (custo) | Bloqueada pela mesma chave |
-| App (Next.js na Vercel) | Não começou — só existe se a calibração passar |
+| App (Next.js na Vercel) | Em construção em **repositório próprio**: `~/dev/redacao-todo-dia`, fora do vault. Núcleo portado e testado (58 testes) |
 | Ebook com exercícios | Não começou |
 | Landing e checkout | Não começou |
 
@@ -62,6 +62,17 @@ Plano da semana 1 em [[003-redacao-todo-dia-corretor]].
 | 5 | OCR de letra manuscrita de adolescente | Alta | Open — testável hoje com 3 redações, sem depender do conjunto de 20 |
 | 6 | **Competir por tempo com o [[Atendente IA]]**, que vence em 13/09 e está parado | **Alta** | Open — os dois não cabem no mesmo mês |
 | 7 | Janela de venda fecha em meados de outubro | Média | Open |
+
+## Onde vive o código
+
+| Peça | Lugar |
+|---|---|
+| Harness de calibração (Python) | `projects/redacao-todo-dia/corretor/` — dentro do vault |
+| App do produto (Next.js) | `~/dev/redacao-todo-dia` — **repositório separado** |
+
+O app saiu do vault de propósito: publicar na Vercel envia o repositório
+inteiro para a infraestrutura de build deles, e o vault tem perfis de pessoas,
+notas de reunião e memória. Produto e caderno pessoal não dividem repositório.
 
 ## Notes
 
