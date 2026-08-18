@@ -170,16 +170,38 @@ qualidade da leitura é o produto.
 **Estimativa por correção completa (etapa A + etapa B), com foto em alta
 resolução e redação de ~30 linhas:**
 
-| | Opus 5 | Sonnet 5 |
-|---|---|---|
-| Etapa A (transcrição) | ~US$ 0,044 | ~US$ 0,026 |
-| Etapa B (avaliação) | ~US$ 0,039 | ~US$ 0,023 |
-| **Total** | **~US$ 0,08** | **~US$ 0,05** |
-| Em reais (a US$1 ≈ R$5,20) | **~R$ 0,43** | **~R$ 0,26** |
+> ⚠️ **Estimativa revisada em 17/08/2026 e ainda não medida.** A primeira
+> versão deste spec dizia ~US$ 0,08 por correção. Estava errada: o thinking do
+> Opus 5 vem **ligado por padrão** e domina os tokens de saída, e a foto entra
+> na faixa de alta resolução (até 4.784 tokens só de imagem).
 
-Um aluno que mande 25 redações em dois meses custa **~R$11 no Opus 5** ou
-**~R$6,50 no Sonnet 5**. Num produto de R$47 com ~9% de taxa de plataforma
-(~R$43 líquidos), isso é 25% ou 15% da receita. Cabe, mas não é desprezível.
+| | Opus 5, effort alto |
+|---|---|
+| Etapa A (transcrição) — entrada com foto | ~US$ 0,025 |
+| Etapa A — saída (texto + thinking) | ~US$ 0,050 |
+| Etapa B (avaliação) — entrada com rubrica cacheada | ~US$ 0,004 |
+| Etapa B — saída (JSON + thinking) | ~US$ 0,150 |
+| **Total** | **~US$ 0,23** (faixa plausível 0,14–0,33) |
+| Em reais (a US$1 ≈ R$5,20) | **~R$ 1,20** |
+
+**Isso muda a conta do produto.** Um aluno que mande 25 redações passa de ~R$11
+para **~R$30**. Num produto de R$47 com ~9% de taxa (~R$43 líquidos), o custo
+de IA come **cerca de 70% da receita** — não os 25% da estimativa original.
+
+Três alavancas, na ordem em que valem a pena:
+
+1. **`effort` por etapa.** Transcrição é OCR, não raciocínio: já está em `low`.
+   A avaliação está em `high` durante a calibração porque é a qualidade que
+   está sendo medida — mas o Opus 5 rende muito acima do esperado em `medium`
+   e `low`, e essa é a alavanca mais direta. Varrer os três níveis contra o
+   mesmo conjunto é tarefa da semana 2.
+2. **Redimensionar a foto** para ~2576 px no lado maior antes do upload. Corta
+   tokens de imagem e evita o limite de 10 MB da API.
+3. **Trocar para Sonnet 5**, que custa ~40% menos por token.
+
+**Nenhum desses números foi medido contra a API.** O harness imprime o custo
+real de cada correção e o total da calibração — o primeiro `run.py calibrar`
+substitui esta tabela inteira por dados.
 
 **Decisão:** começar em `claude-opus-5` na fase de calibração, quando a
 qualidade da correção é a única coisa que importa. Depois da calibração, medir
@@ -241,10 +263,10 @@ funcionar para os dois medos:
 | 1 | 2026-08-17 | Tráfego pago, público aberto | Escolha do dono. É a habilidade central dele (gestor de anúncios). Descartada a venda para os colegas do IPÊ, que teria distribuição quente mas teto de ~100 pessoas |
 | 2 | 2026-08-17 | Redação, não plano de estudos nem revisão de conteúdo | É a única dor do ENEM onde "comprar" e "usar" podem ser a mesma coisa: correção é entrega recorrente com valor mensurável |
 | 3 | 2026-08-17 | Web app primeiro, WhatsApp depois (ou nunca) | Sobe em dias, sem depender de aprovação humana da Meta. WhatsApp reteria melhor, mas travar o lançamento em burocracia numa janela de 83 dias é o risco maior |
-| 4 | 2026-08-17 | Não usar a bridge WhatsApp de `whatsapp-mcp/` | É cliente não-oficial. Com centenas de clientes pagantes mandando foto, o número é banido — e junto vão os clientes e o canal pessoal do Guilherme |
-| 5 | 2026-08-17 | Transcrição confirmada pelo aluno antes da avaliação | Converte o maior risco técnico (OCR de letra ruim) numa tela de conferência, em vez de numa correção errada |
-| 6 | 2026-08-17 | Promessa de método, nunca de resultado | "Escreva uma redação por dia e receba correção nas 5 competências" passa na política de Unrealistic Outcomes do Meta. "Garanta nota 1000" derruba conta — lição já aprendida no [[Infoproduto DE]] |
-| 7 | 2026-08-17 | Pagamento único até 15/11, não assinatura | Produto sazonal com validade natural; assinatura adiciona fricção de compra sem adicionar receita dentro da janela |
+| 5 | 2026-08-17 | Não usar a bridge WhatsApp de `whatsapp-mcp/` | É cliente não-oficial. Com centenas de clientes pagantes mandando foto, o número é banido — e junto vão os clientes e o canal pessoal do Guilherme |
+| 6 | 2026-08-17 | Transcrição confirmada pelo aluno antes da avaliação | Converte o maior risco técnico (OCR de letra ruim) numa tela de conferência, em vez de numa correção errada |
+| 7 | 2026-08-17 | Promessa de método, nunca de resultado | "Escreva uma redação por dia e receba correção nas 5 competências" passa na política de Unrealistic Outcomes do Meta. "Garanta nota 1000" derruba conta — lição já aprendida no [[Infoproduto DE]] |
+| 8 | 2026-08-17 | Pagamento único até 15/11, não assinatura | Produto sazonal com validade natural; assinatura adiciona fricção de compra sem adicionar receita dentro da janela |
 | 8 | 2026-08-17 | Kiwify/Hotmart, não Stripe | Pix nativo, nota fiscal e reembolso resolvidos, webhook pronto. Stripe sem Pix descarta metade do público |
 | 9 | 2026-08-17 | `claude-opus-5` na calibração, avaliar `claude-sonnet-5` depois | A qualidade da correção é o produto inteiro. Otimizar custo antes de saber que a correção é boa é otimizar a coisa errada |
 
@@ -254,7 +276,8 @@ funcionar para os dois medos:
 |---|---|---|---|
 | 1 | **A correção sair inconsistente.** Se a nota oscila sem motivo, o aluno percebe na segunda redação e pede reembolso | **Alta** | Calibrar contra um conjunto com nota conhecida cobrindo a faixa toda — o INEP só publica as nota 1000, então a faixa do meio precisa vir de redações corrigidas de cursinho ou simulado. Meta: erro médio ≤ 80 pontos no total, ≤ 40 por competência. **Isto é a semana 1 e bloqueia todo o resto** |
 | 2 | **OCR de letra manuscrita ruim** | **Alta** | Etapa de confirmação (decisão 5) + teste com 15 fotos de letra real antes de escrever uma linha de landing page |
-| 3 | **CAC acima de R$25** | Alta | Ticket de impulso + Pix + order bump. Se o CPA não fechar em duas semanas de teste, o produto não escala e vira venda orgânica |
+| 3 | **Custo de IA come ~70% da receita** na estimativa revisada, contra 25% na original | **Alta** | Varredura de `effort`, redimensionar foto, avaliar Sonnet 5. Medir antes de decidir — o harness já imprime o custo real |
+| 4 | **CAC acima de R$25** | Alta | Ticket de impulso + Pix + order bump. Se o CPA não fechar em duas semanas de teste, o produto não escala e vira venda orgânica |
 | 4 | **Taxa de reembolso.** CDC dá 7 dias de arrependimento; infoproduto para público jovem tem taxa alta | Média | Entrar na conta do ROAS desde o começo. O painel de evolução é o melhor antídoto: quem vê a nota subir não pede reembolso |
 | 5 | **Não é mercado vazio.** Já existem apps de correção por IA no Brasil, alguns com caixa | Média | Diferencial é a janela sazonal + ritmo diário + pagar uma vez em vez de assinar |
 | 6 | **Competir por tempo com o [[Atendente IA]]**, que tem meta de R$1–3k até 13/09 e precisa de 80 abordagens | **Alta** | Decisão consciente do dono. Registrado aqui para não virar surpresa em setembro |
