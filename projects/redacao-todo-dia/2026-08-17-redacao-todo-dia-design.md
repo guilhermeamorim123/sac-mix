@@ -131,10 +131,18 @@ Usar `output_config.format` com JSON Schema — nada de parsear texto livre:
 Regras da rubrica que precisam estar no prompt de sistema, porque são regras
 reais do ENEM e o modelo erra sem elas:
 
-- Fuga ao tema → competências 2 e 3 zeradas, nota total ≤ 200
-- Menos de 7 linhas → nota 0 no total
+- **Fuga total ao tema → nota 0 na redação inteira**, não só nas competências
+  2 e 3. O mesmo vale para texto não-dissertativo-argumentativo e para cópia
+  integral dos textos motivadores
+- **Até 7 linhas (7 inclusive) → nota 0.** A regra é "até", não "menos de"
+- **Tangenciamento** (aborda o tema de raspão) **não zera** — penaliza as
+  competências 2 e 3 dentro da escala normal. É o erro que mais confunde
 - Texto sem proposta de intervenção → competência 5 baixa mesmo com texto bom
 - Cópia de trechos dos textos motivadores não conta como repertório
+
+A aritmética e os zeramentos **não** são delegados ao modelo: ele julga cada
+competência, e o código soma e aplica as regras de anulação. Somar cinco
+números é onde LLM erra sem ganhar nada em troca.
 
 ### Modelo e custo por correção
 
@@ -263,7 +271,7 @@ descobrir depois de construir app, landing e 60 temas.
 |---|---|---|
 | Calibração da correção | 20 redações com nota conhecida: as nota 1000 publicadas pelo INEP (âncora de teto) + redações corrigidas de cursinho/simulado cobrindo a faixa 400–900 | Erro médio ≤ 80 pts no total, ≤ 40 pts por competência |
 | Transcrição (OCR) | 15 fotos de letra manuscrita real, incluindo letra ruim e foto torta | ≥ 90% das palavras corretas antes da confirmação do aluno |
-| Fuga ao tema | 5 redações deliberadamente fora do tema | 5/5 detectadas com competências 2 e 3 zeradas |
+| Fuga ao tema | 5 redações fora do tema + 3 tangenciando | 5/5 fugas zeradas; 3/3 tangenciamentos penalizados em C2/C3 **sem** zerar |
 | Webhook de liberação | Compra de teste na Kiwify | Acesso liberado em < 60s |
 | Custo real | Medir `usage` de 50 correções reais | Dentro de ±30% da estimativa de US$ 0,08 |
 
@@ -272,9 +280,9 @@ descobrir depois de construir app, landing e 60 temas.
 | Situação | Comportamento |
 |---|---|
 | Foto ilegível | Pede foto nova, com dica ("luz de cima, folha reta"). **Não consome cota** |
-| Texto com menos de 7 linhas | Avisa antes de corrigir; se o aluno confirmar, corrige e explica a regra dos 7 linhas |
+| Texto com até 7 linhas | Avisa antes de corrigir; se o aluno confirmar, corrige, zera e explica a regra |
 | Falha da API | 2 tentativas com backoff; se falhar, devolve a cota e avisa |
-| Fuga ao tema | Corrige normalmente, zera competências 2 e 3 e **explica a regra** — é conteúdo pedagógico, não erro |
+| Fuga total ao tema | Zera a redação inteira e **explica a regra** — é conteúdo pedagógico, não erro. Tangenciamento é caso diferente: penaliza C2/C3 sem zerar |
 | Acesso expirado (após 15/11) | Painel e histórico continuam visíveis; envio de nova redação bloqueado |
 
 ---
