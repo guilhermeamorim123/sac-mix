@@ -101,3 +101,100 @@ def test_transcrever_aceita_texto_sem_cabecalho_de_linhas(tmp_path):
     resultado, _ = api.transcrever(cliente, foto_falsa(tmp_path))
     assert resultado.linhas == 2
     assert resultado.texto == "primeira linha\nsegunda linha"
+
+
+# --- avaliar -------------------------------------------------------------
+
+import json
+
+import prompts
+import schema
+
+
+def avaliacao_json(nota=160, enquadramento="ok", linhas=25, linhas_copiadas=0,
+                   fere_direitos_humanos=False):
+    return json.dumps({
+        "competencias": [
+            {"numero": n, "nota": nota, "justificativa": "j", "melhorias": ["a", "b"]}
+            for n in (1, 2, 3, 4, 5)
+        ],
+        "linhas": linhas,
+        "linhas_copiadas": linhas_copiadas,
+        "enquadramento": enquadramento,
+        "fere_direitos_humanos": fere_direitos_humanos,
+        "resumo": "r",
+    })
+
+
+def test_avaliar_devolve_avaliacao_normalizada():
+    cliente = FakeClient(resposta(avaliacao_json(nota=160)))
+    resultado, _ = api.avaliar(cliente, "texto da redação", "Tema qualquer")
+    assert resultado["nota_total"] == 800
+    assert resultado["penalidades"] == []
+
+
+def test_avaliar_aplica_as_regras_de_anulacao():
+    cliente = FakeClient(resposta(avaliacao_json(nota=200, enquadramento="fuga_total")))
+    resultado, _ = api.avaliar(cliente, "texto", "Tema")
+    assert resultado["nota_total"] == 0
+    assert resultado["anulada"] is True
+
+
+def test_avaliar_aplica_o_teto_do_tangenciamento():
+    cliente = FakeClient(resposta(avaliacao_json(nota=200, enquadramento="tangenciamento")))
+    resultado, _ = api.avaliar(cliente, "texto", "Tema")
+    assert [c["nota"] for c in resultado["competencias"]] == [200, 40, 40, 200, 40]
+
+
+def test_avaliar_exige_saida_estruturada():
+    cliente = FakeClient(resposta(avaliacao_json()))
+    api.avaliar(cliente, "texto", "Tema")
+    enviado = cliente.messages.chamada
+    assert enviado["output_config"]["format"]["type"] == "json_schema"
+    assert enviado["output_config"]["format"]["schema"] == schema.AVALIACAO_SCHEMA
+
+
+def test_avaliar_cacheia_a_rubrica():
+    cliente = FakeClient(resposta(avaliacao_json()))
+    api.avaliar(cliente, "texto", "Tema")
+    bloco_sistema = cliente.messages.chamada["system"][0]
+    assert bloco_sistema["text"] == prompts.RUBRICA
+    assert bloco_sistema["cache_control"] == {"type": "ephemeral"}
+
+
+def test_avaliar_manda_o_tema_junto():
+    cliente = FakeClient(resposta(avaliacao_json()))
+    api.avaliar(cliente, "texto da redação", "Desafios da mobilidade urbana")
+    conteudo = cliente.messages.chamada["messages"][0]["content"]
+    assert "Desafios da mobilidade urbana" in conteudo
+    assert "texto da redação" in conteudo
+
+
+def test_avaliar_levanta_erro_em_recusa():
+    cliente = FakeClient(resposta("", stop_reason="refusal"))
+    with pytest.raises(api.RecusaDaAPI):
+        api.avaliar(cliente, "texto", "Tema")
+
+
+# --- custo ---------------------------------------------------------------
+
+def test_custo_de_um_milhao_de_tokens_de_entrada():
+    assert api.custo_usd(uso(entrada=1_000_000, saida=0)) == pytest.approx(5.00)
+
+
+def test_custo_de_um_milhao_de_tokens_de_saida():
+    assert api.custo_usd(uso(entrada=0, saida=1_000_000)) == pytest.approx(25.00)
+
+
+def test_leitura_de_cache_custa_um_decimo_da_entrada():
+    assert api.custo_usd(uso(entrada=0, saida=0, leitura_cache=1_000_000)) == pytest.approx(0.50)
+
+
+def test_escrita_de_cache_custa_1_25_vezes_a_entrada():
+    assert api.custo_usd(uso(entrada=0, saida=0, escrita_cache=1_000_000)) == pytest.approx(6.25)
+
+
+def test_custo_tolera_usage_sem_campos_de_cache():
+    """Nem toda resposta traz os campos de cache."""
+    magro = SimpleNamespace(input_tokens=1_000_000, output_tokens=0)
+    assert api.custo_usd(magro) == pytest.approx(5.00)

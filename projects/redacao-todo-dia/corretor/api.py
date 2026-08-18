@@ -82,3 +82,47 @@ def transcrever(cliente, caminho):
         linhas = len([linha for linha in texto.splitlines() if linha.strip()])
 
     return Transcricao(texto=texto, linhas=linhas), resposta.usage
+
+
+# Preço do claude-opus-5 em USD por 1M de tokens (referência de 17/08/2026).
+PRECO_ENTRADA = 5.00
+PRECO_SAIDA = 25.00
+FATOR_ESCRITA_CACHE = 1.25
+FATOR_LEITURA_CACHE = 0.10
+
+
+def avaliar(cliente, texto: str, tema: str):
+    """Avalia o texto transcrito. Devolve (avaliação normalizada, usage)."""
+    resposta = cliente.messages.create(
+        model=MODELO,
+        max_tokens=MAX_TOKENS,
+        system=[{
+            "type": "text",
+            "text": prompts.RUBRICA,
+            "cache_control": {"type": "ephemeral"},
+        }],
+        messages=[{
+            "role": "user",
+            "content": (
+                f"TEMA PROPOSTO:\n{tema}\n\n"
+                f"REDAÇÃO DO ALUNO (transcrita da foto):\n{texto}"
+            ),
+        }],
+        output_config={
+            "format": {"type": "json_schema", "schema": schema.AVALIACAO_SCHEMA}
+        },
+    )
+    crua = json.loads(_texto_da_resposta(resposta))
+    return schema.normaliza(crua), resposta.usage
+
+
+def custo_usd(usage) -> float:
+    """Custo da chamada em dólares, a partir do objeto `usage` da resposta."""
+    escrita_cache = getattr(usage, "cache_creation_input_tokens", 0) or 0
+    leitura_cache = getattr(usage, "cache_read_input_tokens", 0) or 0
+    entrada = (
+        usage.input_tokens
+        + escrita_cache * FATOR_ESCRITA_CACHE
+        + leitura_cache * FATOR_LEITURA_CACHE
+    )
+    return entrada * PRECO_ENTRADA / 1e6 + usage.output_tokens * PRECO_SAIDA / 1e6
