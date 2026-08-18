@@ -1,15 +1,21 @@
 ---
 type: project
 name: "Atendente IA"
-status: "em andamento"
+status: "pausado"
 owner: "[[Guilherme Figueredo]]"
 started: 2026-08-14
 tags:
   - project/atendente-ia
-  - project/active
+  - project/paused
 ---
 
 # Atendente IA
+
+> **Pausado em 18/08/2026.** O dono escolheu o [[Redação Todo Dia]] quando os
+> dois passaram a competir pelo mesmo mês. A meta de R$1–3k até 13/09 fica sem
+> dono — **13/09 passa com R$0 desta frente**. O que estava pendente e continua
+> válido se o projeto voltar: a demo pública com número real, e as 80
+> abordagens (~4/dia útil), que nunca começaram.
 
 ## Description
 

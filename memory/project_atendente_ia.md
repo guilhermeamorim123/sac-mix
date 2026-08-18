@@ -23,7 +23,11 @@ Mix Conecta.
   dado sensível na LGPD)
 - Demo pública com número de WhatsApp real **antes** da primeira abordagem
 
-**How to apply:** o risco número 1 é ele passar 30 dias construindo a demo e
+**PAUSADO em 18/08/2026** — o dono escolheu o [[project-redacao-todo-dia]]
+quando os dois passaram a competir pelo mesmo mês. A meta de 13/09 foi
+abandonada conscientemente, não esquecida. As 80 abordagens nunca começaram.
+
+**How to apply (se o projeto voltar):** o risco número 1 é ele passar 30 dias construindo a demo e
 fazer zero abordagens — perfil de builder. Sempre que este projeto voltar,
 perguntar **quantas abordagens foram feitas**, não o que foi construído. O
 número que não pode falhar é 80 abordagens (~4/dia útil). Parar em 15 e concluir

@@ -17,3 +17,8 @@ type: context
 | 5 | Não escrever o plano da semana 2 antes do resultado da calibração | operacional | Plano detalhado é ímã; o padrão do dono é construir antes de validar | [[Guilherme Figueredo]] |
 | 6 | Toda regra determinística do ENEM fica no código, não no modelo | estrutural | Somar e aplicar zeramento é onde LLM erra sem ganhar nada em troca | — |
 
+## 2026-08-18 — Priorização
+
+| # | Decisão | Tipo | Racional | Impactados |
+|---|---------|------|----------|------------|
+| 1 | **[[Redação Todo Dia]] passa na frente do [[Atendente IA]]**, que fica pausado | estrutural | Os dois não cabem no mesmo mês. A janela do ENEM fecha em outubro e não volta; o Atendente IA pode ser retomado a qualquer momento. Custo aceito: 13/09 passa com R$0 | [[Guilherme Figueredo]] |
