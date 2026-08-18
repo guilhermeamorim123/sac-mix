@@ -120,7 +120,17 @@ def cmd_calibrar(args) -> None:
     import calibra
 
     base = Path(args.dataset)
-    itens = calibra.le_gabarito(base / "gabarito.csv")
+    gabarito = base / "gabarito.csv"
+    if not gabarito.exists():
+        sys.exit(
+            f"Erro: {gabarito} não existe.\n"
+            f"Monte o conjunto assim:\n"
+            f"  {base}/gabarito.csv   cabeçalho: "
+            f"arquivo,nota_total,c1,c2,c3,c4,c5,tema\n"
+            f"  {base}/fotos/         uma foto por linha do gabarito\n"
+            f"  {base}/transcricoes/  opcional, texto digitado para medir a leitura"
+        )
+    itens = calibra.le_gabarito(gabarito)
     cliente = cria_cliente()
 
     pares_total = []
