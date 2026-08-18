@@ -69,6 +69,52 @@ def cmd_smoke(args) -> None:
     print(f"tokens: {resposta.usage.input_tokens} entrada / {resposta.usage.output_tokens} saída")
 
 
+def cmd_corrigir(args) -> None:
+    import api
+
+    cliente = cria_cliente()
+    caminho = Path(args.foto)
+
+    print(f"Lendo {caminho.name}...")
+    transcricao, uso_transcricao = api.transcrever(cliente, caminho)
+
+    print(f"\n--- TRANSCRIÇÃO ({transcricao.linhas} linhas) ---")
+    print(transcricao.texto)
+    print("--- fim ---\n")
+
+    if not args.sem_confirmar:
+        resposta = input("Li a letra direito? [S/n] ").strip().lower()
+        if resposta and resposta not in ("s", "sim"):
+            print("\nTire outra foto com mais luz e a folha reta, e rode de novo.")
+            return
+
+    print("Avaliando...")
+    avaliacao, uso_avaliacao = api.avaliar(cliente, transcricao.texto, args.tema)
+
+    print(f"\n=== NOTA: {avaliacao['nota_total']} ===")
+    for penalidade in avaliacao["penalidades"]:
+        print(f"!! {penalidade}")
+    print(f"enquadramento: {avaliacao['enquadramento']}")
+    if avaliacao["linhas_copiadas"]:
+        print(f"linhas copiadas descontadas: {avaliacao['linhas_copiadas']} "
+              f"({avaliacao['linhas_validas']} válidas)")
+    if avaliacao["fere_direitos_humanos"]:
+        print("proposta de intervenção fere direitos humanos: C5 zerada")
+    print()
+
+    for competencia in avaliacao["competencias"]:
+        print(f"C{competencia['numero']}: {competencia['nota']}")
+        print(f"   {competencia['justificativa']}")
+        for melhoria in competencia["melhorias"]:
+            print(f"   → {melhoria}")
+        print()
+
+    print(avaliacao["resumo"])
+
+    custo = api.custo_usd(uso_transcricao) + api.custo_usd(uso_avaliacao)
+    print(f"\ncusto desta correção: US$ {custo:.4f}")
+
+
 def main() -> None:
     garante_venv()
 
@@ -77,6 +123,14 @@ def main() -> None:
 
     p_smoke = sub.add_parser("smoke", help="confirma que a chave e o modelo respondem")
     p_smoke.set_defaults(func=cmd_smoke)
+
+    p_corrigir = sub.add_parser("corrigir", help="corrige uma foto de redação")
+    p_corrigir.add_argument("foto", help="caminho da foto")
+    p_corrigir.add_argument("--tema", required=True, help="tema proposto da redação")
+    p_corrigir.add_argument("--sem-confirmar", action="store_true",
+                            dest="sem_confirmar",
+                            help="pula a conferência da transcrição")
+    p_corrigir.set_defaults(func=cmd_corrigir)
 
     args = parser.parse_args()
     args.func(args)
