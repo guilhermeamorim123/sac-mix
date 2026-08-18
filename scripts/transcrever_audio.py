@@ -76,38 +76,71 @@ def ensure_venv() -> None:
 # difference between "Mix Conecta" and "nomics conecta".
 # --------------------------------------------------------------------------
 
+VOCAB_FILE = VAULT / "context" / "vocabulario.txt"
+
+# Allowlist, not denylist: only folders that hold real meeting content. The
+# rest of the vault (templates, docs, CLAUDE.md) is full of placeholders.
+SCAN_DIRS = ("team", "people", "projects", "weeklys", "daily-briefs",
+             "memory", "companies", "context")
+
+# Placeholders that survive in a vault whose `/cos-setup` is half-done.
+PLACEHOLDERS = {"full name", "owner name", "project display name", "project name",
+                "member name", "team member", "person or project", "participant",
+                "maria souza", "project a", "project b", "name", "memory",
+                "company name", "nome da empresa"}
+
+
 def collect_vocabulary(limit: int = 40) -> list[str]:
+    """Proper nouns to prime Whisper with, most trustworthy first.
+
+    Auto-collection stays deliberately conservative — a wrong term in the
+    prompt biases the transcription toward a word nobody said. Anything the
+    vault can't state plainly belongs in `context/vocabulario.txt`.
+    """
     names: list[str] = []
 
-    for folder in ("team", "people"):
-        for path in sorted((VAULT / folder).glob("*/*.md")) if folder == "team" \
-                else sorted((VAULT / folder).glob("*.md")):
-            stem = path.stem
-            if stem.lower() in {"readme", "index"} or "dev-plan" in stem:
-                continue
-            names.append(stem)
+    if VOCAB_FILE.is_file():
+        for line in VOCAB_FILE.read_text(encoding="utf-8").splitlines():
+            term = line.split("#", 1)[0].strip()
+            if term:
+                names.append(term)
+
+    for path in sorted((VAULT / "team").glob("*/*.md")):
+        if "dev-plan" not in path.stem:
+            names.append(path.stem)
+    for path in sorted((VAULT / "people").glob("*.md")):
+        names.append(path.stem)
 
     for folder in ("projects", "companies"):
         base = VAULT / folder
         if base.is_dir():
-            names.extend(p.name for p in sorted(base.iterdir()) if p.is_dir())
-            names.extend(p.stem for p in sorted(base.glob("*.md")))
+            names.extend(p.name for p in sorted(base.iterdir())
+                         if p.is_dir() and not p.name.startswith("."))
 
-    # Project memories carry the display names that matter most in meetings.
-    for path in sorted((VAULT / "memory").glob("project_*.md")):
-        text = path.read_text(encoding="utf-8", errors="ignore")[:400]
-        match = re.search(r"^description:\s*(.+)$", text, re.MULTILINE)
-        if match:
-            head = re.split(r"[—\-–:,]", match.group(1).strip())[0].strip()
-            if 2 < len(head) < 40:
-                names.append(head)
+    # Wikilinks are the vault's own registry of proper nouns. Keep only the
+    # ones written as display names — lowercase targets are file slugs.
+    for folder in SCAN_DIRS:
+        base = VAULT / folder
+        if not base.is_dir():
+            continue
+        for path in base.rglob("*.md"):
+            try:
+                text = path.read_text(encoding="utf-8", errors="ignore")
+            except OSError:
+                continue
+            for link in re.findall(r"\[\[([^\]|#]{3,40})\]\]", text):
+                link = link.strip()
+                if link[:1].isupper() and "-" not in link and "_" not in link:
+                    names.append(link)
 
     seen, out = set(), []
     for name in names:
-        key = name.lower()
-        if key not in seen and len(name) > 2:
-            seen.add(key)
-            out.append(name)
+        key = name.casefold()
+        if (key in seen or key in PLACEHOLDERS or len(name) <= 2
+                or "{{" in name):
+            continue
+        seen.add(key)
+        out.append(name)
     return out[:limit]
 
 

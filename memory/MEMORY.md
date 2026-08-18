@@ -20,3 +20,5 @@ _(links para recursos externos)_
 - [project_clientia.md](project_clientia.md) — CLIENTIA: app pós/pré-venda ML com IA, Lovable project df990ab7, auto-resposta deployada em 2026-06-22
 - [project_dragx_fleet.md](project_dragx_fleet.md) — DragX/fleet-panel: repo prod separado, keystore, self-update v1000008+, telemetria v1000009, senha reset fábrica v1000010
 - [project_livewire.md](project_livewire.md) — Livewire: SaaS painel web para vendedores de live commerce, respostas automáticas + coaching em tempo real, primeiro uso na Mix Conecta
+- [project_atendente_ia.md](project_atendente_ia.md) — Atendente IA: venda de automação de WhatsApp para comércio local, meta R$1–3k até 13/09/2026, risco nº1 é construir em vez de vender
+- [project_redacao_todo_dia.md](project_redacao_todo_dia.md) — Redação Todo Dia: corretor de redação do ENEM, harness pronto mas sem chave da API; perguntar se calibrou, não o que construiu

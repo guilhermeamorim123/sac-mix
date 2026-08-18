@@ -13,7 +13,7 @@
 | `sync_claude_config.py` | Hook (automatic) | `UserPromptSubmit` | Keep `.claude/` ↔ `_claude/` in sync across devices |
 | `wikilink_hook.py` | Hook (automatic) | `PostToolUse` (Write/Edit) | Validate wikilinks and tags in vault `.md` files |
 | `seed_wikilink_index.py` | Manual (as needed) | User or Claude runs | Build/rebuild `wikilink-index.json` from vault files |
-| `transcrever_audio.py` | Manual (per meeting) | Claude runs during meeting processing | Transcribe audio files via Whisper |
+| `transcrever_audio.py` | Manual (per meeting) | Claude runs during meeting processing | Transcribe audio locally via faster-whisper (no API, no ffmpeg) |
 
 ---
 
@@ -88,9 +88,9 @@ python scripts/seed_wikilink_index.py --rebuild   # Force regenerate
 
 ### `transcrever_audio.py`
 
-**What:** Transcribes meeting audio files using OpenAI Whisper. Handles file organization, format conversion, chunking, and transcription.
+**What:** Transcribes meeting audio into the vault using **faster-whisper**, running entirely on the local machine. No audio leaves the vault and no API key is needed.
 
-**When to run:** During meeting processing workflows when an audio file is provided.
+**When to run:** During meeting processing workflows when an audio file is provided. Also usable standalone (`--type note`) to transcribe a dictated voice memo.
 
 **Usage:**
 ```bash
@@ -105,21 +105,33 @@ python scripts/transcrever_audio.py "reuniao.m4a" --type project --project proje
 
 # With explicit date
 python scripts/transcrever_audio.py "gravacao.m4a" team-member-slug --date 2026-03-23
+
+# Loose dictation — writes <audio>.txt beside the file, moves nothing
+python scripts/transcrever_audio.py "ideia.m4a" --type note
 ```
+
+**Flags:** `--model` (`tiny|base|small|medium|large-v3`, default `small`, or set `WHISPER_MODEL`), `--language` (default `pt`), `--prompt` (extra vocabulary for one run), `--keep-original` (don't move the audio).
 
 **Behavior:**
 1. Creates meeting folder in the correct location:
    - 1:1: `team/<member>/meetings/YYYY-MM-DD/`
    - Weekly: `weeklys/YYYY-MM-DD/`
    - Project: `projects/<project>/meetings/YYYY-MM-DD/`
-2. Moves original audio to the folder as `original.<ext>`
-3. Converts to WAV (16kHz, mono, PCM) for Whisper compatibility
-4. Splits WAV into chunks if > 24MB
-5. Transcribes via Whisper and saves `transcription.txt`
+   - Note: alongside the audio file
+2. Moves original audio to the folder as `original.<ext>` — **after** a successful transcription, so a failure never misplaces the recording
+3. Primes Whisper with vault proper nouns (see Vocabulary below) — this is what separates `Mix Conecta` from `nomics conecta`
+4. Transcribes with silence filtering, printing live progress
+5. Saves `transcription.txt` and `transcription-timestamped.txt`
 
-**Dependencies:** `openai` (Python package), `ffmpeg` (system binary).
+No format conversion or chunking step: PyAV decodes m4a/mp3/wav/mp4 directly, and local transcription has no upload size limit.
 
-**Output:** `transcription.txt` in the meeting folder.
+**Vocabulary:** terms come from `context/vocabulario.txt` (hand-maintained, highest priority), then person filenames in `team/`/`people/`, project and company folder names, and capitalized `[[wikilinks]]` in content folders. Templates and docs are excluded — their placeholders (`[[Full Name]]`, `[[Project A]]`) would bias the transcription toward words nobody said. Add any term Whisper keeps mangling to `context/vocabulario.txt`.
+
+**Dependencies:** self-bootstrapping. First run creates `scripts/.venv-whisper/` (gitignored) and installs `av==13.1.0` + `faster-whisper`, then re-executes itself inside it. Any Python 3.9+ works as the entry point. **No ffmpeg and no Homebrew required** — `av` is pinned to 13.1.0 because 14.x ships no macOS x86_64 wheel for Python 3.9 and would try to compile from source.
+
+The model downloads on first use to `~/.cache/huggingface` (~500 MB for `small`). Measured on this Intel Mac: `small` runs at roughly 1x real time (a 60-minute meeting takes about an hour), `base` at ~2.5x with noticeably worse punctuation.
+
+**Output:** `transcription.txt` + `transcription-timestamped.txt` in the meeting folder.
 
 ---
 

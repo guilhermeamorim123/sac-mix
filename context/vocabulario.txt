@@ -1,0 +1,27 @@
+# Vocabulário de transcrição
+#
+# Nomes próprios, marcas e siglas que o Whisper erra sozinho.
+# Um por linha. `#` inicia comentário. Estes entram primeiro no prompt,
+# na frente do que o script coleta automaticamente do vault.
+#
+# Regra: só coloque o que realmente aparece nas suas reuniões. Termo que
+# ninguém fala enviesa a transcrição para uma palavra errada.
+
+# Empresas e marcas
+Mix Conecta
+Mercado Livre
+
+# Produtos e projetos
+Livewire
+CLIENTIA
+DragX
+
+# Ferramentas e stack
+Supabase
+Lovable
+Claude
+TikTok
+WhatsApp
+Playwright
+Whisper
+Render
