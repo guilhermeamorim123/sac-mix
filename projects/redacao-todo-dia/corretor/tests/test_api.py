@@ -198,3 +198,24 @@ def test_custo_tolera_usage_sem_campos_de_cache():
     """Nem toda resposta traz os campos de cache."""
     magro = SimpleNamespace(input_tokens=1_000_000, output_tokens=0)
     assert api.custo_usd(magro) == pytest.approx(5.00)
+
+
+# --- resposta sem texto --------------------------------------------------
+
+def test_resposta_sem_bloco_de_texto_da_erro_claro():
+    """No Opus 5 o thinking vem ligado; se max_tokens cortar, não sobra texto."""
+    vazia = SimpleNamespace(
+        stop_reason="max_tokens", stop_details=None, model="claude-opus-5",
+        content=[SimpleNamespace(type="thinking", thinking="...")], usage=uso(),
+    )
+    with pytest.raises(api.RespostaSemTexto, match="max_tokens"):
+        api._texto_da_resposta(vazia)
+
+
+def test_resposta_com_content_vazio_da_erro_claro():
+    vazia = SimpleNamespace(
+        stop_reason="end_turn", stop_details=None, model="claude-opus-5",
+        content=[], usage=uso(),
+    )
+    with pytest.raises(api.RespostaSemTexto):
+        api._texto_da_resposta(vazia)

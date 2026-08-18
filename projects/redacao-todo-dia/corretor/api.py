@@ -31,6 +31,10 @@ class FotoIlegivel(ValueError):
     """O modelo não conseguiu ler a foto."""
 
 
+class RespostaSemTexto(RuntimeError):
+    """A resposta não trouxe bloco de texto — normalmente max_tokens curto."""
+
+
 @dataclass
 class Transcricao:
     texto: str
@@ -54,7 +58,13 @@ def _bloco_imagem(caminho: Path) -> dict:
 def _texto_da_resposta(resposta) -> str:
     if resposta.stop_reason == "refusal":
         raise RecusaDaAPI(f"a API recusou: {resposta.stop_details}")
-    return next(b.text for b in resposta.content if b.type == "text")
+    for bloco in resposta.content:
+        if bloco.type == "text":
+            return bloco.text
+    raise RespostaSemTexto(
+        f"resposta sem bloco de texto (stop_reason={resposta.stop_reason}). "
+        f"No Opus 5 o thinking conta para max_tokens — tente aumentar MAX_TOKENS."
+    )
 
 
 def transcrever(cliente, caminho):
