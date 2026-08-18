@@ -115,6 +115,71 @@ def cmd_corrigir(args) -> None:
     print(f"\ncusto desta correção: US$ {custo:.4f}")
 
 
+def cmd_calibrar(args) -> None:
+    import api
+    import calibra
+
+    base = Path(args.dataset)
+    itens = calibra.le_gabarito(base / "gabarito.csv")
+    cliente = cria_cliente()
+
+    pares_total = []
+    pares_competencia = []
+    acuracias = []
+    custo_total = 0.0
+    falhas = []
+
+    for indice, item in enumerate(itens, start=1):
+        print(f"[{indice}/{len(itens)}] {item.arquivo}...", end=" ", flush=True)
+        try:
+            transcricao, uso_t = api.transcrever(cliente, base / "fotos" / item.arquivo)
+            avaliacao, uso_a = api.avaliar(cliente, transcricao.texto, item.tema)
+        except (api.FotoIlegivel, api.RecusaDaAPI, api.RespostaSemTexto, ValueError) as erro:
+            print(f"FALHOU ({erro})")
+            falhas.append((item.arquivo, str(erro)))
+            continue
+
+        custo_total += api.custo_usd(uso_t) + api.custo_usd(uso_a)
+        pares_total.append((item.nota_total, avaliacao["nota_total"]))
+        for oficial, obtida in zip(item.competencias, avaliacao["competencias"]):
+            pares_competencia.append((oficial, obtida["nota"]))
+
+        referencia = base / "transcricoes" / f"{Path(item.arquivo).stem}.txt"
+        if referencia.exists():
+            acuracias.append(calibra.acuracia_ocr(
+                referencia.read_text(encoding="utf-8"), transcricao.texto))
+
+        diferenca = avaliacao["nota_total"] - item.nota_total
+        print(f"oficial {item.nota_total} / obtida {avaliacao['nota_total']} "
+              f"({diferenca:+d})")
+
+    if not pares_total:
+        print("\nNenhuma redação avaliada com sucesso — nada a medir.")
+        return
+
+    erro_total = calibra.mae(pares_total)
+    erro_competencia = calibra.mae(pares_competencia)
+    vies_total = calibra.vies(pares_total)
+
+    print("\n" + "=" * 52)
+    print(f"redações avaliadas:        {len(pares_total)} de {len(itens)}")
+    print(f"erro médio (nota total):   {erro_total:.1f}  (meta ≤ {calibra.META_ERRO_TOTAL})")
+    print(f"erro médio (competência):  {erro_competencia:.1f}  (meta ≤ {calibra.META_ERRO_COMPETENCIA})")
+    print(f"viés:                      {vies_total:+.1f}"
+          f"  ({'generoso' if vies_total > 0 else 'duro'})")
+    if acuracias:
+        media_ocr = sum(acuracias) / len(acuracias)
+        print(f"leitura da letra:          {media_ocr:.1%}  (meta ≥ 90%)")
+    print(f"custo total:               US$ {custo_total:.2f}")
+    print(f"custo por correção:        US$ {custo_total / len(pares_total):.4f}")
+    if falhas:
+        print(f"\nfalhas ({len(falhas)}):")
+        for arquivo, erro in falhas:
+            print(f"  {arquivo}: {erro}")
+    print("=" * 52)
+    print(f"\n{calibra.veredito(erro_total, erro_competencia)}")
+
+
 def main() -> None:
     garante_venv()
 
@@ -131,6 +196,11 @@ def main() -> None:
                             dest="sem_confirmar",
                             help="pula a conferência da transcrição")
     p_corrigir.set_defaults(func=cmd_corrigir)
+
+    p_calibrar = sub.add_parser("calibrar", help="roda o conjunto de calibração")
+    p_calibrar.add_argument("--dataset", default="dataset",
+                            help="pasta do conjunto (padrão: dataset)")
+    p_calibrar.set_defaults(func=cmd_calibrar)
 
     args = parser.parse_args()
     args.func(args)
