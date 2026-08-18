@@ -82,6 +82,7 @@ def transcrever(cliente, caminho):
     resposta = cliente.messages.create(
         model=MODELO,
         max_tokens=MAX_TOKENS,
+        output_config={"effort": EFFORT_TRANSCRICAO},
         messages=[{
             "role": "user",
             "content": [_bloco_imagem(caminho),

@@ -229,3 +229,18 @@ def test_resposta_com_content_vazio_da_erro_claro():
     )
     with pytest.raises(api.RespostaSemTexto):
         api._texto_da_resposta(vazia)
+
+
+# --- effort por etapa -----------------------------------------------------
+
+def test_transcrever_usa_effort_baixo(tmp_path):
+    """OCR não precisa de raciocínio profundo — é a alavanca de custo."""
+    cliente = FakeClient(resposta("LINHAS: 10\n\ntexto"))
+    api.transcrever(cliente, foto_falsa(tmp_path))
+    assert cliente.messages.chamada["output_config"]["effort"] == "low"
+
+
+def test_avaliar_usa_o_effort_configurado(tmp_path):
+    cliente = FakeClient(resposta(avaliacao_json()))
+    api.avaliar(cliente, "texto", "Tema", linhas=25)
+    assert cliente.messages.chamada["output_config"]["effort"] == api.EFFORT_AVALIACAO
