@@ -55,18 +55,19 @@ def cria_cliente():
 
 
 def cmd_smoke(args) -> None:
+    import api
+
     cliente = cria_cliente()
     resposta = cliente.messages.create(
-        model="claude-opus-5",
+        model=api.MODELO,
         max_tokens=1024,
         messages=[{"role": "user", "content": "Responda apenas: ok"}],
     )
-    if resposta.stop_reason == "refusal":
-        sys.exit(f"A API recusou: {resposta.stop_details}")
-    texto = next(b.text for b in resposta.content if b.type == "text")
     print(f"modelo: {resposta.model}")
-    print(f"resposta: {texto.strip()}")
-    print(f"tokens: {resposta.usage.input_tokens} entrada / {resposta.usage.output_tokens} saída")
+    print(f"resposta: {api._texto_da_resposta(resposta).strip()}")
+    print(f"tokens: {resposta.usage.input_tokens} entrada / "
+          f"{resposta.usage.output_tokens} saída")
+    print(f"custo: US$ {api.custo_usd(resposta.usage):.6f}")
 
 
 def cmd_corrigir(args) -> None:
@@ -75,47 +76,59 @@ def cmd_corrigir(args) -> None:
     cliente = cria_cliente()
     caminho = Path(args.foto)
 
-    print(f"Lendo {caminho.name}...")
-    transcricao, uso_transcricao = api.transcrever(cliente, caminho)
+    try:
+        print(f"Lendo {caminho.name}...")
+        transcricao, uso_transcricao = api.transcrever(cliente, caminho)
 
-    print(f"\n--- TRANSCRIÇÃO ({transcricao.linhas} linhas) ---")
-    print(transcricao.texto)
-    print("--- fim ---\n")
+        print(f"\n--- TRANSCRIÇÃO ({transcricao.linhas} linhas) ---")
+        print(transcricao.texto)
+        print("--- fim ---\n")
 
-    if not args.sem_confirmar:
-        resposta = input("Li a letra direito? [S/n] ").strip().lower()
-        if resposta and resposta not in ("s", "sim"):
-            print("\nTire outra foto com mais luz e a folha reta, e rode de novo.")
-            return
+        if not args.sem_confirmar:
+            resposta = input("Li a letra direito? [S/n] ").strip().lower()
+            if resposta and resposta not in ("s", "sim"):
+                print("\nTire outra foto com mais luz e a folha reta, e rode de novo.")
+                return
 
-    print("Avaliando...")
-    avaliacao, uso_avaliacao = api.avaliar(cliente, transcricao.texto, args.tema)
+        print("Avaliando...")
+        avaliacao, uso_avaliacao = api.avaliar(
+            cliente, transcricao.texto, args.tema, linhas=transcricao.linhas)
 
-    print(f"\n=== NOTA: {avaliacao['nota_total']} ===")
-    for penalidade in avaliacao["penalidades"]:
-        print(f"!! {penalidade}")
-    print(f"enquadramento: {avaliacao['enquadramento']}")
-    if avaliacao["linhas_copiadas"]:
-        print(f"linhas copiadas descontadas: {avaliacao['linhas_copiadas']} "
-              f"({avaliacao['linhas_validas']} válidas)")
-    if avaliacao["fere_direitos_humanos"]:
-        print("proposta de intervenção fere direitos humanos: C5 zerada")
-    print()
-
-    for competencia in avaliacao["competencias"]:
-        print(f"C{competencia['numero']}: {competencia['nota']}")
-        print(f"   {competencia['justificativa']}")
-        for melhoria in competencia["melhorias"]:
-            print(f"   → {melhoria}")
+        print(f"\n=== NOTA: {avaliacao['nota_total']} ===")
+        for penalidade in avaliacao["penalidades"]:
+            print(f"!! {penalidade}")
+        print(f"enquadramento: {avaliacao['enquadramento']}")
+        if avaliacao["linhas_copiadas"]:
+            print(f"linhas copiadas descontadas: {avaliacao['linhas_copiadas']} "
+                  f"({avaliacao['linhas_validas']} válidas)")
+        if avaliacao["fere_direitos_humanos"]:
+            print("proposta de intervenção fere direitos humanos: C5 zerada")
         print()
 
-    print(avaliacao["resumo"])
+        for competencia in avaliacao["competencias"]:
+            print(f"C{competencia['numero']}: {competencia['nota']}")
+            print(f"   {competencia['justificativa']}")
+            for melhoria in competencia["melhorias"]:
+                print(f"   → {melhoria}")
+            print()
 
-    custo = api.custo_usd(uso_transcricao) + api.custo_usd(uso_avaliacao)
-    print(f"\ncusto desta correção: US$ {custo:.4f}")
+        print(avaliacao["resumo"])
+
+        custo = api.custo_usd(uso_transcricao) + api.custo_usd(uso_avaliacao)
+        print(f"\ncusto desta correção: US$ {custo:.4f}")
+    except api.FotoIlegivel:
+        sys.exit("A foto está ilegível. Tire outra com mais luz, a folha reta "
+                 "e o celular paralelo ao papel.")
+    except api.TranscricaoSemContagem as erro:
+        sys.exit(f"{erro}")
+    except api.RespostaSemTexto as erro:
+        sys.exit(f"{erro}")
+    except api.RecusaDaAPI as erro:
+        sys.exit(f"{erro}")
 
 
 def cmd_calibrar(args) -> None:
+    import anthropic
     import api
     import calibra
 
@@ -143,10 +156,16 @@ def cmd_calibrar(args) -> None:
         print(f"[{indice}/{len(itens)}] {item.arquivo}...", end=" ", flush=True)
         try:
             transcricao, uso_t = api.transcrever(cliente, base / "fotos" / item.arquivo)
-            avaliacao, uso_a = api.avaliar(cliente, transcricao.texto, item.tema)
-        except (api.FotoIlegivel, api.RecusaDaAPI, api.RespostaSemTexto, ValueError) as erro:
+            avaliacao, uso_a = api.avaliar(
+                cliente, transcricao.texto, item.tema, linhas=transcricao.linhas)
+        except (api.FotoIlegivel, api.RecusaDaAPI, api.RespostaSemTexto,
+                api.TranscricaoSemContagem, ValueError) as erro:
             print(f"FALHOU ({erro})")
             falhas.append((item.arquivo, str(erro)))
+            continue
+        except anthropic.APIError as erro:
+            print(f"ERRO DE API ({erro})")
+            falhas.append((item.arquivo, f"API: {erro}"))
             continue
 
         custo_total += api.custo_usd(uso_t) + api.custo_usd(uso_a)
