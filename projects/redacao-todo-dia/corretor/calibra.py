@@ -24,31 +24,62 @@ class ItemGabarito:
     tema: str
 
 
+COLUNAS = ("arquivo", "nota_total", "c1", "c2", "c3", "c4", "c5", "tema")
+
+
+def _texto_do_csv(caminho) -> str:
+    """Lê o arquivo tolerando o que o Excel produz: BOM e cp1252."""
+    dados = Path(caminho).read_bytes()
+    for encoding in ("utf-8-sig", "cp1252"):
+        try:
+            return dados.decode(encoding)
+        except UnicodeDecodeError:
+            continue
+    raise ValueError(
+        f"{caminho}: não consegui decodificar. Salve a planilha como "
+        f"'CSV UTF-8' e tente de novo."
+    )
+
+
 def le_gabarito(caminho) -> list:
-    """Lê o CSV de gabarito e valida a coerência de cada linha."""
+    """Lê o CSV de gabarito e valida a coerência de cada linha.
+
+    Tolera o que sai de uma planilha: BOM, cp1252 e separador ponto-e-vírgula.
+    """
+    texto = _texto_do_csv(caminho)
+    primeira_linha = texto.splitlines()[0] if texto.splitlines() else ""
+    separador = ";" if primeira_linha.count(";") > primeira_linha.count(",") else ","
+
+    leitor = csv.DictReader(texto.splitlines(), delimiter=separador)
+    faltando = [coluna for coluna in COLUNAS if coluna not in (leitor.fieldnames or [])]
+    if faltando:
+        raise ValueError(
+            f"{caminho}: faltam as colunas {faltando}. "
+            f"O cabeçalho precisa ser: {','.join(COLUNAS)}"
+        )
+
     itens = []
-    with open(caminho, newline="", encoding="utf-8") as f:
-        for numero, linha in enumerate(csv.DictReader(f), start=2):
-            competencias = [int(linha[f"c{n}"]) for n in (1, 2, 3, 4, 5)]
-            total = int(linha["nota_total"])
-            for indice, nota in enumerate(competencias, start=1):
-                if nota not in schema.NOTAS_VALIDAS:
-                    raise ValueError(
-                        f"linha {numero} ({linha['arquivo']}): c{indice}={nota} "
-                        f"fora do grid {list(schema.NOTAS_VALIDAS)}"
-                    )
-            if sum(competencias) != total:
+    for numero, linha in enumerate(leitor, start=2):
+        competencias = [int(linha[f"c{n}"]) for n in (1, 2, 3, 4, 5)]
+        total = int(linha["nota_total"])
+        for indice, nota in enumerate(competencias, start=1):
+            if nota not in schema.NOTAS_VALIDAS:
                 raise ValueError(
-                    f"linha {numero} ({linha['arquivo']}): a soma das "
-                    f"competências ({sum(competencias)}) não bate com a nota "
-                    f"total ({total})"
+                    f"linha {numero} ({linha['arquivo']}): c{indice}={nota} "
+                    f"fora do grid {list(schema.NOTAS_VALIDAS)}"
                 )
-            itens.append(ItemGabarito(
-                arquivo=linha["arquivo"],
-                nota_total=total,
-                competencias=competencias,
-                tema=linha["tema"],
-            ))
+        if sum(competencias) != total:
+            raise ValueError(
+                f"linha {numero} ({linha['arquivo']}): a soma das "
+                f"competências ({sum(competencias)}) não bate com a nota "
+                f"total ({total})"
+            )
+        itens.append(ItemGabarito(
+            arquivo=linha["arquivo"],
+            nota_total=total,
+            competencias=competencias,
+            tema=linha["tema"],
+        ))
     return itens
 
 

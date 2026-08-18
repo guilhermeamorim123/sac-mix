@@ -82,3 +82,43 @@ def test_veredito_reprova_erro_total_alto():
 
 def test_veredito_reprova_erro_por_competencia_alto():
     assert calibra.veredito(erro_total=70, erro_competencia=55) == "REPROVADO"
+
+
+# --- CSV como o Excel realmente salva -------------------------------------
+
+def escreve_bruto(tmp_path, texto, encoding="utf-8"):
+    caminho = tmp_path / "gabarito.csv"
+    caminho.write_text(texto, encoding=encoding)
+    return caminho
+
+
+CABECALHO = "arquivo,nota_total,c1,c2,c3,c4,c5,tema"
+LINHA = "001.jpg,760,160,160,160,120,160,Educação"
+
+
+def test_le_csv_com_bom_do_excel(tmp_path):
+    caminho = escreve_bruto(tmp_path, f"﻿{CABECALHO}\n{LINHA}\n")
+    assert calibra.le_gabarito(caminho)[0].arquivo == "001.jpg"
+
+
+def test_le_csv_separado_por_ponto_e_virgula(tmp_path):
+    texto = f"{CABECALHO}\n{LINHA}\n".replace(",", ";")
+    caminho = escreve_bruto(tmp_path, texto)
+    assert calibra.le_gabarito(caminho)[0].nota_total == 760
+
+
+def test_le_csv_em_latin1(tmp_path):
+    caminho = escreve_bruto(tmp_path, f"{CABECALHO}\n{LINHA}\n", encoding="cp1252")
+    assert calibra.le_gabarito(caminho)[0].tema == "Educação"
+
+
+def test_le_csv_com_bom_e_ponto_e_virgula(tmp_path):
+    texto = f"﻿{CABECALHO}\n{LINHA}\n".replace(",", ";")
+    caminho = escreve_bruto(tmp_path, texto)
+    assert calibra.le_gabarito(caminho)[0].arquivo == "001.jpg"
+
+
+def test_coluna_faltando_da_erro_util(tmp_path):
+    caminho = escreve_bruto(tmp_path, "arquivo,nota_total\n001.jpg,760\n")
+    with pytest.raises(ValueError, match="c1"):
+        calibra.le_gabarito(caminho)
