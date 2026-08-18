@@ -32,8 +32,8 @@ resultado, risco na política do Meta), "Corretor ENEM" (genérico demais).
 
 ## Não-objetivos
 
-- **Não é curso de redação.** O guia é material de apoio consultado quando a
-  correção aponta um erro, não a espinha dorsal.
+- **Não é curso de redação.** O guia e o ebook são material de apoio; a
+  espinha dorsal é a correção.
 - **Não é assinatura.** Pagamento único, acesso até 15/11/2026. Assinatura
   aumenta a fricção de compra num público de 17 anos e não faz sentido num
   produto com data de validade natural.
@@ -72,7 +72,8 @@ O painel é pequeno de construir e é a peça que mais retém. Não cortar.
 
 | Peça | Escolha | Motivo |
 |---|---|---|
-| App | Lovable (React + Tailwind + shadcn) sobre Supabase | Já usado no [[CLIENTIA]]; sobe em dias |
+| App | Next.js na **Vercel**, com Supabase para auth/dados/arquivos | Escolha do dono. Front próprio em vez do Lovable |
+| Correção | **API route server-side**, nunca no browser | A `ANTHROPIC_API_KEY` não pode sair do servidor: no cliente, qualquer um abre o DevTools e usa sua chave |
 | Auth | Magic link por email (Supabase Auth) | Senha é fricção pura num público de 17 anos |
 | Storage | Supabase Storage (fotos) | Nativo do stack |
 | Checkout | Kiwify ou Hotmart | Pix nativo, nota fiscal, reembolso, webhook |
@@ -90,6 +91,22 @@ Compra na Kiwify
 ```
 
 Reembolso dispara `order.refunded` → `UPDATE entitlements SET revoked = true`.
+
+### A restrição da Vercel que molda o app
+
+Uma correção completa são duas chamadas ao Opus 5 com thinking ligado — na
+casa de dezenas de segundos, às vezes mais de um minuto. O limite padrão de
+função na Vercel é **60s no Hobby** e 60s no Pro (até 300s configurável).
+Com **Fluid compute** ligado, o teto vai a 300s no Hobby.
+
+Isso não é detalhe de infraestrutura: se a função estourar, o aluno vê erro
+depois de esperar um minuto olhando para uma tela parada, e a correção que já
+foi paga se perde. Três providências, todas obrigatórias:
+
+1. Ligar **Fluid compute** e declarar `maxDuration` na rota de correção
+2. **Streaming** da resposta, para o aluno ver progresso em vez de tela morta
+3. Gravar a correção no banco **assim que chega**, antes de renderizar — se o
+   navegador cair, o aluno não perde o que pagou
 
 ### Fluxo de correção — duas etapas, com confirmação humana no meio
 
@@ -231,20 +248,51 @@ produção mais demorado depois da calibração.
 
 ## Oferta e precificação
 
-| Item | Preço | Conteúdo |
+Dois planos, com o degrau em **conteúdo**, não em cota de correção.
+
+| Plano | Preço | O que tem |
 |---|---|---|
-| Produto principal | **R$ 47** | Correção diária (até 3 por dia) + desafio diário + guia + painel, até 15/11/2026 |
-| Order bump | **R$ 27** | 20 temas mais prováveis de 2026, cada um com redação-modelo nota alta comentada |
+| **Corretor** | **R$ 45,90** | Correção nas 5 competências (até 3/dia) + desafio diário + guia + painel de evolução, até 15/11/2026 |
+| **Acesso completo** | **R$ 59,90** | Tudo do Corretor **+ ebook**: 20 temas prováveis de 2026 com redação-modelo comentada, banco de repertório, e exercícios estilo ENEM |
 
-AOV alvo: ~R$60 com 30–40% de take rate no bump.
+**Por que o degrau é conteúdo e não cota.** O ebook é PDF: custo marginal zero,
+então os R$14 de diferença entram quase inteiros. Se os planos se separassem
+por "mais correções", o plano caro teria margem **pior** que o barato — o
+oposto do que se quer.
 
-**Ancoragem:** correção humana avulsa custa R$25–40 por redação. O produto
-inteiro custa menos que duas correções avulsas e entrega dezenas delas.
+**Por que só R$14 de diferença.** É pequeno demais para recusar quando o de
+cima tem algo que o de baixo não tem. A meta é que a maioria suba de plano, não
+que os dois vendam igual.
 
-**Por que R$47:** com CPA realista de R$15–25 nesse público, R$97 não converte
-em volume e R$27 não paga a mídia. **Pix é obrigatório** — exigir cartão de um
-público de 17 anos descarta metade do tráfego, e em boa parte dos casos quem
-paga é a mãe.
+### A conta que decide se esses preços funcionam
+
+Com ~9% de taxa de plataforma e CPA de R$20:
+
+| | Líquido | IA (20 correções a R$1,20) | CPA | Sobra |
+|---|---|---|---|---|
+| R$ 45,90 | 41,77 | −24,00 | −20,00 | **−R$ 2,23** |
+| R$ 59,90 | 54,51 | −24,00 | −20,00 | **+R$ 10,51** |
+
+**No custo de IA atual, o plano de baixo dá prejuízo em quem usa o produto** —
+e "usar o produto" é a tese inteira. Quem compra e não abre é lucrativo; quem
+escreve toda semana dá prejuízo. Incentivo invertido.
+
+A mesma conta com a correção a R$0,40, que é onde ela deve cair depois da
+varredura de `effort`:
+
+| | Líquido | IA (20 correções a R$0,40) | CPA | Sobra |
+|---|---|---|---|---|
+| R$ 45,90 | 41,77 | −8,00 | −20,00 | **+R$ 13,77** |
+| R$ 59,90 | 54,51 | −8,00 | −20,00 | **+R$ 26,51** |
+
+**Conclusão: a varredura de `effort` não é otimização, é pré-condição destes
+preços.** Roda junto com a calibração, na mesma semana.
+
+**Ancoragem:** correção humana avulsa custa R$25–40 por redação. O plano
+completo custa menos que duas correções avulsas e entrega dezenas delas.
+
+**Pix é obrigatório** — exigir cartão de um público de 17 anos descarta metade
+do tráfego, e em boa parte dos casos quem paga é a mãe.
 
 ## Página de vendas — o comprador duplo
 
