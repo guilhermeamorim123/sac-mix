@@ -1161,8 +1161,8 @@ def cmd_corrigir(args) -> None:
     avaliacao, uso_avaliacao = api.avaliar(cliente, transcricao.texto, args.tema)
 
     print(f"\n=== NOTA: {avaliacao['nota_total']} ===")
-    if avaliacao["penalidade"]:
-        print(f"!! {avaliacao['penalidade']}")
+    for penalidade in avaliacao["penalidades"]:
+        print(f"!! {penalidade}")
     print(f"enquadramento: {avaliacao['enquadramento']}\n")
 
     for competencia in avaliacao["competencias"]:

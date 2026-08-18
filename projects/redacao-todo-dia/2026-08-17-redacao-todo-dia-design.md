@@ -131,14 +131,22 @@ Usar `output_config.format` com JSON Schema — nada de parsear texto livre:
 Regras da rubrica que precisam estar no prompt de sistema, porque são regras
 reais do ENEM e o modelo erra sem elas:
 
-- **Fuga total ao tema → nota 0 na redação inteira**, não só nas competências
-  2 e 3. O mesmo vale para texto não-dissertativo-argumentativo e para cópia
-  integral dos textos motivadores
+Conferidas contra a [Cartilha do Participante do INEP](https://download.inep.gov.br/publicacoes/institucionais/avaliacoes_e_exames_da_educacao_basica/a_redacao_no_enem_2025_cartilha_do_participante.pdf):
+
+- **Oito causas anulam a redação inteira:** fuga total ao tema, texto não
+  dissertativo-argumentativo, parte deliberadamente desconectada do tema,
+  impropérios ou desenhos, identificação fora do espaço próprio, texto
+  predominantemente em língua estrangeira, texto ilegível, folha em branco.
+  As duas últimas e a de identificação importam **porque a entrada é foto**
 - **Até 7 linhas (7 inclusive) → nota 0.** A regra é "até", não "menos de"
-- **Tangenciamento** (aborda o tema de raspão) **não zera** — penaliza as
-  competências 2 e 3 dentro da escala normal. É o erro que mais confunde
+- **Tangenciamento não anula, mas trava C2, C3 e C5 em 40 pontos cada.** Não é
+  penalização dentro da escala normal — é teto duro, e são três competências,
+  não duas. É a regra que mais se erra
+- **Cópia dos textos motivadores não anula:** as linhas copiadas são
+  descontadas da contagem, e só zera se sobrarem 7 ou menos
+- **Proposta de intervenção que fere direitos humanos → competência 5 = 0.**
+  Até 2017 zerava a redação inteira; desde 2018 zera só a C5
 - Texto sem proposta de intervenção → competência 5 baixa mesmo com texto bom
-- Cópia de trechos dos textos motivadores não conta como repertório
 
 A aritmética e os zeramentos **não** são delegados ao modelo: ele julga cada
 competência, e o código soma e aplica as regras de anulação. Somar cinco
@@ -271,7 +279,7 @@ descobrir depois de construir app, landing e 60 temas.
 |---|---|---|
 | Calibração da correção | 20 redações com nota conhecida: as nota 1000 publicadas pelo INEP (âncora de teto) + redações corrigidas de cursinho/simulado cobrindo a faixa 400–900 | Erro médio ≤ 80 pts no total, ≤ 40 pts por competência |
 | Transcrição (OCR) | 15 fotos de letra manuscrita real, incluindo letra ruim e foto torta | ≥ 90% das palavras corretas antes da confirmação do aluno |
-| Fuga ao tema | 5 redações fora do tema + 3 tangenciando | 5/5 fugas zeradas; 3/3 tangenciamentos penalizados em C2/C3 **sem** zerar |
+| Fuga ao tema | 5 redações fora do tema + 3 tangenciando | 5/5 fugas zeradas; 3/3 tangenciamentos travados em 40 nas C2, C3 e C5 **sem** zerar |
 | Webhook de liberação | Compra de teste na Kiwify | Acesso liberado em < 60s |
 | Custo real | Medir `usage` de 50 correções reais | Dentro de ±30% da estimativa de US$ 0,08 |
 
@@ -282,7 +290,7 @@ descobrir depois de construir app, landing e 60 temas.
 | Foto ilegível | Pede foto nova, com dica ("luz de cima, folha reta"). **Não consome cota** |
 | Texto com até 7 linhas | Avisa antes de corrigir; se o aluno confirmar, corrige, zera e explica a regra |
 | Falha da API | 2 tentativas com backoff; se falhar, devolve a cota e avisa |
-| Fuga total ao tema | Zera a redação inteira e **explica a regra** — é conteúdo pedagógico, não erro. Tangenciamento é caso diferente: penaliza C2/C3 sem zerar |
+| Fuga total ao tema | Zera a redação inteira e **explica a regra** — é conteúdo pedagógico, não erro. Tangenciamento é caso diferente: trava C2, C3 e C5 em 40 sem zerar |
 | Acesso expirado (após 15/11) | Painel e histórico continuam visíveis; envio de nova redação bloqueado |
 
 ---
