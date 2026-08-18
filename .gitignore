@@ -68,3 +68,8 @@ scripts/.venv-whisper/
 # Radar Infoproduto: venv privado e cache bruto da API (regeneravel)
 scripts/.venv-radar/
 projects/radar-infoproduto/data/runs/
+
+# --- Redações do conjunto de calibração (dados de terceiros) ---
+/projects/redacao-todo-dia/corretor/dataset/*
+!/projects/redacao-todo-dia/corretor/dataset/.gitkeep
+/projects/redacao-todo-dia/corretor/.venv/
