@@ -76,21 +76,21 @@ O painel é pequeno de construir e é a peça que mais retém. Não cortar.
 | Correção | **API route server-side**, nunca no browser | A `ANTHROPIC_API_KEY` não pode sair do servidor: no cliente, qualquer um abre o DevTools e usa sua chave |
 | Auth | Magic link por email (Supabase Auth) | Senha é fricção pura num público de 17 anos |
 | Storage | Supabase Storage (fotos) | Nativo do stack |
-| Checkout | Kiwify ou Hotmart | Pix nativo, nota fiscal, reembolso, webhook |
+| Checkout | **Cakto** | Pix a 0% + R$2,49 fixo, liquidação instantânea no Pix, webhook. Kiwify fica como conta reserva verificada e sem uso |
 | IA | Claude via API (`claude-opus-5`) | Visão de alta resolução + avaliação; ver abaixo |
 | Email | Resend | Desafio diário + magic link |
 
 ### Fluxo de liberação de acesso
 
 ```
-Compra na Kiwify
-   → webhook (order.approved) → Supabase Edge Function
+Compra na Cakto
+   → webhook de compra aprovada → Supabase Edge Function
    → INSERT em entitlements (email, expires_at = 2026-11-15)
    → aluno faz login com magic link no mesmo email
    → app checa entitlements antes de liberar qualquer tela
 ```
 
-Reembolso dispara `order.refunded` → `UPDATE entitlements SET revoked = true`.
+O webhook de reembolso dispara → `UPDATE entitlements SET revoked = true`.
 
 ### A restrição da Vercel que molda o app
 
@@ -266,12 +266,17 @@ que os dois vendam igual.
 
 ### A conta que decide se esses preços funcionam
 
-Com ~9% de taxa de plataforma e CPA de R$20:
+Taxa da Cakto no Pix: **0% + R$2,49 fixo** (cartão é 4,99% + R$2,49). Como o
+Pix é o trilho principal deste público, a conta usa o Pix. CPA de R$20:
 
 | | Líquido | IA (20 correções a R$1,20) | CPA | Sobra |
 |---|---|---|---|---|
-| R$ 45,90 | 41,77 | −24,00 | −20,00 | **−R$ 2,23** |
-| R$ 59,90 | 54,51 | −24,00 | −20,00 | **+R$ 10,51** |
+| R$ 45,90 | 43,41 | −24,00 | −20,00 | **−R$ 0,59** |
+| R$ 59,90 | 57,41 | −24,00 | −20,00 | **+R$ 13,41** |
+
+Nota sobre a estrutura: taxa **fixa** pesa proporcionalmente mais no plano
+barato — R$2,49 é 5,4% de R$45,90 e 4,2% de R$59,90. A Cakto empurra na mesma
+direção que o ebook: o plano de cima é onde está a margem.
 
 **No custo de IA atual, o plano de baixo dá prejuízo em quem usa o produto** —
 e "usar o produto" é a tese inteira. Quem compra e não abre é lucrativo; quem
@@ -282,8 +287,8 @@ varredura de `effort`:
 
 | | Líquido | IA (20 correções a R$0,40) | CPA | Sobra |
 |---|---|---|---|---|
-| R$ 45,90 | 41,77 | −8,00 | −20,00 | **+R$ 13,77** |
-| R$ 59,90 | 54,51 | −8,00 | −20,00 | **+R$ 26,51** |
+| R$ 45,90 | 43,41 | −8,00 | −20,00 | **+R$ 15,41** |
+| R$ 59,90 | 57,41 | −8,00 | −20,00 | **+R$ 29,41** |
 
 **Conclusão: a varredura de `effort` não é otimização, é pré-condição destes
 preços.** Roda junto com a calibração, na mesma semana.
@@ -292,7 +297,10 @@ preços.** Roda junto com a calibração, na mesma semana.
 completo custa menos que duas correções avulsas e entrega dezenas delas.
 
 **Pix é obrigatório** — exigir cartão de um público de 17 anos descarta metade
-do tráfego, e em boa parte dos casos quem paga é a mãe.
+do tráfego, e em boa parte dos casos quem paga é a mãe. Na Cakto o Pix ainda
+liquida na hora, contra até 15 dias no cartão: rodando anúncio diário sem
+caixa, isso é a diferença entre reinvestir amanhã e financiar o Meta do
+próprio bolso por duas semanas.
 
 ## Página de vendas — o comprador duplo
 
@@ -315,7 +323,7 @@ funcionar para os dois medos:
 | 6 | 2026-08-17 | Transcrição confirmada pelo aluno antes da avaliação | Converte o maior risco técnico (OCR de letra ruim) numa tela de conferência, em vez de numa correção errada |
 | 7 | 2026-08-17 | Promessa de método, nunca de resultado | "Escreva uma redação por dia e receba correção nas 5 competências" passa na política de Unrealistic Outcomes do Meta. "Garanta nota 1000" derruba conta — lição já aprendida no [[Infoproduto DE]] |
 | 8 | 2026-08-17 | Pagamento único até 15/11, não assinatura | Produto sazonal com validade natural; assinatura adiciona fricção de compra sem adicionar receita dentro da janela |
-| 8 | 2026-08-17 | Kiwify/Hotmart, não Stripe | Pix nativo, nota fiscal e reembolso resolvidos, webhook pronto. Stripe sem Pix descarta metade do público |
+| 8 | 2026-08-18 | **Cakto**, não Kiwify nem Stripe | Pix a 0% + R$2,49 fixo contra ~9% da Kiwify, e liquidação instantânea no Pix. Stripe sem Pix descarta metade do público |
 | 9 | 2026-08-17 | `claude-opus-5` na calibração, avaliar `claude-sonnet-5` depois | A qualidade da correção é o produto inteiro. Otimizar custo antes de saber que a correção é boa é otimizar a coisa errada |
 
 ## Riscos e bloqueios
@@ -351,7 +359,7 @@ descobrir depois de construir app, landing e 60 temas.
 | Calibração da correção | 20 redações com nota conhecida: as nota 1000 publicadas pelo INEP (âncora de teto) + redações corrigidas de cursinho/simulado cobrindo a faixa 400–900 | Erro médio ≤ 80 pts no total, ≤ 40 pts por competência |
 | Transcrição (OCR) | 15 fotos de letra manuscrita real, incluindo letra ruim e foto torta | ≥ 90% das palavras corretas antes da confirmação do aluno |
 | Fuga ao tema | 5 redações fora do tema + 3 tangenciando | 5/5 fugas zeradas; 3/3 tangenciamentos travados em 40 nas C2, C3 e C5 **sem** zerar |
-| Webhook de liberação | Compra de teste na Kiwify | Acesso liberado em < 60s |
+| Webhook de liberação | Compra de teste na Cakto | Acesso liberado em < 60s |
 | Custo real | Medir `usage` de 50 correções reais | Dentro de ±30% da estimativa de US$ 0,08 |
 
 ## Tratamento de erro
