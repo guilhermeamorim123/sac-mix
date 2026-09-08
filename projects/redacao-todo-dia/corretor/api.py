@@ -10,6 +10,7 @@ from __future__ import annotations
 import base64
 import json
 import mimetypes
+import os
 import re
 from dataclasses import dataclass
 from pathlib import Path
@@ -17,14 +18,27 @@ from pathlib import Path
 import prompts
 import schema
 
-MODELO = "claude-opus-5"
+# Preço fica JUNTO do modelo: constantes separadas silenciosamente divergem, e
+# custo errado vira decisão de preço errada. USD por 1M de tokens.
+MODELOS = {
+    "claude-opus-5":    {"entrada": 5.00, "saida": 25.00},
+    "claude-sonnet-5":  {"entrada": 3.00, "saida": 15.00},
+    "claude-haiku-4-5": {"entrada": 1.00, "saida": 5.00},
+}
+
+MODELO = os.environ.get("CORRETOR_MODELO", "claude-sonnet-5")
+if MODELO not in MODELOS:
+    raise SystemExit(
+        f"modelo desconhecido: {MODELO}. Conhecidos: {', '.join(MODELOS)}"
+    )
+
 MAX_TOKENS = 16000
 
 # O thinking do Opus 5 vem ligado e conta para max_tokens e para o custo.
 # Transcrição é OCR, não raciocínio — roda barato. Avaliação é julgamento.
 # Estes dois são a alavanca de custo mais direta: meça antes de baixar.
-EFFORT_TRANSCRICAO = "low"
-EFFORT_AVALIACAO = "high"
+EFFORT_TRANSCRICAO = os.environ.get("CORRETOR_EFFORT_TRANSCRICAO", "low")
+EFFORT_AVALIACAO = os.environ.get("CORRETOR_EFFORT_AVALIACAO", "medium")
 
 FORMATOS_ACEITOS = {"image/jpeg", "image/png", "image/webp", "image/gif"}
 
@@ -107,9 +121,6 @@ def transcrever(cliente, caminho):
     return Transcricao(texto=texto, linhas=linhas), resposta.usage
 
 
-# Preço do claude-opus-5 em USD por 1M de tokens (referência de 17/08/2026).
-PRECO_ENTRADA = 5.00
-PRECO_SAIDA = 25.00
 FATOR_ESCRITA_CACHE = 1.25
 FATOR_LEITURA_CACHE = 0.10
 
@@ -148,8 +159,9 @@ def avaliar(cliente, texto: str, tema: str, linhas: int, linhas_copiadas: int = 
     return schema.normaliza(crua), resposta.usage
 
 
-def custo_usd(usage) -> float:
-    """Custo da chamada em dólares, a partir do objeto `usage` da resposta."""
+def custo_usd(usage, modelo: str = None) -> float:
+    """Custo da chamada em dólares, com o preço do modelo que de fato rodou."""
+    preco = MODELOS[modelo or MODELO]
     escrita_cache = getattr(usage, "cache_creation_input_tokens", 0) or 0
     leitura_cache = getattr(usage, "cache_read_input_tokens", 0) or 0
     entrada = (
@@ -157,4 +169,4 @@ def custo_usd(usage) -> float:
         + escrita_cache * FATOR_ESCRITA_CACHE
         + leitura_cache * FATOR_LEITURA_CACHE
     )
-    return entrada * PRECO_ENTRADA / 1e6 + usage.output_tokens * PRECO_SAIDA / 1e6
+    return entrada * preco["entrada"] / 1e6 + usage.output_tokens * preco["saida"] / 1e6

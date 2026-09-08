@@ -189,25 +189,25 @@ def test_avaliar_com_poucas_linhas_anula_pelo_numero_da_transcricao():
 # --- custo ---------------------------------------------------------------
 
 def test_custo_de_um_milhao_de_tokens_de_entrada():
-    assert api.custo_usd(uso(entrada=1_000_000, saida=0)) == pytest.approx(5.00)
+    assert api.custo_usd(uso(entrada=1_000_000, saida=0)) == pytest.approx(3.00)
 
 
 def test_custo_de_um_milhao_de_tokens_de_saida():
-    assert api.custo_usd(uso(entrada=0, saida=1_000_000)) == pytest.approx(25.00)
+    assert api.custo_usd(uso(entrada=0, saida=1_000_000)) == pytest.approx(15.00)
 
 
 def test_leitura_de_cache_custa_um_decimo_da_entrada():
-    assert api.custo_usd(uso(entrada=0, saida=0, leitura_cache=1_000_000)) == pytest.approx(0.50)
+    assert api.custo_usd(uso(entrada=0, saida=0, leitura_cache=1_000_000)) == pytest.approx(0.30)
 
 
 def test_escrita_de_cache_custa_1_25_vezes_a_entrada():
-    assert api.custo_usd(uso(entrada=0, saida=0, escrita_cache=1_000_000)) == pytest.approx(6.25)
+    assert api.custo_usd(uso(entrada=0, saida=0, escrita_cache=1_000_000)) == pytest.approx(3.75)
 
 
 def test_custo_tolera_usage_sem_campos_de_cache():
     """Nem toda resposta traz os campos de cache."""
     magro = SimpleNamespace(input_tokens=1_000_000, output_tokens=0)
-    assert api.custo_usd(magro) == pytest.approx(5.00)
+    assert api.custo_usd(magro) == pytest.approx(3.00)
 
 
 # --- resposta sem texto --------------------------------------------------
@@ -244,3 +244,17 @@ def test_avaliar_usa_o_effort_configurado(tmp_path):
     cliente = FakeClient(resposta(avaliacao_json()))
     api.avaliar(cliente, "texto", "Tema", linhas=25)
     assert cliente.messages.chamada["output_config"]["effort"] == api.EFFORT_AVALIACAO
+
+
+def test_modelo_em_uso_tem_preco_na_tabela():
+    assert api.MODELO in api.MODELOS
+
+
+def test_avaliacao_nao_roda_no_esforco_maximo():
+    """"high" era 65% do custo. Voltar pra lá tem que ser decisão consciente."""
+    assert api.EFFORT_AVALIACAO != "high"
+
+
+def test_opus_custa_mais_que_sonnet_pela_mesma_saida():
+    u = uso(entrada=0, saida=1_000_000)
+    assert api.custo_usd(u, "claude-opus-5") > api.custo_usd(u, "claude-sonnet-5")
