@@ -29,3 +29,11 @@ OutSell é o SaaS que remodela o DGX Foco (Lovable `879efa46-428c-44f0-9ac7-ff28
 - Supabase: projeto `outsell` criado via MCP na org Mixconecta (ref `iwiknbvwhtbmrnqpyawp`, sa-east-1, free). Migração `core` e seed `limites_plano` (18 linhas) JÁ APLICADOS pelo MCP. Falta: gravar `supabase/migrations/0001_core.sql`, `supabase/seed.sql` e `src/lib/supabase/types.ts` no repo (tipos geráveis de novo com `generate_typescript_types` via MCP). `.env.local` do repo já tem URL + chave publishable.
 - Pendente do Guilherme: SERPER_API_KEY, ANTHROPIC_API_KEY, SUPABASE_SERVICE_ROLE_KEY (painel → API), e o arquivo do logo Outsell OPS (só o ícone; ele mostrou a imagem no chat, precisa salvar em `+Inbox/`). Chaves ele disse que passa no final.
 - Fluxo de execução: subagent-driven (implementador + revisor de spec + revisor de qualidade por task/bloco). Agrupar tasks pequenas é aceitável.
+
+**Estado em 2026-09-18 (sessão 2, manhã):**
+- Fase 1 (Tasks 2–7) revisada e aprovada após 2 rodadas de correção (bug crítico em `normalizarE164` fechado; `calcularScore` virou 1 argumento com união discriminada; `textoDetalhe(d)`; `texto.ts`, `score/pontos.ts`).
+- Tasks 8–9 aprovadas. Migrações aplicadas via MCP e versionadas no repo: `0001_core`, `0002_hardening` (devolver_consultas só service_role com `_user`, revokes em helpers, search_path, seed de limites), `0003_perfis_grants` (usuário NÃO edita plano/plano_ate; só nome/tipo_negocio/onboarding). `seed.sql` removido. Next 16: guarda de rota é `src/proxy.ts` (401 JSON em /api). `caminhoSeguro()` em `src/lib/seguranca.ts`.
+- Lição SQL: REVOKE de coluna não subtrai grant de tabela; tem que revogar a tabela e conceder colunas.
+- Supabase Auth está exigindo confirmação de e-mail → pedir ao Guilherme pra desligar "Confirm email" no painel (Authentication → Providers → Email) pra testar; ou usar SMTP próprio.
+- Tasks 10–11 (Serper provider + rota /api/varreduras) despachadas; depois 12–14, depois UI (15–23).
+- Ainda faltam do Guilherme: SERPER_API_KEY, ANTHROPIC_API_KEY, SUPABASE_SERVICE_ROLE_KEY (painel → Settings → API → service_role), logo em `+Inbox/`.
