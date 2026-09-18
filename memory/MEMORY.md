@@ -20,3 +20,5 @@ _(links para recursos externos)_
 - [project_clientia.md](project_clientia.md) — CLIENTIA: app pós/pré-venda ML com IA, Lovable project df990ab7, auto-resposta deployada em 2026-06-22
 - [project_dragx_fleet.md](project_dragx_fleet.md) — DragX/fleet-panel: repo prod separado, keystore, self-update v1000008+, telemetria v1000009, senha reset fábrica v1000010
 - [project_livewire.md](project_livewire.md) — Livewire: SaaS painel web para vendedores de live commerce, respostas automáticas + coaching em tempo real, primeiro uso na Mix Conecta
+- [project_keylight.md](project_keylight.md) — Keylight: SaaS que gera 8 imagens de anúncio com IA para sellers de ML/Shopee/Amazon, planos R$49,90–R$599,90/mês, afiliados na Kiwify
+- [project_outsell.md](project_outsell.md) — OutSell: SaaS de prospecção (Serper + Claude, Next.js, Vercel), concorrente do Zuzyia, spec 2026-09-17, 4 subprojetos
