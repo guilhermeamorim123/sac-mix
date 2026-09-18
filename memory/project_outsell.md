@@ -20,3 +20,12 @@ OutSell é o SaaS que remodela o DGX Foco (Lovable `879efa46-428c-44f0-9ac7-ff28
 **Why:** Guilherme quer um SaaS vendável a partir do que a DGX já construiu, sem ficar refém de crédito do Lovable nem de custo variável do Google.
 
 **How to apply:** Ao retomar, ler o spec antes de qualquer código. Próximo passo após aprovação do spec: `writing-plans` pro subprojeto 1. Guilherme prefere telas de nível alto ("muito fodas") e decisões rápidas em multiple choice.
+
+**Estado em 2026-09-18 (fim da sessão 1 de execução):**
+- Plano: `docs/superpowers/plans/2026-09-17-outsell-nucleo.md` (26 tasks, pasta gitignored, só local). Design doc compartilhável: https://claude.ai/code/artifact/068eddeb-c622-4357-b2cf-8db08b9e26e8
+- Repo: `C:\Users\Dvilh\dev\outsell` → github.com/guilhermeamorim123/outsell (privado, main). Stack real: **Next 16.3.5** (middleware virou `src/proxy.ts`), React 19.2, Tailwind 4, **shadcn 4.21 sobre Base UI** (props `onCheckedChange`/`onOpenChange`/`onValueChange` iguais, mas `data-checked` em vez de `data-state`), Vitest 5 (`vitest.config.mts`), Playwright config já criado (0 testes até Task 25).
+- Task 1 DONE e aprovada nas duas revisões (commit c64a675).
+- Tasks 2–7 (lógica pura) despachadas num único subagente na noite de 2026-09-17; ao retomar, checar `git log` do repo e rodar `npm test`; depois revisar (spec + qualidade) e seguir pra Task 8.
+- Supabase: projeto `outsell` criado via MCP na org Mixconecta (ref `iwiknbvwhtbmrnqpyawp`, sa-east-1, free). Migração `core` e seed `limites_plano` (18 linhas) JÁ APLICADOS pelo MCP. Falta: gravar `supabase/migrations/0001_core.sql`, `supabase/seed.sql` e `src/lib/supabase/types.ts` no repo (tipos geráveis de novo com `generate_typescript_types` via MCP). `.env.local` do repo já tem URL + chave publishable.
+- Pendente do Guilherme: SERPER_API_KEY, ANTHROPIC_API_KEY, SUPABASE_SERVICE_ROLE_KEY (painel → API), e o arquivo do logo Outsell OPS (só o ícone; ele mostrou a imagem no chat, precisa salvar em `+Inbox/`). Chaves ele disse que passa no final.
+- Fluxo de execução: subagent-driven (implementador + revisor de spec + revisor de qualidade por task/bloco). Agrupar tasks pequenas é aceitável.
