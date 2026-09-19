@@ -37,3 +37,12 @@ OutSell é o SaaS que remodela o DGX Foco (Lovable `879efa46-428c-44f0-9ac7-ff28
 - Supabase Auth está exigindo confirmação de e-mail → pedir ao Guilherme pra desligar "Confirm email" no painel (Authentication → Providers → Email) pra testar; ou usar SMTP próprio.
 - Tasks 10–11 (Serper provider + rota /api/varreduras) despachadas; depois 12–14, depois UI (15–23).
 - Ainda faltam do Guilherme: SERPER_API_KEY, ANTHROPIC_API_KEY, SUPABASE_SERVICE_ROLE_KEY (painel → Settings → API → service_role), logo em `+Inbox/`.
+
+**Estado em 2026-09-19 (pausa por limite do plano Max):**
+- Backend completo e aprovado: Tasks 1–14 + follow-ups (commit `c46711e`, 218 testes). Migrações aplicadas e versionadas: 0001 core, 0002 hardening, 0003 perfis_grants, 0004 cota_varredura (consumir_cota_varredura atômica, devolver_varredura, leads_existentes). Inserts de lead usam `inserirLeadsComFallback` (bisseção, sem upsert em índice parcial).
+- UI lote 1 (Tasks 15–17: tokens, shell, componentes, onboarding, conta, campanhas) aprovado (commit `14795c0`). lucide sem `Instagram` → `AtSign`. Base UI usa `render` em vez de `asChild`.
+- UI lote 2 (Tasks 18–20: captar, leads, disparar + `requireUser()` em `src/lib/auth.ts`, `chamarApi` em `src/lib/cliente-api.ts`) foi DESPACHADO e pode ter ficado pela metade quando a sessão parou. Ao retomar: `git log`/`git status` no repo; se houver commits parciais, checar gates (`npm test`, `tsc`, `lint`, `build`) e concluir o que faltar (ver prompt do lote 2 = plano Tasks 18–20 adaptado às respostas das APIs).
+- Depois: lote 3 (Tasks 21–23: pipeline, templates, início), depois Tasks 24–26 (cron, E2E, CI/Vercel). Modo econômico: 1 revisão combinada por lote, revisor Sonnet.
+- Vercel: time `team_EnJo1ihShZyi9KqQVKqVQP1s` (conta do Sergio). `create_git_project` falha com repo_not_found até o Guilherme liberar o GitHub App da Vercel pro repo `guilhermeamorim123/outsell`. Depois: criar projeto, envs `NEXT_PUBLIC_SUPABASE_URL=https://iwiknbvwhtbmrnqpyawp.supabase.co`, `NEXT_PUBLIC_SUPABASE_ANON_KEY=sb_publishable_ElVi75S88lxNM0dZ2RgpvQ_yf2hEFOK`, e adicionar o domínio Vercel em Supabase Auth → URL configuration.
+- Pendências do Guilherme: liberar GitHub App na Vercel; desligar "Confirm email" no Supabase Auth; chaves SERPER/ANTHROPIC/SUPABASE_SERVICE_ROLE; logo em `+Inbox/`.
+- Máquina com pouca RAM (8 GB): gates rodam melhor pelo PowerShell; nunca deixar `next dev` aberto.
