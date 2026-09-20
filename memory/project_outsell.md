@@ -53,3 +53,9 @@ OutSell é o SaaS que remodela o DGX Foco (Lovable `879efa46-428c-44f0-9ac7-ff28
 - DEPLOY PENDENTE: Vercel `create_git_project` falha com repo_not_found até o Guilherme liberar o GitHub App da Vercel (conta Vercel do Sergio, team `team_EnJo1ihShZyi9KqQVKqVQP1s`) pro repo `guilhermeamorim123/outsell`. Depois: criar projeto, envs (NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY=sb_publishable_ElVi75S88lxNM0dZ2RgpvQ_yf2hEFOK, SUPABASE_SERVICE_ROLE_KEY, SERPER_API_KEY, ANTHROPIC_API_KEY, CRON_SECRET), Supabase Auth → URL configuration com o domínio Vercel, desligar Confirm email.
 - Próximos subprojetos (specs próprias): 2 Fechamento (contrato, avaliador de preço, dashboard de vendas), 4 Plataforma (Kiwify/Stripe, landing, mentor IA), 3 Criador de site.
 - Ainda pendente do Guilherme: logo em `+Inbox/` (trocar `src/components/shell/logo.tsx`), chaves, Vercel GitHub App, Confirm email.
+
+**Infra definitiva (2026-09-20):**
+- Supabase OFICIAL do OutSell: projeto `outsell` ref `grqjopupgrkpgzzblxsm` na org do Guilherme (`guilhermeamorim123's Org`, `lmszghbwqocdicqpjivn`), sa-east-1, free. URL `https://grqjopupgrkpgzzblxsm.supabase.co`, publishable `sb_publishable_SdxFGkDjuetLECa-zjEx5w_xBUKM1aL`. Migrações 0001–0004 aplicadas via MCP em 2026-09-20 e verificadas. Conector Supabase do claude.ai agora autenticado na conta do Guilherme.
+- O projeto antigo `iwiknbvwhtbmrnqpyawp` (org Mixconecta, conta do Sergio) ficou ÓRFÃO: pausar/apagar quando conveniente.
+- Vercel: projeto `outsell` na conta pessoal do Guilherme (guiafiguerdo@gmail.com, time "guilherme-amorim-figueredo-s-projects"), produção `https://outsell-alpha.vercel.app`, Hobby, Fluid compute, Node 24. Meu conector Vercel NÃO enxerga essa conta (só o time do Sergio): configuração de envs/cron é manual pelo Guilherme. Primeiro deploy deu 500 por falta de envs.
+- `.env.local` local já aponta pro projeto novo.
