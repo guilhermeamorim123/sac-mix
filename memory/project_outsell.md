@@ -59,3 +59,8 @@ OutSell é o SaaS que remodela o DGX Foco (Lovable `879efa46-428c-44f0-9ac7-ff28
 - O projeto antigo `iwiknbvwhtbmrnqpyawp` (org Mixconecta, conta do Sergio) ficou ÓRFÃO: pausar/apagar quando conveniente.
 - Vercel: projeto `outsell` na conta pessoal do Guilherme (guiafiguerdo@gmail.com, time "guilherme-amorim-figueredo-s-projects"), produção `https://outsell-alpha.vercel.app`, Hobby, Fluid compute, Node 24. Meu conector Vercel NÃO enxerga essa conta (só o time do Sergio): configuração de envs/cron é manual pelo Guilherme. Primeiro deploy deu 500 por falta de envs.
 - `.env.local` local já aponta pro projeto novo.
+
+**Landing integrada (2026-09-21), branch `feat/landing` (commit `bfb21dd`, push feito, preview Vercel automático):**
+- Landing (HTML feito pelo Guilherme no v0) vive em `src/app/(landing)/` com layout raiz próprio (sem Tailwind, Google Fonts Barlow); screenshots byte a byte iguais ao original em 1440/390px. App inteiro passou pro route group `src/app/(app)/`; dashboard agora é `/painel`; `/` é pública e o proxy manda logado pra `/painel`.
+- Links da landing: `/entrar`, `/entrar?modo=criar`, planos `/entrar?modo=criar&plano=radar|rota|territorio` (guardado como `plano_interesse` na metadata do signup). Assets em `public/logo.png` e `public/favicon.png`; shell usa o ícone real.
+- Pendente: Guilherme conferir o preview e fazer merge em `main` (produção). Textos de plano ainda têm `[X]` (placeholders do original). O projeto separado da landing na Vercel pode ser apagado depois do merge.
