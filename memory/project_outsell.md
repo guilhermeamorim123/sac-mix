@@ -64,3 +64,10 @@ OutSell é o SaaS que remodela o DGX Foco (Lovable `879efa46-428c-44f0-9ac7-ff28
 - Landing (HTML feito pelo Guilherme no v0) vive em `src/app/(landing)/` com layout raiz próprio (sem Tailwind, Google Fonts Barlow); screenshots byte a byte iguais ao original em 1440/390px. App inteiro passou pro route group `src/app/(app)/`; dashboard agora é `/painel`; `/` é pública e o proxy manda logado pra `/painel`.
 - Links da landing: `/entrar`, `/entrar?modo=criar`, planos `/entrar?modo=criar&plano=radar|rota|territorio` (guardado como `plano_interesse` na metadata do signup). Assets em `public/logo.png` e `public/favicon.png`; shell usa o ícone real.
 - Merge em `main` feito e confirmado em produção em 2026-09-21 (commits `bfb21dd`, `5ff198b` logo sem recorte, `a16955e` sair volta pra `/`). Textos de plano ainda têm `[X]` (placeholders do original). O projeto separado da landing na Vercel pode ser apagado depois do merge.
+
+**Colaboração (2026-09-24):**
+- Sócio: Marcelo (`marcelomass4`), colaborador write no GitHub. Vercel Hobby BLOQUEIA deploy de commit dele (autor não é membro da conta). Decisão: fluxo de PR; Guilherme faz merge com "Create a merge commit". Commit vazio do Guilherme por cima destrava (feito em `7ada8f8`).
+- Marcelo já entregou: landing nova (recursos, dúvidas, contato, mapa animado, OG image) e fix "recusa varredura sem consumir cota quando SERPER_API_KEY falta".
+- `CLAUDE.md` no repo com fluxo e convenções; README com seção "Como contribuir".
+- Conector Vercel do claude.ai agora enxerga a conta do Guilherme (projeto `outsell` = `prj_NkrLfs19TSxod9YR8baUcfvrkG2t`, `outsell-landing` = `prj_XD6klPHpm67vBmy4eseL0TZ2b9o8`, pode ser apagado).
+- Plano `ilimitado`: migrações 0005/0006 no repo; SQL precisa ser rodado pelo Guilherme no SQL Editor (MCP bloqueado pela permissão). Conta admin `outsellops@gmail.com` já confirmada.
