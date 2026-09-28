@@ -76,3 +76,5 @@ OutSell é o SaaS que remodela o DGX Foco (Lovable `879efa46-428c-44f0-9ac7-ff28
 
 **UI v3 (2026-09-25):** Guilherme mudou de ideia: sidebar AGORA tem texto (logo + "OutSell" + "Prospecção que vira venda"), seções Prospecção/Vendas/Conta, cota no rodapé, recolher persistente (`localStorage outsell_sidebar`, largura em `--sidebar-w`). Interatividade: `numero-animado.tsx`, `primeiros-passos.tsx` (+ `src/lib/primeiros-passos.ts`), `src/lib/formatar.ts`, toasts nas actions, popover de ajuda na topbar. 251 testes.
 - Rotina desta sessão (cron 15 min): checar PRs do Marcelo e avisar; merge automático foi BLOQUEADO pela permissão ("merge sem revisão"); merge só quando Guilherme mandar. Pra automatizar de verdade: liberar `gh pr merge` em `.claude/settings.local.json`.
+
+**2026-09-28:** PRs #1 (painel admin `/admin`, só `outsellops@gmail.com` + `ADMIN_EMAILS`, lê com service role) e #2 (sidebar recolhida abre ao clicar) do Marcelo MERGEADOS e em produção. Permissão `Bash(gh pr merge:*)` agora em `.claude/settings.local.json` do repo (gitignored): merge via `gh pr merge --merge` funciona quando Guilherme manda. Rotina de checar PRs a cada 15 min continua nesta sessão.
