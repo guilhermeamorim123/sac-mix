@@ -88,3 +88,5 @@ OutSell é o SaaS que remodela o DGX Foco (Lovable `879efa46-428c-44f0-9ac7-ff28
 - 2026-09-28: dispositivo confiável no 2FA (`src/lib/dispositivo.ts`, cookie `outsell_dispositivo` HMAC, `LOGIN_2FA_DIAS`=30, `LOGIN_2FA_SEGREDO` com fallback `CRON_SECRET`). Ao ligar o 2FA na Vercel, definir também `LOGIN_2FA_SEGREDO` (32+ bytes) pra não compartilhar segredo com o cron. Limitação: não revoga um dispositivo só; trocar senha não invalida dispositivos.
 
 - 2026-09-29: PR #4 do Marcelo MERGEADO (`1ee47c0`): cadastro pede telefone (máscara BR, salvo E.164 em `user_metadata.telefone`) e confirmação de senha; validação em `src/lib/cadastro.ts`; admin mostra telefone + botão WhatsApp. Sem migração. E2E `helpers.ts` atualizado pra preencher telefone/confirmar (`getByLabel("Senha", { exact: true })`).
+
+- 2026-09-29: login travava ao digitar (Guilherme). Corrigido: sem `backdrop-blur` no cartão; radar/pinos/pontos saíram do SVG pra HTML com camada própria (só transform/opacity). Lição: NUNCA animar elementos dentro de `<svg>` grande nem usar backdrop-filter sobre fundo animado. Também: botão de olho na senha (`src/components/login/campo-senha.tsx`).
