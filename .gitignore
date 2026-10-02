@@ -68,3 +68,7 @@ scripts/.venv-whisper/
 # Radar Infoproduto: venv privado e cache bruto da API (regeneravel)
 scripts/.venv-radar/
 projects/radar-infoproduto/data/runs/
+
+# projetos locais (dependências e logs não vão pro git)
+my-video/node_modules/
+debug.log

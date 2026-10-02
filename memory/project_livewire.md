@@ -49,47 +49,45 @@ Falta checar: `.com`, `.com.br`, @ no Instagram e busca no INPI.
 - Envio no chat: Playwright sobre o LIVE Center — **não existe API oficial de envio**
 - TikTok Shop: adiado, exige aprovação de partner app (semanas)
 
-## Painel (pronto em 05/08/2026)
-Projeto Lovable **"Co-Piloto TikTok"** — id `558553c9-7d94-4a6c-a282-fb8828387ac0`,
-workspace `vVCbLWo6thE41wKRMQww` ("Guilherme's Lovable"). Está sob a conta
-`sergiogpn@gmail.com`, mas no workspace do Guilherme — a preocupação antiga de
-conta foi resolvida assim.
+## Arquitetura atual (10/08/2026) — a extensão é o caminho principal
 
-Construído em 8 etapas: esqueleto → auth Supabase (email/senha, rotas
-protegidas) → página Ao Vivo (3 colunas, Realtime em `messages`/`leads`, fila de
-resposta) → bloco de coaching → página Lives Prontas + faixa de supervisão →
-multiconta (`sellers`/`seller_users`/`produtos`/`frete_regras`/
-`base_conhecimento`/`configuracoes`) + tela de Configurações → importação de
-planilha CSV/XLSX na aba Produtos → rebrand para Livewire.
+O agente Python **funciona** e está testado ponta a ponta, mas exige PC ligado e
+Python instalado. Guilherme rejeitou isso: "tem que ser um agente autônomo".
 
-Banco no **Lovable Cloud** (Supabase gerenciado), 12 tabelas + view
-`lives_ranking` + funções `upsert_lead`, `tem_acesso`, trigger
-`aplicar_comando_supervisao`. Já com dados de seed da Mix Conecta.
+A **extensão de navegador** (`extensao/`) virou o caminho principal. Ela captura
+o chat, classifica com o Claude e grava no Supabase — sem Python, sem servidor,
+sem PC dedicado. Roda no navegador que já está aberto na live.
 
-## Status do agente (06/08/2026)
-- Código agora vive **dentro do vault**, em `tiktok-copilot/` (commit `99487b1`).
-  O `.env` está no `.gitignore` — a service_role nunca entra no git.
-- GitHub: repo **privado** em `guilhermeamorim123/tiktok-copilot`, branch `main`.
+Decisões importantes:
+- A rota de servidor no Lovable foi tentada e **abandonada**: o agente do Lovable
+  reescreveu a implementação seis vezes e nunca instalou a lógica enviada
+  (devolvia intents inventados, sem `suggested_reply`, sem gravar no banco).
+- **Dívida aceita:** a chave da Anthropic vive no storage da extensão. Vale só
+  para máquinas do dono da loja; a tela de config avisa em destaque. Mover para
+  servidor quando houver acesso ao Supabase.
+- O detector de chat funciona **por comportamento**, não por nome de classe —
+  o TikTok ofusca classes. Primeira versão elegeu o feed de presentes; corrigido
+  pontuando texto único que parece mensagem, descontando ruído.
+
+Próximo passo combinado: **painel lateral dentro da extensão** (Chrome Side Panel),
+para operar a live sem trocar de aba. O painel web fica para configuração,
+histórico e CRM.
+
+## Status
+- Código em **`C:\dev\tiktok-copilot`** (repo git próprio, fora do vault).
+  Ficou fora do OneDrive de propósito: o `.env` guarda a service_role do Supabase,
+  e Desktop e Documentos estão os dois redirecionados para o OneDrive.
+- GitHub: repo **privado** em `guilhermeamorim123/livewire`, branch `main`.
   Identidade correta do projeto: `Guilherme <guiafiguerdo@gmail.com>`.
-- **Agente sincronizado com o banco (06/08/2026):** catálogo, frete e base de
-  conhecimento saem das tabelas `produtos`/`frete_regras`/`base_conhecimento`;
-  auto-resposta, teto/min, intents, tom de voz e threshold de lead quente saem
-  de `configuracoes`. `products.json` e `.env` viraram fallback do modo sqlite.
-  Refresh a cada 30s durante a live, `live_id` nas mensagens, `schema.sql`
-  regerado a partir do banco real.
-- Decisões que valem lembrar: catálogo vazio **aborta o arranque** (não entra na
-  live respondendo "não sei"); o refresh só mexe no interruptor quando o valor
-  muda no banco, para não desfazer um PARAR TUDO; nem o painel consegue liberar
-  `reclamacao` para auto-envio.
-- Falta: módulo RTMP/OBS do replay (comando `replay_live` volta `failed`),
-  vendas/receita (dependem do TikTok Shop), `viewers_pico`/`viewers_media`
-  (ingest só escuta comentários), cobrança.
-- **Dívida do multi-tenant:** `seller_id` ainda tem `default 'mix-conecta'` nas
-  tabelas de operação. Derrubar antes de entrar a segunda loja (comando no
-  rodapé do `schema.sql`).
-- **Este Mac não roda o agente:** só tem Python 3.9 do sistema, sem Homebrew, e
-  o código exige 3.10+. Testes foram rodados com um shim de dataclass em
-  scratchpad. Para rodar de verdade aqui, instalar Python 3.11+.
-- Próximo passo: pegar URL + service_role do Lovable Cloud, pôr no `.env` com
-  `STORE_BACKEND=supabase`, cadastrar os produtos reais no painel e rodar live
-  de teste com a auto-resposta desligada.
+  A pasta local ainda se chama `C:\dev\tiktok-copilot` (só o nome; o remote é livewire).
+- **Só existe UMA cópia do projeto: `C:\dev\tiktok-copilot`.** Houve uma duplicata
+  dentro do vault que causou confusão (chave colada no arquivo errado, e dentro
+  do OneDrive) — foi apagada em 09/08/2026. Não recriar cópia do projeto dentro
+  do vault: `.env` com segredo não pode ficar em pasta sincronizada.
+- **Atenção com contas:** o conector do Lovault/Lovable e o Google desta máquina
+  estão em `sergiogpn@gmail.com`, que **não** é a conta que Guilherme quer usar.
+  A conta certa é a do GitHub (`guilhermeamorim123`). Reconectar o Lovable pelo
+  claude.ai antes de criar o painel — não dá para trocar isso pelo Claude Code.
+- Falta: módulo RTMP/OBS do replay, vendas/receita (dependem do TikTok Shop), cobrança
+- Próximo passo: preencher `products.json` real e rodar live de teste com
+  `AUTO_REPLY_ENABLED=false`

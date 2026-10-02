@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Papa-Tudo — Guia de Alimentação Infantil | 74 receitas</title>
+<meta name="description" content="74 receitas, cardápio de 4 semanas e 12 lancheiras montadas. PDF de 110 páginas, entrega imediata no e-mail. R$ 27,90.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Lora:wght@400;500;600&family=Poppins:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    color-scheme:light;
+    --bg:#FFF8F0;
+    --green:#1F6B4F;
+    --green-dark:#164E3A;
+    --green-bright:#7CC242;
+    --orange:#E1782A;
+    --orange-dark:#C4651E;
+    --yellow:#FFC42E;
+    --ink:#2A211B;
+    --ink-soft:#5C4F45;
+    --cream:#FFF3E6;
+    --line:#E8D9C7;
+    --radius:12px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{-webkit-text-size-adjust:100%}
+  body{
+    background:var(--bg);
+    color:var(--ink);
+    font-family:'Lora',Georgia,serif;
+    font-size:16px;
+    line-height:1.65;
+    overflow-x:hidden;
+    -webkit-font-smoothing:antialiased;
+  }
+  h1,h2,h3{font-family:'Poppins',system-ui,'Segoe UI',sans-serif;color:var(--green);line-height:1.2;font-weight:700;text-wrap:balance}
+  img,svg{max-width:100%;display:block}
+  a:focus-visible,button:focus-visible{outline:3px solid var(--orange);outline-offset:3px}
+  .wrap{width:100%;max-width:1080px;margin:0 auto;padding:0 20px}
+  section{padding:56px 0}
+  .eyebrow{
+    font-family:'Poppins',sans-serif;font-size:11px;font-weight:600;
+    letter-spacing:.14em;text-transform:uppercase;color:var(--orange);
+  }
+  .section-title{font-size:clamp(24px,6vw,34px);margin-bottom:10px}
+  .section-sub{color:var(--ink-soft);font-size:16px;max-width:52ch}
+  .center{text-align:center}
+
+  /* botões */
+  .btn{
+    display:flex;align-items:center;justify-content:center;text-align:center;
+    width:100%;min-height:56px;padding:14px 22px;
+    background:var(--orange);color:#fff;text-decoration:none;
+    font-family:'Poppins',sans-serif;font-weight:700;font-size:15px;
+    letter-spacing:.02em;text-transform:uppercase;
+    border:none;border-radius:var(--radius);cursor:pointer;
+  }
+  .btn:hover{background:var(--orange-dark)}
+  .btn-lg{min-height:64px;font-size:17px}
+  .btn-note{
+    display:block;margin-top:10px;text-align:center;
+    font-family:'Poppins',sans-serif;font-size:12.5px;color:var(--ink-soft);
+  }
+  .cta-block{max-width:440px;margin:0 auto}
+
+  /* header */
+  header{border-bottom:1px solid var(--line);background:var(--bg)}
+  .brand{display:flex;align-items:center;padding:10px 0}
+  .brand img{height:56px;width:auto}
+  .wordmark{
+    font-family:'Poppins',sans-serif;font-weight:700;font-size:23px;
+    color:var(--orange);letter-spacing:-.02em;line-height:1;
+  }
+  .wordmark em{font-style:normal;color:var(--green-bright)}
+
+  /* hero */
+  .hero{padding:20px 0 34px}
+  .hero-grid{display:flex;flex-direction:column;gap:18px}
+  .hero h1{font-size:clamp(26px,7.4vw,32px);margin:10px 0 12px}
+  .hero-sub{
+    font-family:'Poppins',sans-serif;font-weight:600;font-size:clamp(15px,4.1vw,17px);
+    color:var(--ink);line-height:1.4;
+    border-left:4px solid var(--orange);padding-left:12px;margin-bottom:12px;
+  }
+  .hero-p{font-size:14.5px;color:var(--ink-soft);margin-bottom:16px;max-width:46ch}
+  .hero-cta{max-width:460px}
+
+  /* mockup do e-book com o logo real */
+  .book-wrap{display:flex;justify-content:center;margin-bottom:14px}
+  .book{
+    width:158px;background:#fff;border:1px solid var(--line);
+    border-left:10px solid var(--green);border-radius:var(--radius);
+    overflow:hidden;padding:12px 12px 0;text-align:center;
+  }
+  .book-strip{
+    margin:10px -12px 0;background:var(--green);color:#fff;
+    font-family:'Poppins',sans-serif;font-weight:600;font-size:10px;
+    letter-spacing:.08em;text-transform:uppercase;padding:9px 6px;
+  }
+
+  /* números */
+  .numbers{background:var(--green);padding:34px 0}
+  .numbers-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:22px 12px}
+  .num{text-align:center}
+  .num b{
+    display:block;font-family:'Poppins',sans-serif;font-weight:700;
+    font-size:clamp(26px,7vw,34px);line-height:1;margin-bottom:6px;color:var(--yellow);
+  }
+  .num span{font-family:'Poppins',sans-serif;font-size:12.5px;color:#D7EADF;letter-spacing:.02em}
+
+  /* dor */
+  .cards{display:grid;gap:16px;margin-top:26px}
+  .card{background:var(--cream);border:1px solid var(--line);border-radius:var(--radius);padding:22px}
+  .card .hora{
+    font-family:'Poppins',sans-serif;font-weight:700;font-size:17px;
+    color:var(--orange);display:block;margin-bottom:8px;
+  }
+  .card p{font-size:15.5px}
+  .closer{margin-top:26px;font-family:'Poppins',sans-serif;font-weight:600;font-size:16.5px;color:var(--green)}
+
+  /* recebe */
+  .grid6{display:grid;gap:16px;margin-top:28px}
+  .item{border-top:2px solid var(--green);padding-top:16px}
+  .item h3{font-size:17px;margin-bottom:6px}
+  .item p{font-size:14.5px;color:var(--ink-soft);line-height:1.55}
+
+  /* capítulos */
+  .chapters{background:var(--cream);border:1px solid var(--line);border-radius:var(--radius);padding:8px 20px;margin-top:26px}
+  .chapters ol{list-style:none;counter-reset:cap}
+  .chapters li{
+    counter-increment:cap;display:flex;align-items:baseline;gap:12px;
+    padding:15px 0;border-bottom:1px solid var(--line);font-size:15.5px;
+  }
+  .chapters li:last-child{border-bottom:none}
+  .chapters li::before{
+    content:counter(cap);font-family:'Poppins',sans-serif;font-weight:700;
+    font-size:13px;color:#fff;background:var(--green);
+    min-width:24px;height:24px;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;flex:0 0 24px;
+  }
+  .cap-nome{flex:1}
+  .cap-qtd{font-family:'Poppins',sans-serif;font-weight:600;font-size:13px;color:var(--orange);white-space:nowrap;font-variant-numeric:tabular-nums}
+  .chapters-note{margin-top:18px;font-size:15px;color:var(--ink-soft)}
+
+  /* passos */
+  .steps{display:grid;gap:14px;margin-top:26px}
+  .step{display:flex;gap:14px;align-items:flex-start;padding:18px;border:1px solid var(--line);border-radius:var(--radius)}
+  .step .ico{
+    flex:0 0 42px;width:42px;height:42px;border-radius:50%;background:var(--cream);
+    display:flex;align-items:center;justify-content:center;
+  }
+  .step .ico svg{width:20px;height:20px;stroke:var(--green);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+  .step h3{font-size:16px;margin-bottom:3px}
+  .step p{font-size:14.5px;color:var(--ink-soft)}
+
+  /* para quem */
+  .fit{display:grid;gap:18px;margin-top:26px}
+  .fit-col{border-radius:var(--radius);padding:24px 22px;border:1px solid var(--line)}
+  .fit-yes{background:var(--cream)}
+  .fit-no{background:#fff}
+  .fit-col h3{font-family:'Poppins',sans-serif;font-size:13px;letter-spacing:.1em;text-transform:uppercase;margin-bottom:16px}
+  .fit-no h3{color:var(--ink-soft)}
+  .fit-col ul{list-style:none;display:grid;gap:12px}
+  .fit-col li{display:flex;gap:10px;font-size:15px;line-height:1.5}
+  .mark-i{
+    flex:0 0 20px;width:20px;height:20px;border-radius:50%;margin-top:2px;
+    display:flex;align-items:center;justify-content:center;
+    font-family:'Poppins',sans-serif;font-size:12px;font-weight:700;color:#fff;
+  }
+  .mark-yes{background:var(--green)}
+  .mark-no{background:#B9A895}
+
+  /* faixa de arte (banner) — só onde o texto da arte é legível */
+  .artband{display:none;padding:0 0 8px}
+  .artband img{width:100%;border-radius:var(--radius);border:1px solid var(--line)}
+
+  /* oferta */
+  .offer-section{background:var(--cream)}
+  .offer{
+    background:#fff;border:2px solid var(--orange);border-radius:var(--radius);
+    padding:30px 22px;max-width:560px;margin:0 auto;text-align:center;
+  }
+  .offer h2{font-size:clamp(21px,5.6vw,26px);margin-bottom:20px}
+  .offer ul{list-style:none;display:grid;gap:11px;text-align:left;margin-bottom:26px}
+  .offer li{display:flex;gap:10px;font-size:15px;line-height:1.5}
+  .price{font-family:'Poppins',sans-serif;font-weight:700;color:var(--green);font-size:clamp(40px,11vw,52px);line-height:1}
+  .price-note{font-family:'Poppins',sans-serif;font-size:13.5px;color:var(--ink-soft);margin:8px 0 22px}
+
+  /* garantia */
+  .guarantee{
+    max-width:640px;margin:0 auto;text-align:center;
+    border:1px solid var(--line);border-radius:var(--radius);
+    background:var(--cream);padding:32px 24px;
+  }
+  .guarantee .seal{
+    width:52px;height:52px;margin:0 auto 16px;border-radius:50%;
+    background:var(--green);display:flex;align-items:center;justify-content:center;
+    font-family:'Poppins',sans-serif;font-weight:700;color:#fff;font-size:15px;
+  }
+  .guarantee h2{font-size:clamp(21px,5.6vw,27px);margin-bottom:12px}
+  .guarantee p{font-size:15.5px;color:var(--ink-soft)}
+
+  /* faq */
+  .faq{max-width:720px;margin:26px auto 0;border-top:1px solid var(--line)}
+  .q{
+    width:100%;background:none;border:none;border-bottom:1px solid var(--line);
+    display:flex;justify-content:space-between;align-items:center;gap:16px;
+    text-align:left;padding:19px 2px;cursor:pointer;
+    font-family:'Poppins',sans-serif;font-weight:600;font-size:15.5px;color:var(--green);
+  }
+  .q .sign{font-size:20px;color:var(--orange);flex:0 0 auto;line-height:1}
+  .q[aria-expanded="true"]{border-bottom-color:transparent}
+  .a{border-bottom:1px solid var(--line);padding:0 2px 20px;font-size:15px;color:var(--ink-soft)}
+
+  /* cta final */
+  .final{background:var(--green);text-align:center}
+  .final h2{color:#fff;font-size:clamp(24px,6.4vw,34px);margin:0 auto 26px;max-width:20ch}
+  .final .btn-note{color:#D7EADF}
+
+  /* rodapé */
+  footer{padding:34px 0 40px;border-top:1px solid var(--line);background:var(--bg)}
+  .foot-logo{height:60px;width:auto;margin-bottom:18px}
+  .disclaimer{
+    font-size:12.5px;line-height:1.6;color:var(--ink-soft);
+    background:var(--cream);border-radius:var(--radius);padding:16px 18px;margin-bottom:20px;
+  }
+  .foot-meta{font-family:'Poppins',sans-serif;font-size:12.5px;color:var(--ink-soft);line-height:1.9}
+  .foot-meta strong{color:var(--green)}
+
+  /* barra fixa mobile */
+  .sticky{
+    position:fixed;left:0;right:0;bottom:0;z-index:50;
+    background:#fff;border-top:1px solid var(--line);
+    padding:10px 14px calc(10px + env(safe-area-inset-bottom));
+    display:none;align-items:center;gap:12px;
+  }
+  .sticky.on{display:flex}
+  .sticky .sp{font-family:'Poppins',sans-serif;line-height:1.15;flex:0 0 auto}
+  .sticky .sp b{display:block;font-size:19px;font-weight:700;color:var(--green)}
+  .sticky .sp span{font-size:10.5px;color:var(--ink-soft)}
+  .sticky .btn{font-size:13px;min-height:52px;padding:12px 14px}
+  body.has-sticky{padding-bottom:84px}
+
+  @media (min-width:600px){
+    .cards{grid-template-columns:repeat(3,1fr)}
+    .grid6{grid-template-columns:repeat(2,1fr);gap:24px 28px}
+    .numbers-grid{grid-template-columns:repeat(4,1fr)}
+    .fit{grid-template-columns:1fr 1fr;gap:20px}
+    .steps{grid-template-columns:repeat(3,1fr)}
+    .step{flex-direction:column}
+  }
+  @media (min-width:861px){
+    section{padding:76px 0}
+    .hero{padding:48px 0 62px}
+    .hero-grid{flex-direction:row;align-items:center;gap:52px}
+    .hero-text{flex:1 1 54%}
+    .hero-visual{flex:1 1 46%;order:2}
+    .book-wrap{margin-bottom:0}
+    .book{width:300px;padding:20px 20px 0}
+    .book-strip{margin:16px -20px 0;font-size:11.5px;padding:12px 8px}
+    .hero h1{font-size:44px}
+    .hero-sub{font-size:19px}
+    .hero-p{font-size:16px}
+    .brand img{height:70px}
+    .grid6{grid-template-columns:repeat(3,1fr)}
+    .artband{display:block;padding:0 0 12px}
+    .sticky{display:none !important}
+    body.has-sticky{padding-bottom:0}
+  }
+</style>
+<!-- Meta Pixel Code -->
+<script>
+!function(f,b,e,v,n,t,s)
+{if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+n.queue=[];t=b.createElement(e);t.async=!0;
+t.src=v;s=b.getElementsByTagName(e)[0];
+s.parentNode.insertBefore(t,s)}(window, document,'script',
+'https://connect.facebook.net/en_US/fbevents.js');
+fbq('init', '1758510522269166');
+fbq('track', 'PageView');
+</script>
+<noscript><img height="1" width="1" style="display:none"
+src="https://www.facebook.com/tr?id=1758510522269166&ev=PageView&noscript=1"
+/></noscript>
+<!-- End Meta Pixel Code -->
+<!-- Meta Pixel Events -->
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  // Visualizacao do produto — dispara ao carregar a pagina do produto
+  fbq('track', 'ViewContent', {
+    content_ids: ['SKU-001'],
+    content_type: 'product',
+    value: 27.90,
+    currency: 'BRL'
+  });
+
+  // Clique no botao de compra
+  document.querySelectorAll('[data-fb="buy"]').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      fbq('track', 'InitiateCheckout', {
+        content_ids: ['SKU-001'],
+        value: 27.90,
+        currency: 'BRL'
+      });
+    });
+  });
+});
+</script>
+<!-- End Meta Pixel Events -->
+</head>
+<body>
+
+<!-- 1. HEADER — sem menu, sem links -->
+<header>
+  <div class="wrap">
+    <div class="brand">
+      <img src="assets/logo.png" alt="Papa-Tudo — guia de alimentação infantil" width="640" height="640"
+           onerror="this.remove();document.getElementById('wm').hidden=false">
+      <span class="wordmark" id="wm" hidden>Papa-<em>Tudo</em></span>
+    </div>
+  </div>
+</header>
+
+<!-- 2. HERO -->
+<section class="hero" id="hero">
+  <div class="wrap hero-grid">
+    <div class="hero-visual">
+      <div class="book-wrap">
+        <div class="book">
+          <img src="assets/logo.png" alt="Capa do e-book Papa-Tudo" width="640" height="640">
+          <div class="book-strip">110 páginas · PDF</div>
+        </div>
+      </div>
+    </div>
+    <div class="hero-text">
+      <span class="eyebrow">Guia de alimentação infantil · 74 receitas</span>
+      <h1>Seu filho vai lanchar 730 vezes este ano.</h1>
+      <p class="hero-sub">Quantas dessas vezes vai ser biscoito recheado porque você não teve tempo de pensar em outra coisa?</p>
+      <p class="hero-p">Dois lanches por dia, 365 dias. Não dá pra acertar todos. Mas dá pra virar o jogo na maioria — e é disso que este guia trata.</p>
+      <div class="hero-cta">
+        <a data-fb="buy" class="btn" href="https://pay.cakto.com.br/i44h4sj_1074634">Quero as 74 receitas — R$ 27,90</a>
+        <span class="btn-note">Acesso imediato no seu e-mail · 7 dias de garantia</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 3. FAIXA DE NÚMEROS -->
+<div class="numbers">
+  <div class="wrap numbers-grid">
+    <div class="num"><b>74</b><span>receitas</span></div>
+    <div class="num"><b>4</b><span>semanas de cardápio</span></div>
+    <div class="num"><b>15 min</b><span>de preparo</span></div>
+    <div class="num"><b>110</b><span>páginas</span></div>
+  </div>
+</div>
+
+<!-- 4. DOR -->
+<section>
+  <div class="wrap">
+    <h2 class="section-title">Você já viveu as três.</h2>
+    <div class="cards">
+      <div class="card">
+        <span class="hora">São 6h40.</span>
+        <p>A mochila está aberta, ela sai em doze minutos, e a única coisa pronta na casa é o pacote.</p>
+      </div>
+      <div class="card">
+        <span class="hora">São 16h.</span>
+        <p>Ela chega da escola com fome e você abre a geladeira sem ter ideia do que oferecer.</p>
+      </div>
+      <div class="card">
+        <span class="hora">São 18h40.</span>
+        <p>Você está exausta, ela está com fome, e o salgadinho resolve em trinta segundos.</p>
+      </div>
+    </div>
+    <p class="closer">Não é falta de cuidado. É falta de opção pronta na hora certa.</p>
+  </div>
+</section>
+
+<!-- 5. O QUE VOCÊ RECEBE -->
+<section>
+  <div class="wrap">
+    <h2 class="section-title">O que você recebe</h2>
+    <p class="section-sub">Um PDF de 110 páginas que abre no celular e você usa de pé na cozinha.</p>
+    <div class="grid6">
+      <div class="item">
+        <h3>74 receitas testadas</h3>
+        <p>Com tempo, rendimento e ingrediente de mercado de bairro. Nenhuma pede equipamento profissional.</p>
+      </div>
+      <div class="item">
+        <h3>Cardápio de 4 semanas</h3>
+        <p>20 dias com manhã, lancheira e tarde já decididos. Você não escolhe nada.</p>
+      </div>
+      <div class="item">
+        <h3>4 listas de compras</h3>
+        <p>Organizadas na ordem em que você anda no mercado.</p>
+      </div>
+      <div class="item">
+        <h3>12 lancheiras montadas</h3>
+        <p>Base, proteína, fruta e bebida. É só copiar.</p>
+      </div>
+      <div class="item">
+        <h3>Tabela de substituições</h3>
+        <p>O que usar quando faltar ingrediente e o mercado estiver fechado.</p>
+      </div>
+      <div class="item">
+        <h3>Guia de congelamento</h3>
+        <p>O que congela, como porcionar e quanto dura.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 6. DENTRO DO GUIA -->
+<section>
+  <div class="wrap">
+    <h2 class="section-title">Dentro do guia</h2>
+    <p class="section-sub">Sete capítulos de receita, divididos pelos momentos do dia.</p>
+    <div class="chapters">
+      <ol>
+        <li><span class="cap-nome">Café da manhã</span><span class="cap-qtd">12 receitas</span></li>
+        <li><span class="cap-nome">Lancheira da escola</span><span class="cap-qtd">16 receitas</span></li>
+        <li><span class="cap-nome">Lanche da tarde</span><span class="cap-qtd">12 receitas</span></li>
+        <li><span class="cap-nome">Salgados assados</span><span class="cap-qtd">10 receitas</span></li>
+        <li><span class="cap-nome">Doces sem açúcar refinado</span><span class="cap-qtd">10 receitas</span></li>
+        <li><span class="cap-nome">Bebidas e vitaminas</span><span class="cap-qtd">6 receitas</span></li>
+        <li><span class="cap-nome">Mini refeições e jantas rápidas</span><span class="cap-qtd">8 receitas</span></li>
+      </ol>
+    </div>
+    <p class="chapters-note">Mais os capítulos de segurança alimentar, congelamento e criança seletiva. Toda receita vem com tempo, rendimento e tags: congela, sem glúten, sem lactose, sem ovo.</p>
+    <div class="cta-block" style="margin-top:32px">
+      <a data-fb="buy" class="btn" href="https://pay.cakto.com.br/i44h4sj_1074634">Quero as 74 receitas — R$ 27,90</a>
+      <span class="btn-note">Acesso imediato no seu e-mail · 7 dias de garantia</span>
+    </div>
+  </div>
+</section>
+
+<!-- 7. COMO FUNCIONA -->
+<section>
+  <div class="wrap">
+    <h2 class="section-title">Como funciona</h2>
+    <div class="steps">
+      <div class="step">
+        <span class="ico"><svg viewBox="0 0 24 24"><path d="M3 4h2l2.4 11.2a2 2 0 0 0 2 1.6h7.9a2 2 0 0 0 2-1.5L21 8H6"/><circle cx="10" cy="20" r="1.3"/><circle cx="18" cy="20" r="1.3"/></svg></span>
+        <div><h3>1. Você compra</h3><p>Pagamento em cartão ou Pix.</p></div>
+      </div>
+      <div class="step">
+        <span class="ico"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg></span>
+        <div><h3>2. Recebe em 2 minutos</h3><p>O PDF chega no seu e-mail.</p></div>
+      </div>
+      <div class="step">
+        <span class="ico"><svg viewBox="0 0 24 24"><path d="M5 3v8a4 4 0 0 0 8 0V3"/><path d="M9 11v10"/><path d="M18 3c1.6 1.6 1.6 5.4 0 7v11"/></svg></span>
+        <div><h3>3. Usa hoje mesmo</h3><p>Escolhe uma receita e faz agora.</p></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 8. PARA QUEM É / NÃO É -->
+<section>
+  <div class="wrap">
+    <h2 class="section-title">Antes de comprar, leia isto</h2>
+    <div class="fit">
+      <div class="fit-col fit-yes">
+        <h3>É para você se:</h3>
+        <ul>
+          <li><span class="mark-i mark-yes">&#10003;</span><span>O lanche do seu filho virou piloto automático de industrializado</span></li>
+          <li><span class="mark-i mark-yes">&#10003;</span><span>Você quer variar mas não tem repertório na cabeça</span></li>
+          <li><span class="mark-i mark-yes">&#10003;</span><span>Você tem 15 minutos, não uma tarde inteira</span></li>
+          <li><span class="mark-i mark-yes">&#10003;</span><span>Você quer parar de decidir de manhã</span></li>
+        </ul>
+      </div>
+      <div class="fit-col fit-no">
+        <h3>Não é para você se:</h3>
+        <ul>
+          <li><span class="mark-i mark-no">&times;</span><span>Você procura dieta ou plano alimentar prescrito</span></li>
+          <li><span class="mark-i mark-no">&times;</span><span>Seu filho tem alergia diagnosticada e você precisa de orientação clínica (fale com o pediatra dele antes)</span></li>
+          <li><span class="mark-i mark-no">&times;</span><span>Você quer receita gourmet com ingrediente importado</span></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- INSERIR DEPOIMENTOS REAIS AQUI -->
+
+<!-- 9. OFERTA -->
+<section class="offer-section">
+  <div class="wrap">
+    <div class="artband"><img src="assets/banner.jpg" alt="Papa-Tudo: 74 receitas, cardápio de 4 semanas e lista de compras pronta. Acesso no e-mail em até 2 minutos." width="1700" height="566"></div>
+    <div class="offer">
+      <h2>Papa-Tudo — Guia completo</h2>
+      <ul>
+        <li><span class="mark-i mark-yes">&#10003;</span><span>74 receitas testadas, com tempo, rendimento e ingrediente de mercado de bairro</span></li>
+        <li><span class="mark-i mark-yes">&#10003;</span><span>Cardápio de 4 semanas — 20 dias com manhã, lancheira e tarde já decididos</span></li>
+        <li><span class="mark-i mark-yes">&#10003;</span><span>4 listas de compras na ordem dos corredores do mercado</span></li>
+        <li><span class="mark-i mark-yes">&#10003;</span><span>12 lancheiras montadas: base, proteína, fruta e bebida</span></li>
+        <li><span class="mark-i mark-yes">&#10003;</span><span>Tabela com 12 substituições de ingrediente</span></li>
+        <li><span class="mark-i mark-yes">&#10003;</span><span>Guia de congelamento: o que congela, como porcionar e quanto dura</span></li>
+      </ul>
+      <div class="price">R$ 27,90</div>
+      <p class="price-note">à vista ou parcelado no cartão</p>
+      <a data-fb="buy" class="btn btn-lg" href="https://pay.cakto.com.br/i44h4sj_1074634">Quero começar agora</a>
+      <span class="btn-note">Compra segura · Acesso imediato · 7 dias de garantia</span>
+    </div>
+  </div>
+</section>
+
+<!-- 10. GARANTIA -->
+<section>
+  <div class="wrap">
+    <div class="guarantee">
+      <div class="seal" aria-hidden="true">7</div>
+      <h2>Você tem 7 dias para decidir.</h2>
+      <p>Baixe, leia, faça duas ou três receitas. Se achar que não é pra você, peça o reembolso dentro de 7 dias e devolvemos o valor integral. Sem formulário, sem justificativa.</p>
+    </div>
+  </div>
+</section>
+
+<!-- 11. FAQ -->
+<section>
+  <div class="wrap">
+    <div class="center"><h2 class="section-title">Perguntas frequentes</h2></div>
+    <div class="faq" id="faq">
+      <button class="q" aria-expanded="false" aria-controls="a1" id="q1">Como recebo o material?<span class="sign" aria-hidden="true">+</span></button>
+      <div class="a" id="a1" role="region" aria-labelledby="q1" hidden>
+        <p>Assim que o pagamento é confirmado, o PDF chega no e-mail que você cadastrar na compra — em geral em até 2 minutos. No cartão a confirmação é na hora; no Pix, poucos minutos depois. Você baixa no celular ou no computador e o arquivo fica seu.</p>
+      </div>
+
+      <button class="q" aria-expanded="false" aria-controls="a2" id="q2">Serve para qual idade?<span class="sign" aria-hidden="true">+</span></button>
+      <div class="a" id="a2" role="region" aria-labelledby="q2" hidden>
+        <p>O guia foi feito para a rotina de crianças de 0 a 12 anos, e a maior parte das receitas serve da fase em que a criança já come a comida da casa em diante. O capítulo de segurança alimentar marca o que não entra antes de 1 ano, como o mel, e o que oferece risco de engasgo.</p>
+      </div>
+
+      <button class="q" aria-expanded="false" aria-controls="a3" id="q3">Preciso saber cozinhar?<span class="sign" aria-hidden="true">+</span></button>
+      <div class="a" id="a3" role="region" aria-labelledby="q3" hidden>
+        <p>Não. As receitas são escritas passo a passo, com tempo e rendimento em cada uma, e nenhuma pede equipamento profissional. Se você faz um bolo de caneca, faz o que está aqui.</p>
+      </div>
+
+      <button class="q" aria-expanded="false" aria-controls="a4" id="q4">Os ingredientes são caros?<span class="sign" aria-hidden="true">+</span></button>
+      <div class="a" id="a4" role="region" aria-labelledby="q4" hidden>
+        <p>São ingredientes de mercado de bairro. Nada importado, nada de loja especializada. As 4 listas de compras vêm na ordem dos corredores justamente para você comprar o que vai usar e não deixar item parado no armário.</p>
+      </div>
+
+      <button class="q" aria-expanded="false" aria-controls="a5" id="q5">Funciona para criança alérgica?<span class="sign" aria-hidden="true">+</span></button>
+      <div class="a" id="a5" role="region" aria-labelledby="q5" hidden>
+        <p>Todas as receitas trazem tags — sem glúten, sem lactose, sem ovo — e existe uma tabela com 12 substituições de ingrediente. Mas isto não é orientação clínica. Se seu filho tem alergia diagnosticada, converse com o pediatra ou o nutricionista dele antes de usar qualquer receita.</p>
+      </div>
+
+      <button class="q" aria-expanded="false" aria-controls="a6" id="q6">E se eu não gostar?<span class="sign" aria-hidden="true">+</span></button>
+      <div class="a" id="a6" role="region" aria-labelledby="q6" hidden>
+        <p>Você tem 7 dias. Pede o reembolso e devolvemos o valor integral, sem formulário e sem justificativa.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 12. CTA FINAL -->
+<section class="final">
+  <div class="wrap">
+    <h2>O lanche de amanhã já pode estar decidido.</h2>
+    <div class="cta-block">
+      <a data-fb="buy" class="btn" href="https://pay.cakto.com.br/i44h4sj_1074634">Quero as 74 receitas — R$ 27,90</a>
+      <span class="btn-note">Acesso imediato no seu e-mail · 7 dias de garantia</span>
+    </div>
+  </div>
+</section>
+
+<!-- 13. RODAPÉ -->
+<footer>
+  <div class="wrap">
+    <img class="foot-logo" src="assets/logo.png" alt="Papa-Tudo" width="640" height="640">
+    <p class="disclaimer">Este material tem caráter informativo e não substitui orientação de pediatra ou nutricionista. Alergias, restrições e questões de crescimento devem ser conduzidas com o profissional que acompanha a criança.</p>
+    <p class="foot-meta">
+      <strong>Papa-Tudo</strong> — Guia de Alimentação Infantil<br>
+      &copy; 2026 · Todos os direitos reservados<br>
+      Suporte: suporte@papatudo.com.br
+    </p>
+  </div>
+</footer>
+
+<!-- BARRA FIXA MOBILE -->
+<div class="sticky" id="sticky">
+  <div class="sp"><b>R$ 27,90</b><span>à vista ou parcelado</span></div>
+  <a data-fb="buy" class="btn" href="https://pay.cakto.com.br/i44h4sj_1074634">Quero as 74 receitas</a>
+</div>
+
+<script>
+(function(){
+  var faq = document.getElementById('faq');
+  faq.addEventListener('click', function(e){
+    var btn = e.target.closest('.q');
+    if(!btn) return;
+    var open = btn.getAttribute('aria-expanded') === 'true';
+    var panel = document.getElementById(btn.getAttribute('aria-controls'));
+    btn.setAttribute('aria-expanded', open ? 'false' : 'true');
+    btn.querySelector('.sign').textContent = open ? '+' : '–';
+    panel.hidden = open;
+  });
+
+
+  var bar = document.getElementById('sticky');
+  var hero = document.getElementById('hero');
+  function toggle(show){
+    bar.classList.toggle('on', show);
+    document.body.classList.toggle('has-sticky', show);
+  }
+  if('IntersectionObserver' in window){
+    new IntersectionObserver(function(entries){
+      toggle(!entries[0].isIntersecting);
+    }, {threshold:0}).observe(hero);
+  } else {
+    window.addEventListener('scroll', function(){
+      toggle(window.scrollY > hero.offsetHeight);
+    }, {passive:true});
+  }
+})();
+</script>
+</body>
+</html>
