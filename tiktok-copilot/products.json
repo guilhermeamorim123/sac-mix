@@ -1,5 +1,5 @@
 {
-  "_comentario": "Edite este arquivo com os produtos da live. O agente recarrega a cada live.",
+  "_comentario": "Fallback do modo local (STORE_BACKEND=sqlite). Com o Supabase ligado, quem manda sao as tabelas produtos/frete_regras/base_conhecimento, editadas pelo painel.",
   "produtos": [
     {
       "nome": "Fone Bluetooth TWS Pro",

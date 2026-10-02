@@ -1,0 +1,286 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The 4-Hour Listing Week — Claude workflows for real estate agents</title>
+<meta name="description" content="Eight workflows and 47 prompts that take the writing out of a real estate agent's week — and make AI sound like you, not like a brochure.">
+
+<!-- Meta Pixel — replace PIXEL_ID before going live -->
+<script>
+!function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;
+n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;
+t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,
+document,'script','https://connect.facebook.net/en_US/fbevents.js');
+fbq('init', 'PIXEL_ID');
+fbq('track', 'PageView');
+</script>
+
+<style>
+  :root {
+    --ink: #16202B;
+    --soft: #4A5866;
+    --faint: #7C8894;
+    --rule: #D3DAE0;
+    --brand: #0E5C7A;
+    --accent: #B5541F;
+    --paper: #FBFBF9;
+    --card: #FFFFFF;
+    --sunk: #EEF2F4;
+
+    --display: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    --body: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+    --gutter: clamp(1.25rem, 5vw, 2.5rem);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ink: #E6EBEF; --soft: #A7B4BF; --faint: #7A8894; --rule: #2A3440;
+      --brand: #4FA8C7; --accent: #E08B4E; --paper: #10171F; --card: #16202B;
+      --sunk: #1B2733;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ink: #E6EBEF; --soft: #A7B4BF; --faint: #7A8894; --rule: #2A3440;
+    --brand: #4FA8C7; --accent: #E08B4E; --paper: #10171F; --card: #16202B;
+    --sunk: #1B2733;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--paper); color: var(--ink);
+    font-family: var(--body); font-size: 1.0625rem; line-height: 1.62;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 58rem; margin: 0 auto; padding: 0 var(--gutter); }
+  .narrow { max-width: 38rem; }
+  section { padding-block: clamp(3rem, 7vw, 5rem); }
+  section + section { border-top: 1px solid var(--rule); }
+
+  h1, h2, h3, .eyebrow, .btn, .price__num, .mod__no, .stat__num, .stat__label {
+    font-family: var(--display); text-wrap: balance;
+  }
+  .eyebrow {
+    font-size: 0.72rem; font-weight: 700; letter-spacing: 0.18em;
+    text-transform: uppercase; color: var(--accent); margin: 0 0 1rem;
+  }
+  h1 {
+    font-size: clamp(2.3rem, 6vw, 3.9rem); line-height: 1.02;
+    letter-spacing: -0.035em; font-weight: 700; margin: 0 0 1.3rem;
+  }
+  h2 {
+    font-size: clamp(1.5rem, 3.2vw, 2.15rem); line-height: 1.14;
+    letter-spacing: -0.022em; font-weight: 700; margin: 0 0 1.2rem;
+  }
+  h3 { font-size: 1rem; font-weight: 700; margin: 0 0 0.3rem; letter-spacing: -0.01em; }
+  p { margin: 0 0 1.1rem; max-width: 36rem; }
+  .lede { font-size: 1.18rem; line-height: 1.5; color: var(--soft); }
+
+  .hero { padding-block: clamp(3.5rem, 8vw, 6rem) clamp(2.5rem, 5vw, 3.5rem); }
+
+  .stats {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px;
+    background: var(--rule); border: 1px solid var(--rule); margin-top: 2.2rem;
+    max-width: 34rem;
+  }
+  .stat { background: var(--card); padding: 0.95rem 1.1rem; }
+  .stat__num { display: block; font-size: 1.6rem; font-weight: 700; letter-spacing: -0.02em;
+    line-height: 1.1; font-variant-numeric: tabular-nums; }
+  .stat__label { font-size: 0.68rem; letter-spacing: 0.09em; text-transform: uppercase; color: var(--faint); }
+
+  .quotebox {
+    background: var(--sunk); border-left: 3px solid var(--accent);
+    padding: 1.3rem 1.5rem; margin: 0 0 1.4rem; max-width: 36rem;
+  }
+  .quotebox p { margin: 0; font-style: italic; color: var(--soft); }
+
+  .mods { display: grid; gap: 1px; background: var(--rule);
+    border: 1px solid var(--rule); grid-template-columns: 1fr; }
+  @media (min-width: 44rem) { .mods { grid-template-columns: 1fr 1fr; } }
+  .mod { background: var(--card); padding: 1.2rem 1.3rem;
+    display: grid; grid-template-columns: 2.1rem 1fr; gap: 0 0.4rem; }
+  .mod__no { font-size: 0.78rem; color: var(--accent); font-variant-numeric: tabular-nums; padding-top: 0.2rem; }
+  .mod p { font-size: 0.9rem; color: var(--soft); margin: 0; }
+
+  .ticks { list-style: none; margin: 0 0 1.2rem; padding: 0; display: grid; gap: 0.6rem; max-width: 36rem; }
+  .ticks li { padding-left: 1.5rem; position: relative; font-size: 0.98rem; line-height: 1.5; }
+  .ticks li::before { content: ""; position: absolute; left: 0; top: 0.62em;
+    width: 0.7rem; height: 1px; background: var(--brand); }
+  .ticks--no li::before { background: var(--accent); }
+
+  .offer { border: 1px solid var(--ink); background: var(--card);
+    padding: clamp(1.5rem, 4vw, 2.4rem); max-width: 32rem; }
+  .price { display: flex; align-items: baseline; gap: 0.55rem; margin-bottom: 0.4rem; }
+  .price__num { font-size: 3rem; font-weight: 700; letter-spacing: -0.035em; line-height: 1;
+    font-variant-numeric: tabular-nums; }
+  .price__note { color: var(--faint); font-size: 0.88rem; }
+  .btn {
+    display: inline-block; background: var(--accent); color: #FFF8F3;
+    font-size: 1rem; font-weight: 700; letter-spacing: -0.005em;
+    padding: 0.9rem 1.9rem; border: 1px solid var(--accent);
+    text-decoration: none; margin-top: 1.1rem; cursor: pointer;
+  }
+  .btn:hover { filter: brightness(1.08); }
+  .btn:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; }
+  .guarantee { font-size: 0.85rem; color: var(--faint); margin: 1rem 0 0; }
+
+  details { border-bottom: 1px solid var(--rule); padding: 0.9rem 0; max-width: 40rem; }
+  summary { font-family: var(--display); font-weight: 600; font-size: 0.98rem; cursor: pointer;
+    list-style: none; display: flex; justify-content: space-between; gap: 1rem; }
+  summary::-webkit-details-marker { display: none; }
+  summary::after { content: "+"; color: var(--accent); font-weight: 400; }
+  details[open] summary::after { content: "\2013"; }
+  details p { margin: 0.7rem 0 0; font-size: 0.93rem; color: var(--soft); }
+  summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+
+  footer { padding-block: 2.2rem 3rem; border-top: 1px solid var(--rule); }
+  .legal { font-size: 0.8rem; color: var(--faint); max-width: 44rem; line-height: 1.55; }
+</style>
+</head>
+<body>
+
+<section class="hero">
+  <div class="wrap">
+    <p class="eyebrow">Claude workflows for real estate agents</p>
+    <h1>You didn't get licensed to write.</h1>
+    <p class="lede">But last week you wrote four listing descriptions, eleven
+      follow-up emails, a dozen social captions and a market update nobody read.
+      That's most of a day, and none of it was the part that closes deals.</p>
+    <a class="btn" href="#offer" onclick="fbq('track','InitiateCheckout')">Get the system — $47</a>
+    <div class="stats">
+      <div class="stat"><span class="stat__num">11</span><span class="stat__label">Workflows</span></div>
+      <div class="stat"><span class="stat__num">47</span><span class="stat__label">Prompts</span></div>
+      <div class="stat"><span class="stat__num">60</span><span class="stat__label">Min / week</span></div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <p class="eyebrow">Why it hasn't worked so far</p>
+    <h2>The fix isn't a better prompt</h2>
+    <p>Every agent who tried AI and quit did it for the same reason: it writes
+      like a brochure.</p>
+    <div class="quotebox">
+      <p>"Welcome to this stunning residence, nestled in a sought-after
+        neighborhood…"</p>
+    </div>
+    <p>You can spot it in a second. So can your clients, and so can the other
+      agent's clients — because they are all using the same average of every
+      listing ever published.</p>
+    <p><strong>The fix is giving the AI a sample of you before you ask it for
+      anything.</strong> Module 1 takes twenty minutes and is the reason the
+      other ten work. Skip it and you get the same generic output as everyone
+      else.</p>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <p class="eyebrow">Inside</p>
+    <h2>Eleven workflows you set up once</h2>
+    <div class="mods">
+      <div class="mod"><span class="mod__no">01</span><div><h3>Your Voice File</h3><p>The 20-minute setup that stops AI sounding generic.</p></div></div>
+      <div class="mod"><span class="mod__no">02</span><div><h3>Listing Descriptions</h3><p>Facts in, finished description out, in 90 seconds.</p></div></div>
+      <div class="mod"><span class="mod__no">03</span><div><h3>The Follow-Up Engine</h3><p>Seven touchpoints, personalized per lead.</p></div></div>
+      <div class="mod"><span class="mod__no">04</span><div><h3>Social Posts</h3><p>One listing becomes twelve posts across four platforms.</p></div></div>
+      <div class="mod"><span class="mod__no">05</span><div><h3>The Neighborhood Guide</h3><p>The asset that makes you the local expert.</p></div></div>
+      <div class="mod"><span class="mod__no">06</span><div><h3>Objection Scripts</h3><p>Your real objections, answered in your words.</p></div></div>
+      <div class="mod"><span class="mod__no">07</span><div><h3>Presentation Prep</h3><p>Walk in knowing the street and the pushback.</p></div></div>
+      <div class="mod"><span class="mod__no">08</span><div><h3>Projects &amp; Skills</h3><p>Make Claude carry your voice automatically, every time.</p></div></div>
+      <div class="mod"><span class="mod__no">09</span><div><h3>The First Five Minutes</h3><p>Response speed, and the reply that gets answered.</p></div></div>
+      <div class="mod"><span class="mod__no">10</span><div><h3>Listing Visuals</h3><p>Short video and images, and the line you don't cross.</p></div></div>
+      <div class="mod"><span class="mod__no">11</span><div><h3>The Weekly Hour</h3><p>Running all of it in sixty minutes every Monday.</p></div></div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <p class="eyebrow">The part most prompt packs skip</p>
+    <h2>The guardrails are written in</h2>
+    <p>Every prompt that touches a client carries the instructions that keep you
+      out of trouble:</p>
+    <ul class="ticks">
+      <li><strong>Never invent a local fact.</strong> The model writes; it does not research.</li>
+      <li><strong>Delete rather than guess</strong> a detail about a lead they never gave you.</li>
+      <li><strong>Never promise an outcome you don't control</strong> — no predictions about rates, prices or timelines.</li>
+      <li><strong>Fair housing</strong> note in the module where it actually matters.</li>
+      <li><strong>Label every generated image.</strong> A buyer should never be surprised at the door.</li>
+    </ul>
+    <p>You're the one who signs the email. That should be built into the tool,
+      not left to you to remember at 11pm.</p>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <p class="eyebrow">Honest</p>
+    <h2>This is not for you if</h2>
+    <ul class="ticks ticks--no">
+      <li>You want leads. This doesn't get leads, and no prompt will.</li>
+      <li>You want it fully automated. You read and approve everything that goes out.</li>
+      <li>You already have a writing process you like.</li>
+    </ul>
+  </div>
+</section>
+
+<section id="offer">
+  <div class="wrap">
+    <p class="eyebrow">Get it</p>
+    <h2>The 4-Hour Listing Week</h2>
+    <div class="offer">
+      <div class="price">
+        <span class="price__num">$47</span>
+        <span class="price__note">one time</span>
+      </div>
+      <p style="color: var(--soft); font-size: 0.94rem;">
+        17-page PDF. 11 modules, 47 copy-paste prompts. Built for Claude, works
+        with any assistant. Instant download.
+      </p>
+      <a class="btn" id="buy" href="STRIPE_PAYMENT_LINK">Get instant access</a>
+      <p class="guarantee">Secure checkout by Stripe. If it isn't useful, reply
+        to your receipt within 14 days and I'll refund it.</p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <p class="eyebrow">Questions</p>
+    <h2>Before you buy</h2>
+    <details><summary>Do I need to pay for Claude?</summary>
+      <p>No. Everything in the course works on the free tier. Projects and Skills — Module 8 — need a paid plan, and that module tells you plainly whether it's worth it for how you work.</p></details>
+    <details><summary>Will this work with ChatGPT or Gemini?</summary>
+      <p>Yes. The prompts are written to work anywhere. Module 8 is Claude-specific because Projects and Skills are what remove the repetitive setup — the other ten modules are tool-agnostic.</p></details>
+    <details><summary>Is this just a list of prompts?</summary>
+      <p>The prompts are there, but the prompts aren't the product. The product is Module 1 — teaching the AI your voice — which is what makes the other prompts produce something you'd actually send.</p></details>
+    <details><summary>How long until I'm using it?</summary>
+      <p>Module 1 takes twenty minutes and you can write your first listing description right after. The full setup, including Projects and Skills, is about three hours spread over a week.</p></details>
+    <details><summary>What do I get, exactly?</summary>
+      <p>A 17-page PDF, delivered instantly after checkout. No subscription, no login, no course platform.</p></details>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <p class="legal">
+      This course teaches workflows for using AI assistants in real estate work.
+      It does not provide legal, financial or brokerage advice, and it makes no
+      claim about income, listings won or time to sale. You remain responsible
+      for everything you publish and send, including compliance with fair
+      housing rules and your local licensing requirements.
+    </p>
+    <p class="legal"><strong>Before going live:</strong> replace
+      <code>PIXEL_ID</code> and <code>STRIPE_PAYMENT_LINK</code>, and add
+      contact, terms and privacy links here.</p>
+  </div>
+</footer>
+
+<script>
+  document.getElementById('buy').addEventListener('click', function () {
+    if (window.fbq) fbq('track', 'InitiateCheckout');
+  });
+</script>
+</body>
+</html>

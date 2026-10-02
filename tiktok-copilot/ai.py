@@ -17,7 +17,9 @@ import logging
 
 import anthropic
 
-from catalog import as_prompt_block
+from catalog import Catalog
+from custo import Consumo
+from config import Settings
 from models import Analysis, ChatMessage
 
 log = logging.getLogger(__name__)
@@ -95,14 +97,30 @@ _SCHEMA = {
 
 
 class Classifier:
-    def __init__(self, api_key: str, model: str, produtos: list[dict], frete: dict):
+    def __init__(self, api_key: str, model: str, catalogo: Catalog, settings: Settings):
         self._client = anthropic.AsyncAnthropic(api_key=api_key)
         self._model = model
+        self._system: list[dict] = []
+        self.consumo = Consumo(model)
+        self.recarregar(catalogo, settings)
+
+    def recarregar(self, catalogo: Catalog, settings: Settings) -> None:
+        """Reconstroi o system prompt.
+
+        Chamado quando o lojista mexe no catalogo ou no tom de voz pelo painel
+        no meio da live. Custa um cache-miss na proxima rajada -- barato perto
+        de responder com preco velho.
+        """
+        contexto = catalogo.as_prompt_block()
+        extra = settings.prompt_extra()
+        if extra:
+            contexto += f"\n\n{extra}"
+
         self._system = [
             {"type": "text", "text": INSTRUCOES},
             {
                 "type": "text",
-                "text": as_prompt_block(produtos, frete),
+                "text": contexto,
                 # Breakpoint do cache: tudo acima e estavel durante a live.
                 "cache_control": {"type": "ephemeral"},
             },
@@ -121,7 +139,11 @@ class Classifier:
         try:
             resp = await self._client.messages.create(
                 model=self._model,
-                max_tokens=4000,
+                # Folga de proposito. O Opus 5 pensa por padrao, e o pensamento
+                # cabe DENTRO do max_tokens -- apertado aqui, o JSON vem cortado
+                # e o lote inteiro cai para o fallback manual. So se paga o que
+                # for gerado, entao a folga nao custa nada.
+                max_tokens=12000,
                 system=self._system,
                 output_config={
                     "effort": "low",  # classificacao curta: latencia importa mais que profundidade
@@ -135,8 +157,19 @@ class Classifier:
             log.error("Falha ao classificar lote de %d msg: %s", len(batch), exc)
             return [_fallback(m) for m in batch]
 
+        self.consumo.somar(resp.usage)
+
         if resp.stop_reason == "refusal":
             log.warning("Lote recusado pelos filtros de seguranca; caindo para manual.")
+            return [_fallback(m) for m in batch]
+
+        if resp.stop_reason == "max_tokens":
+            # Resposta cortada no meio: o JSON nao fecha e o lote inteiro cai
+            # para manual. Se aparecer, suba o max_tokens.
+            log.error(
+                "Resposta truncada em max_tokens com %d mensagens no lote. "
+                "O lote foi para manual -- suba o max_tokens em ai.py.", len(batch)
+            )
             return [_fallback(m) for m in batch]
 
         texto = next((b.text for b in resp.content if b.type == "text"), "")

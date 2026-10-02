@@ -1,0 +1,553 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>Das Selbstversorger-Jahr</title>
+<style>
+  @page {
+    size: A4;
+    margin: 22mm 20mm 20mm 20mm;
+  }
+  @page :first { margin: 0; }
+
+  :root {
+    --ink: #1A231C;
+    --soft: #4B5750;
+    --faint: #7D877E;
+    --rule: #C8CCBF;
+    --beet: #7A2231;
+    --moss: #4A5D3A;
+    --wheat: #8A6E22;
+    --sunk: #F1F2EB;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    font-family: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
+    font-size: 10.5pt;
+    line-height: 1.55;
+    color: var(--ink);
+  }
+
+  h1, h2, h3, h4, .label, th, .cover__meta, .toc__no {
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  }
+
+  /* ---------- Cover ---------- */
+  .cover {
+    height: 297mm;
+    padding: 30mm 22mm;
+    background: var(--ink);
+    color: #E9EAE3;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    page-break-after: always;
+  }
+  .cover__eyebrow {
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-size: 8.5pt;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: #C4A24A;
+  }
+  .cover h1 {
+    font-size: 44pt;
+    line-height: 1.0;
+    letter-spacing: -0.03em;
+    margin: 0 0 8mm;
+    font-weight: 700;
+  }
+  .cover__sub {
+    font-size: 14pt;
+    line-height: 1.35;
+    color: #B9C0B4;
+    max-width: 120mm;
+    margin: 0;
+  }
+  .cover__rule { height: 2px; background: #7A2231; width: 40mm; margin: 10mm 0; }
+  .cover__meta { font-size: 9pt; color: #8B9389; letter-spacing: 0.04em; }
+
+  /* ---------- Structure ---------- */
+  .chapter { page-break-before: always; }
+
+  h2 {
+    font-size: 20pt;
+    line-height: 1.12;
+    letter-spacing: -0.02em;
+    margin: 0 0 2mm;
+    font-weight: 700;
+  }
+  .label {
+    font-size: 8pt;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--beet);
+    margin: 0 0 3mm;
+    display: block;
+  }
+  h3 {
+    font-size: 11.5pt;
+    font-weight: 700;
+    margin: 7mm 0 2mm;
+    letter-spacing: -0.01em;
+  }
+  h4 {
+    font-size: 10pt;
+    font-weight: 700;
+    margin: 5mm 0 1.5mm;
+    color: var(--soft);
+  }
+  p { margin: 0 0 3.2mm; }
+  .intro { font-size: 11.5pt; color: var(--soft); line-height: 1.5; margin-bottom: 6mm; }
+
+  ul, ol { margin: 0 0 3.5mm; padding-left: 5mm; }
+  li { margin-bottom: 1.4mm; }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 9pt;
+    margin: 3mm 0 5mm;
+    page-break-inside: avoid;
+  }
+  th {
+    text-align: left;
+    font-size: 7.5pt;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--faint);
+    border-bottom: 1.5px solid var(--ink);
+    padding: 1.5mm 2mm 1.5mm 0;
+    font-weight: 600;
+  }
+  td {
+    padding: 1.6mm 2mm 1.6mm 0;
+    border-bottom: 1px solid var(--rule);
+    vertical-align: top;
+  }
+  tbody tr:last-child td { border-bottom: 1.5px solid var(--ink); }
+  .num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+  .box {
+    background: var(--sunk);
+    border-left: 2.5px solid var(--moss);
+    padding: 4mm 5mm;
+    margin: 4mm 0 5mm;
+    page-break-inside: avoid;
+  }
+  .box p:last-child { margin-bottom: 0; }
+  .box__title {
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-size: 8pt;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--moss);
+    display: block;
+    margin-bottom: 2mm;
+  }
+  .box--warn { border-left-color: var(--beet); background: #F7EFF0; }
+  .box--warn .box__title { color: var(--beet); }
+
+  /* ---------- TOC ---------- */
+  .toc { page-break-after: always; }
+  .toc ol { list-style: none; padding: 0; margin: 6mm 0 0; }
+  .toc li {
+    display: grid;
+    grid-template-columns: 10mm 1fr;
+    gap: 0 3mm;
+    padding: 2.6mm 0;
+    border-bottom: 1px solid var(--rule);
+  }
+  .toc__no { font-size: 9pt; color: var(--beet); font-variant-numeric: tabular-nums; padding-top: 0.6mm; }
+  .toc__t { font-weight: 600; font-size: 10.5pt; }
+  .toc__d { color: var(--faint); font-size: 9pt; display: block; }
+
+  .cal td:first-child { font-weight: 700; width: 16mm; }
+</style>
+</head>
+<body>
+
+<div class="cover">
+  <div>
+    <p class="cover__eyebrow">Anbauplan &amp; Vorratssystem</p>
+  </div>
+  <div>
+    <h1>Das Selbst&shy;versorger&#8209;Jahr</h1>
+    <div class="cover__rule"></div>
+    <p class="cover__sub">Zwölf Monate ernten auf 40&nbsp;Quadratmetern.
+      Ein Anbau-, Nachsaat- und Einlagerungsplan für den deutschen Garten.</p>
+  </div>
+  <div>
+    <p class="cover__meta">31 Kulturen · 8 Kapitel · Aussaatkalender zum Ausdrucken</p>
+  </div>
+</div>
+
+<div class="toc">
+  <span class="label">Inhalt</span>
+  <h2>Was in diesem Buch steht</h2>
+  <p class="intro">Acht Kapitel, aufeinander aufbauend. Wer zum ersten Mal anbaut,
+    liest Kapitel&nbsp;8 zuerst.</p>
+  <ol>
+    <li><span class="toc__no">01</span><span><span class="toc__t">Die Fläche einteilen</span>
+      <span class="toc__d">40&nbsp;m² in vier Beete, Wege und einen Kompostplatz — mit Maßen</span></span></li>
+    <li><span class="toc__no">02</span><span><span class="toc__t">Der Aussaatkalender</span>
+      <span class="toc__d">Monat für Monat: säen, pflanzen, ernten, einlagern</span></span></li>
+    <li><span class="toc__no">03</span><span><span class="toc__t">Fruchtfolge ohne Tabelle im Kopf</span>
+      <span class="toc__d">Vier Beete, vier Jahre, ein Rotationsschema</span></span></li>
+    <li><span class="toc__no">04</span><span><span class="toc__t">Nachsaat: die eigentliche Verdopplung</span>
+      <span class="toc__d">Dieselbe Fläche zweimal beernten</span></span></li>
+    <li><span class="toc__no">05</span><span><span class="toc__t">Wintergemüse</span>
+      <span class="toc__d">Was von November bis März draußen steht</span></span></li>
+    <li><span class="toc__no">06</span><span><span class="toc__t">Einlagern statt wegwerfen</span>
+      <span class="toc__d">Temperaturen, Luftfeuchte und Haltbarkeit je Kultur</span></span></li>
+    <li><span class="toc__no">07</span><span><span class="toc__t">Einkochen und Fermentieren</span>
+      <span class="toc__d">Die Grundverfahren — mit einem klaren Wort zur Sicherheit</span></span></li>
+    <li><span class="toc__no">08</span><span><span class="toc__t">Das erste Jahr realistisch</span>
+      <span class="toc__d">Sieben Kulturen statt einunddreißig, und was garantiert scheitert</span></span></li>
+  </ol>
+</div>
+
+<!-- ============ 1 ============ -->
+<div class="chapter">
+  <span class="label">Kapitel 01</span>
+  <h2>Die Fläche einteilen</h2>
+  <p class="intro">Bevor irgendetwas gesät wird, wird gemessen. Ein Beet, das man nicht
+    von beiden Seiten erreicht, wird betreten — und ein betretener Boden verdichtet.</p>
+
+  <h3>Die Grundregel: 1,20&nbsp;Meter</h3>
+  <p>Ein Beet ist so breit, dass Sie die Mitte von beiden Seiten erreichen, ohne
+    hineinzutreten. Für die meisten Menschen sind das 1,20&nbsp;m. Alles darüber führt
+    dazu, dass Sie irgendwann doch hineinsteigen, meist im Mai, wenn es eilt.</p>
+
+  <h3>Die Aufteilung von 40&nbsp;m²</h3>
+  <table>
+    <thead><tr><th>Element</th><th>Maß</th><th class="num">Fläche</th></tr></thead>
+    <tbody>
+      <tr><td>Beet A bis D</td><td>je 1,20 × 6,00 m</td><td class="num">28,8 m²</td></tr>
+      <tr><td>Hauptweg</td><td>0,60 × 6,00 m</td><td class="num">3,6 m²</td></tr>
+      <tr><td>Trennwege (3×)</td><td>je 0,40 × 6,00 m</td><td class="num">7,2 m²</td></tr>
+      <tr><td>Kompost und Geräte</td><td>Ecke, ca. 1,20 × 1,20 m</td><td class="num">1,4 m²</td></tr>
+    </tbody>
+  </table>
+  <p>Knapp 29&nbsp;m² reine Anbaufläche. Die 11&nbsp;m² Weg sind kein Verlust — sie sind
+    der Grund, warum der Boden locker bleibt.</p>
+
+  <h3>Wege richtig anlegen</h3>
+  <p>Rindenmulch oder Holzhäcksel, 5&nbsp;cm hoch, auf Pappe. Die Pappe erstickt das
+    Gras im ersten Jahr und ist nach zwei Jahren verrottet. Kies ist ein Fehler:
+    Er wandert in die Beete und bleibt dort für immer.</p>
+
+  <div class="box">
+    <span class="box__title">Wenn Sie weniger Platz haben</span>
+    <p>Bei 20&nbsp;m² halbieren Sie die Beetlänge auf 3&nbsp;m, nicht die Anzahl der Beete.
+      Die vier Beete werden für die Fruchtfolge in Kapitel&nbsp;3 gebraucht — drei Beete
+      brechen das System.</p>
+  </div>
+
+  <h3>Himmelsrichtung</h3>
+  <p>Beete möglichst in Nord-Süd-Richtung anlegen, damit beide Beetseiten gleich viel
+    Sonne bekommen. Hohe Kulturen — Stangenbohnen, Tomaten, Mais — kommen ans Nordende,
+    sonst beschatten sie den Rest.</p>
+</div>
+
+<!-- ============ 2 ============ -->
+<div class="chapter">
+  <span class="label">Kapitel 02</span>
+  <h2>Der Aussaatkalender</h2>
+  <p class="intro">Der Kalender ist das Herz des Plans. Er ist auf mittlere Lagen
+    ausgelegt. Norddeutschland und Höhenlagen verschieben um ein bis zwei Wochen
+    nach hinten, Weinbauklima um ein bis zwei Wochen nach vorn.</p>
+
+  <table class="cal">
+    <thead><tr><th>Monat</th><th>Vorziehen &amp; Säen</th><th>Ernten &amp; Einlagern</th></tr></thead>
+    <tbody>
+      <tr><td>Januar</td><td>Chili und Paprika auf der Fensterbank. Saatgut bestellen, Beetplan festlegen.</td><td>Grünkohl, Rosenkohl, Porree, Feldsalat</td></tr>
+      <tr><td>Februar</td><td>Tomaten vorkultivieren (ab Monatsmitte). Frühbeet vorbereiten. Kartoffeln vorkeimen.</td><td>Feldsalat, Pastinake, Winterportulak</td></tr>
+      <tr><td>März</td><td>Radieschen, Spinat, Erbsen, Möhren direkt säen. Kohl und Salat vorziehen.</td><td>Letzter Feldsalat, erster Bärlauch</td></tr>
+      <tr><td>April</td><td>Kartoffeln legen. Kohl auspflanzen. Zwiebeln stecken. Möhren nachsäen.</td><td>Radieschen, Spinat, Rhabarber</td></tr>
+      <tr><td>Mai</td><td><strong>Nach den Eisheiligen (15.&nbsp;Mai):</strong> Tomaten, Gurken, Zucchini, Bohnen ins Freiland.</td><td>Salat, Radieschen, Spinat, erste Erbsen</td></tr>
+      <tr><td>Juni</td><td>Nachsaat startet: Buschbohnen, Herbstsalat, Rote Bete. Grünkohl vorziehen.</td><td>Erbsen, Salat, Kohlrabi, Mangold</td></tr>
+      <tr><td>Juli</td><td>Letzte Buschbohnen. Wintergemüse säen: Grünkohl auspflanzen, Winterportulak.</td><td>Zucchini, Bohnen, erste Tomaten. <strong>Einkochen beginnt.</strong></td></tr>
+      <tr><td>August</td><td>Feldsalat, Winterspinat, Rucola säen. Zuckerhut pflanzen.</td><td>Hauptsaison: Tomaten, Gurken, Bohnen, Zwiebeln. <strong>Fermentieren.</strong></td></tr>
+      <tr><td>September</td><td>Letzte Chance für Feldsalat. Knoblauch stecken.</td><td>Kartoffeln, Kürbis, Rote Bete, Möhren. <strong>Einlagern beginnt.</strong></td></tr>
+      <tr><td>Oktober</td><td>Winterheckenzwiebel. Beete abdecken oder Gründüngung säen.</td><td>Pastinake, Porree, Kürbis, letzte Möhren</td></tr>
+      <tr><td>November</td><td>Nichts mehr säen. Kompost umsetzen, Geräte reinigen.</td><td>Rosenkohl, Porree, Feldsalat, Zuckerhut</td></tr>
+      <tr><td>Dezember</td><td>Planung fürs Folgejahr, Fruchtfolge um ein Beet weiterdrehen.</td><td><strong>Grünkohl — erst nach dem ersten Frost.</strong></td></tr>
+    </tbody>
+  </table>
+
+  <div class="box">
+    <span class="box__title">Die Eisheiligen</span>
+    <p>Vom 11. bis 15.&nbsp;Mai — Mamertus, Pankratius, Servatius, Bonifatius und die
+      Kalte Sophie. Es ist keine Bauernregel aus Aberglauben, sondern eine statistisch
+      belegte Spätfrostperiode. Wer Tomaten am 5.&nbsp;Mai auspflanzt, gewinnt zehn Tage
+      oder verliert die ganze Pflanze.</p>
+  </div>
+</div>
+
+<!-- ============ 3 ============ -->
+<div class="chapter">
+  <span class="label">Kapitel 03</span>
+  <h2>Fruchtfolge ohne Tabelle im Kopf</h2>
+  <p class="intro">Dieselbe Kultur zweimal hintereinander auf demselben Beet zehrt den
+    Boden einseitig aus und züchtet die passenden Krankheiten heran. Die Lösung ist
+    kein Regelwerk, sondern ein Kreis mit vier Positionen.</p>
+
+  <h3>Die vier Gruppen</h3>
+  <table>
+    <thead><tr><th>Gruppe</th><th>Kulturen</th><th>Nährstoffbedarf</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Starkzehrer</strong></td><td>Kohl, Kartoffeln, Kürbis, Zucchini, Tomaten, Gurken, Mais</td><td>Hoch — Kompost im Frühjahr</td></tr>
+      <tr><td><strong>Mittelzehrer</strong></td><td>Möhren, Zwiebeln, Rote Bete, Mangold, Spinat, Porree, Knoblauch</td><td>Mittel — kein frischer Kompost</td></tr>
+      <tr><td><strong>Schwachzehrer</strong></td><td>Salat, Radieschen, Feldsalat, Kräuter, Rucola, Erbsen als Nachsaat</td><td>Gering — nichts zusätzlich</td></tr>
+      <tr><td><strong>Leguminosen</strong></td><td>Erbsen, Bohnen, Klee als Gründüngung</td><td>Reichern Stickstoff an</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Der Kreis</h3>
+  <p>Jedes Beet durchläuft die vier Positionen in vier Jahren. Im Jahr&nbsp;5 beginnt es
+    von vorn — und der Boden hat sich in der Leguminosen-Phase erholt.</p>
+  <table>
+    <thead><tr><th>Beet</th><th class="num">Jahr 1</th><th class="num">Jahr 2</th><th class="num">Jahr 3</th><th class="num">Jahr 4</th></tr></thead>
+    <tbody>
+      <tr><td><strong>A</strong></td><td>Starkzehrer</td><td>Mittelzehrer</td><td>Schwachzehrer</td><td>Leguminosen</td></tr>
+      <tr><td><strong>B</strong></td><td>Mittelzehrer</td><td>Schwachzehrer</td><td>Leguminosen</td><td>Starkzehrer</td></tr>
+      <tr><td><strong>C</strong></td><td>Schwachzehrer</td><td>Leguminosen</td><td>Starkzehrer</td><td>Mittelzehrer</td></tr>
+      <tr><td><strong>D</strong></td><td>Leguminosen</td><td>Starkzehrer</td><td>Mittelzehrer</td><td>Schwachzehrer</td></tr>
+    </tbody>
+  </table>
+  <p>Sie müssen sich nichts merken. Schreiben Sie im Dezember die vier Wörter auf vier
+    Holzstecker und stecken Sie sie ein Beet weiter.</p>
+
+  <div class="box">
+    <span class="box__title">Die eine Ausnahme</span>
+    <p>Kartoffeln und Tomaten sind beide Nachtschattengewächse und teilen sich die
+      Krautfäule. Sie gehören nie ins selbe Beet und nie direkt nacheinander — auch
+      wenn beide Starkzehrer sind. Tomaten deshalb besser ans Beetende oder in einen
+      geschützten Extraplatz.</p>
+  </div>
+</div>
+
+<!-- ============ 4 ============ -->
+<div class="chapter">
+  <span class="label">Kapitel 04</span>
+  <h2>Nachsaat: die eigentliche Verdopplung</h2>
+  <p class="intro">Der Unterschied zwischen einem Garten, der von Juni bis September
+    liefert, und einem, der zwölf Monate liefert, ist nicht die Fläche. Es ist die
+    zweite Runde auf derselben Fläche.</p>
+
+  <h3>Das Prinzip</h3>
+  <p>Frühe Kulturen räumen das Beet im Juni oder Juli. Wer dann nichts nachsät, lässt
+    die halbe Saison ungenutzt. Entscheidend ist, dass die Nachsaat schon vorbereitet
+    ist, wenn geerntet wird — nicht erst dann besorgt wird.</p>
+
+  <h3>Bewährte Paare</h3>
+  <table>
+    <thead><tr><th>Erste Kultur</th><th>Räumt das Beet</th><th>Nachsaat</th></tr></thead>
+    <tbody>
+      <tr><td>Radieschen</td><td>Mai</td><td>Möhren oder Buschbohnen</td></tr>
+      <tr><td>Frühe Erbsen</td><td>Juni</td><td>Herbstsalat, Rote Bete, Buschbohnen</td></tr>
+      <tr><td>Frühkartoffeln</td><td>Juli</td><td>Feldsalat oder Winterspinat</td></tr>
+      <tr><td>Kopfsalat</td><td>Juni</td><td>Grünkohl auspflanzen</td></tr>
+      <tr><td>Buschbohnen</td><td>August</td><td>Feldsalat, Rucola, Winterportulak</td></tr>
+      <tr><td>Zwiebeln</td><td>August</td><td>Feldsalat oder Gründüngung</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Die Faustregel für den letzten Termin</h3>
+  <p>Zählen Sie die Kulturdauer von der Aussaat bis zur Ernte und rechnen Sie vom
+    ersten erwarteten Frost rückwärts. Bei Feldsalat sind das etwa zehn Wochen. Bei
+    einem ersten Frost Anfang November heißt das: letzte Aussaat Mitte&nbsp;August,
+    allerspätestens Anfang September.</p>
+
+  <div class="box">
+    <span class="box__title">Der Fehler, den fast alle machen</span>
+    <p>Im Juni ist der Garten voll, es ist heiß, und Nachsäen fühlt sich unnötig an.
+      Im Januar steht das Beet leer und man kauft Feldsalat im Supermarkt. Die
+      Nachsaat entscheidet sich im Juni, nicht im Januar.</p>
+  </div>
+</div>
+
+<!-- ============ 5 ============ -->
+<div class="chapter">
+  <span class="label">Kapitel 05</span>
+  <h2>Wintergemüse</h2>
+  <p class="intro">Es gibt Gemüse, das den deutschen Winter im Freiland übersteht.
+    Nicht viel davon, aber genug, um von November bis März frisch zu ernten.</p>
+
+  <table>
+    <thead><tr><th>Kultur</th><th>Aussaat</th><th>Ernte</th><th>Frosthärte</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Grünkohl</strong></td><td>Mai–Juni vorziehen, Juli pflanzen</td><td>Nov–Feb</td><td>bis −15&nbsp;°C</td></tr>
+      <tr><td><strong>Feldsalat</strong></td><td>Aug–Sep</td><td>Nov–März</td><td>bis −15&nbsp;°C</td></tr>
+      <tr><td><strong>Rosenkohl</strong></td><td>April vorziehen, Mai pflanzen</td><td>Nov–Jan</td><td>bis −10&nbsp;°C</td></tr>
+      <tr><td><strong>Porree (Winter)</strong></td><td>März vorziehen, Mai pflanzen</td><td>Nov–März</td><td>bis −15&nbsp;°C</td></tr>
+      <tr><td><strong>Pastinake</strong></td><td>April–Mai direkt</td><td>Okt–März</td><td>bis −10&nbsp;°C</td></tr>
+      <tr><td><strong>Winterspinat</strong></td><td>Aug–Sep</td><td>Okt und März</td><td>bis −10&nbsp;°C</td></tr>
+      <tr><td><strong>Winterportulak</strong></td><td>Sep–Okt</td><td>Dez–März</td><td>sehr hart</td></tr>
+      <tr><td><strong>Zuckerhut</strong></td><td>Juli säen</td><td>Okt–Nov</td><td>leichter Frost</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Grünkohl und der Frost</h3>
+  <p>Die Regel, Grünkohl erst nach dem ersten Frost zu ernten, ist keine Folklore.
+    Bei Kälte baut die Pflanze Stärke zu Zucker um — als Frostschutz. Das schmeckt man.
+    Vor dem Frost geernteter Grünkohl ist deutlich bitterer.</p>
+
+  <h3>Abdecken</h3>
+  <p>Ein Vlies oder ein Tunnel bringt etwa zwei bis drei Wochen zusätzliche Erntezeit
+    an beiden Enden des Winters. Wichtiger als Kälteschutz ist bei Feldsalat der Schutz
+    vor Nässe von oben — nasse Blätter faulen bei Frost.</p>
+</div>
+
+<!-- ============ 6 ============ -->
+<div class="chapter">
+  <span class="label">Kapitel 06</span>
+  <h2>Einlagern statt wegwerfen</h2>
+  <p class="intro">Die meisten Ernten scheitern nicht im Beet, sondern zwischen Beet
+    und Küche. Jede Kultur hat eine Temperatur und eine Luftfeuchte, bei der sie hält —
+    und eine, bei der sie in drei Wochen weich wird.</p>
+
+  <table>
+    <thead><tr><th>Kultur</th><th class="num">Temperatur</th><th>Luftfeuchte</th><th>Methode</th><th>Haltbarkeit</th></tr></thead>
+    <tbody>
+      <tr><td>Möhren</td><td class="num">0–4&nbsp;°C</td><td>hoch</td><td>Sandkiste, Laub abgedreht</td><td>4–6 Monate</td></tr>
+      <tr><td>Kartoffeln</td><td class="num">4–8&nbsp;°C</td><td>mittel</td><td>Dunkel, luftig, in Kisten</td><td>5–8 Monate</td></tr>
+      <tr><td>Rote Bete</td><td class="num">0–4&nbsp;°C</td><td>hoch</td><td>Sandkiste</td><td>4–5 Monate</td></tr>
+      <tr><td>Zwiebeln</td><td class="num">0–5&nbsp;°C</td><td>niedrig</td><td>Geflochten, trocken, luftig</td><td>6–8 Monate</td></tr>
+      <tr><td>Knoblauch</td><td class="num">0–5&nbsp;°C</td><td>niedrig</td><td>Geflochten</td><td>6–9 Monate</td></tr>
+      <tr><td>Kürbis</td><td class="num">12–15&nbsp;°C</td><td>niedrig</td><td>Nachreifen, dann einzeln lagern</td><td>3–6 Monate</td></tr>
+      <tr><td>Pastinake</td><td class="num">0–4&nbsp;°C</td><td>hoch</td><td>Im Beet lassen, bei Bedarf ernten</td><td>über Winter</td></tr>
+      <tr><td>Weißkohl</td><td class="num">0–2&nbsp;°C</td><td>hoch</td><td>Am Strunk aufgehängt</td><td>3–4 Monate</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Die Sandkiste</h3>
+  <p>Eine Holzkiste, feuchter — nicht nasser — Sand, Wurzelgemüse schichtweise so
+    hineingelegt, dass sich die Rüben nicht berühren. Das Laub wird abgedreht, nicht
+    abgeschnitten: Eine Schnittfläche ist eine Eintrittspforte für Fäulnis.</p>
+
+  <h3>Kürbis nachreifen lassen</h3>
+  <p>Kürbis wird zwei Wochen warm und trocken gelagert, damit die Schale aushärtet.
+    Erst danach kommt er ins kühlere Lager. Wer ihn direkt kalt stellt, verkürzt die
+    Haltbarkeit um Monate.</p>
+
+  <div class="box">
+    <span class="box__title">Wöchentlich durchsehen</span>
+    <p>Eine faulende Kartoffel steckt die Kiste an. Fünf Minuten pro Woche im Lager
+      sind der Unterschied zwischen sechs Monaten Vorrat und einem Eimer Kompost
+      im Januar.</p>
+  </div>
+</div>
+
+<!-- ============ 7 ============ -->
+<div class="chapter">
+  <span class="label">Kapitel 07</span>
+  <h2>Einkochen und Fermentieren</h2>
+  <p class="intro">Zwei Verfahren, zwei völlig verschiedene Sicherheitslagen. Der
+    Unterschied ist wichtiger als jedes Rezept, deshalb steht er zuerst.</p>
+
+  <div class="box box--warn">
+    <span class="box__title">Bitte zuerst lesen: Botulismus</span>
+    <p><em>Clostridium botulinum</em> vermehrt sich unter Luftabschluss, in feuchter,
+      salzarmer und säurearmer Umgebung — also genau in einem Einweckglas mit Bohnen
+      oder Möhren. Die Sporen überleben 100&nbsp;°C. Ein Wasserbad-Einkocher erreicht
+      nur 100&nbsp;°C und tötet sie <strong>nicht</strong> ab.</p>
+    <p>Deshalb gilt in diesem Buch: <strong>säurearmes Gemüse wird nicht im Wasserbad
+      eingekocht.</strong> Es wird fermentiert, eingefroren, eingelagert oder in
+      Essigsud eingelegt. Wer säurearmes Gemüse sterilisieren will, braucht einen
+      Drucktopf mit 116–121&nbsp;°C. Das ist keine Vorsicht aus Prinzip: Botulismus
+      ist selten, aber lebensgefährlich, und man schmeckt und riecht ihn nicht.</p>
+  </div>
+
+  <h3>Was sicher im Wasserbad geht</h3>
+  <table>
+    <thead><tr><th>Gruppe</th><th>Beispiele</th><th class="num">Temperatur</th><th class="num">Dauer</th></tr></thead>
+    <tbody>
+      <tr><td>Obst</td><td>Äpfel, Birnen, Pflaumen, Kirschen</td><td class="num">80&nbsp;°C</td><td class="num">25–30 min</td></tr>
+      <tr><td>Marmelade, Gelee</td><td>Zuckergehalt hoch</td><td class="num">heiß abfüllen</td><td class="num">—</td></tr>
+      <tr><td>Saures Eingelegtes</td><td>Gurken, Rote Bete in Essigsud</td><td class="num">85&nbsp;°C</td><td class="num">30 min</td></tr>
+      <tr><td>Tomaten mit Säurezugabe</td><td>1 EL Zitronensäure je Liter</td><td class="num">90&nbsp;°C</td><td class="num">30 min</td></tr>
+    </tbody>
+  </table>
+  <p>Der gemeinsame Nenner ist Säure oder Zucker. Beides hemmt genau den Erreger,
+    den Hitze allein nicht erwischt.</p>
+
+  <h3>Fermentieren — das sicherste Verfahren</h3>
+  <p>Milchsäurebakterien senken den pH-Wert unter 4,6, und darunter wächst
+    <em>C.&nbsp;botulinum</em> nicht mehr. Fermentation macht säurearmes Gemüse
+    also selbst sicher.</p>
+  <h4>Die 2-Prozent-Lake</h4>
+  <ul>
+    <li>Gemüse wiegen. 2&nbsp;% des Gewichts an Salz ohne Jod und ohne Rieselhilfe.</li>
+    <li>Bei Kraut: Salz direkt einkneten, bis Saft austritt. Bei festem Gemüse:
+      20&nbsp;g Salz je Liter Wasser als Lake aufgießen.</li>
+    <li>Alles muss unter der Flüssigkeit bleiben — mit Gewicht beschweren.
+      Was oben schwimmt, schimmelt.</li>
+    <li>5 bis 10 Tage bei 18–22&nbsp;°C stehen lassen, dann kühl stellen.</li>
+  </ul>
+  <p>Gut geht: Weißkohl zu Sauerkraut, Möhren, Rote Bete, Bohnen, Gurken, Blumenkohl.</p>
+
+  <div class="box">
+    <span class="box__title">Woran man erkennt, dass es funktioniert</span>
+    <p>Es blubbert in den ersten Tagen, die Lake wird trüb, es riecht säuerlich und
+      frisch. Hefeschleier oben ist harmlos und wird abgeschöpft. Pelziger, farbiger
+      Schimmel bedeutet: wegwerfen, komplett.</p>
+  </div>
+</div>
+
+<!-- ============ 8 ============ -->
+<div class="chapter">
+  <span class="label">Kapitel 08</span>
+  <h2>Das erste Jahr realistisch</h2>
+  <p class="intro">Wer im ersten Jahr einunddreißig Kulturen anbaut, erntet
+    einunddreißig halbe Misserfolge. Dieses Kapitel ist der reduzierte Plan.</p>
+
+  <h3>Sieben Kulturen, die im ersten Jahr funktionieren</h3>
+  <table>
+    <thead><tr><th>Kultur</th><th>Warum sie geeignet ist</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Radieschen</strong></td><td>Vier Wochen von Saat bis Ernte. Der schnellste Erfolg, den ein Garten liefern kann.</td></tr>
+      <tr><td><strong>Pflücksalat</strong></td><td>Verzeiht Fehler, wächst nach, liefert über Monate statt einmal.</td></tr>
+      <tr><td><strong>Buschbohnen</strong></td><td>Brauchen kein Gerüst, keine Düngung, und reichern nebenbei Stickstoff an.</td></tr>
+      <tr><td><strong>Zucchini</strong></td><td>Zwei Pflanzen reichen für einen Haushalt. Mehr ist ein bekannter Anfängerfehler.</td></tr>
+      <tr><td><strong>Kartoffeln</strong></td><td>Robust, lagerfähig, und sie lockern den Boden für das Folgejahr.</td></tr>
+      <tr><td><strong>Zwiebeln aus Steckzwiebeln</strong></td><td>Fast fehlerresistent, lange lagerfähig.</td></tr>
+      <tr><td><strong>Grünkohl</strong></td><td>Die Winterernte. Steht draußen, wenn sonst nichts mehr steht.</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Was Sie im ersten Jahr weglassen</h3>
+  <ul>
+    <li><strong>Blumenkohl und Brokkoli</strong> — reagieren empfindlich auf Trockenheit
+      und Hitze; entweder schießen sie oder der Kopf bleibt klein.</li>
+    <li><strong>Sellerie</strong> — lange Kulturdauer, hoher Wasserbedarf, wenig Ertrag
+      auf kleiner Fläche.</li>
+    <li><strong>Melonen und Auberginen</strong> — brauchen mehr Wärme, als das deutsche
+      Freiland zuverlässig liefert.</li>
+    <li><strong>Zwanzig Tomatenpflanzen</strong> — vier reichen. Der Rest wird im
+      August ohnehin nicht verarbeitet.</li>
+  </ul>
+
+  <h3>Wo Anfänger Geld verbrennen</h3>
+  <p>Nicht bei Saatgut — das kostet für ein ganzes Jahr weniger als zwei Einkäufe im
+    Gartencenter. Sondern bei Hochbeet-Bausätzen, Bewässerungsanlagen und Spezialerde,
+    alles gekauft im März, bevor klar ist, ob der Garten überhaupt zum Alltag passt.</p>
+  <p>Kaufen Sie im ersten Jahr: Saatgut, Steckzwiebeln, Pflanzkartoffeln, eine
+    Grabegabel, eine Handhacke und ein Vlies. Alles andere entscheidet sich im
+    zweiten Jahr, wenn Sie wissen, was Sie tatsächlich brauchen.</p>
+
+  <div class="box">
+    <span class="box__title">Der einzige Maßstab, der im Jahr eins zählt</span>
+    <p>Nicht der Ertrag in Kilogramm. Sondern: Sind Sie im Oktober noch dabei?
+      Ein Garten, der im Juli aufgegeben wird, liefert nichts. Einer, der klein
+      anfängt und durchgehalten wird, liefert ab dem zweiten Jahr mehr, als
+      dieser Plan verspricht.</p>
+  </div>
+</div>
+
+</body>
+</html>
