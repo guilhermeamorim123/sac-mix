@@ -97,3 +97,5 @@ OutSell é o SaaS que remodela o DGX Foco (Lovable `879efa46-428c-44f0-9ac7-ff28
 
 - 2026-10-02: faixa "Plano personalizado" abaixo dos 3 planos da landing (`ce78e52`): `<aside class="plan-custom">` em `page.tsx`, botão "Falar com a gente" abre `LINK_EMAIL_PLANO` (`contato.ts`: mailto outsellops@gmail.com com assunto "Plano personalizado Outsell" e corpo com Nome/Empresa/Cidades/Quantas empresas). Estilo `.plan-custom` em `landing.css` (navy com grade de mapa, responsivo). Lição: corpo de mailto com quebra de linha tem que ser array `.join("
 ")`, nunca template string multilinha.
+
+- 2026-10-02: plano free passou a 1 varredura/mês (migração `0008_free_uma_varredura.sql`, commit `3d35096`): `varreduras_mes` 3→1, `consultas_mes` 144→48; texto da página Conta atualizado. Supabase MCP estava indisponível nesta sessão: SQL entregue pro Guilherme rodar no painel — CONFERIR se foi aplicado. Precificação discutida (Radar 97 / Rota 197 / Território 497 ou 597, custo por cabeça); faltam regime tributário e gateway (Asaas vs Stripe) pra fechar. Custo real Serper Maps = 2 créditos/página (US$ 0,002), código assume 0,001 em `custo_estimado`.
