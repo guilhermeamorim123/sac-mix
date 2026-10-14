@@ -146,3 +146,9 @@ OutSell é o SaaS que remodela o DGX Foco (Lovable `879efa46-428c-44f0-9ac7-ff28
 - Causa: a env `NEXT_PUBLIC_SUPABASE_URL` na Vercel tem uma quebra de linha no final. Entrava crua na `Content-Security-Policy` → header inválido: Chrome recusava a página ("This page couldn't load") e toda rota dinâmica (`/api/metricas`, `/api/cron/limpeza`) respondia 500.
 - Fix: `next.config.ts` → `origemSupabase()` limpa e usa só `new URL(...).origin` (commit `faa78ab`). Verificado em prod: CSP limpa, `/entrar` 200 sem erro de console, metricas 204, cron 401.
 - Pendente (usuário, painel Vercel): editar a env e remover a quebra de linha; sem isso, qualquer outro uso cru da variável pode quebrar de novo.
+
+## 2026-10-14 — PRs do Marcelo (#18–#22 mesclados; #17 aguardando migrações)
+- Mesclados e no ar: #18 (tira /termos e /privacidade — negócio em PF, sem CNPJ), #19 (logo branca com símbolo visível), #20 (prévia agrupada por nicho), #21 (excluir leads selecionados), #22 (templates prontos pra conta sem template). Gates na main: build, tsc, lint, 549 testes ok.
+- Também no ar: aviso da busca em `captar-form.tsx` sem valor em R$ (mostra "sobram X de Y" da cota) — commit `ab3069b`.
+- **#17 (quatro planos + período da assinatura) NÃO mesclado**: exige `0015_plano_radar_enum.sql` (sozinha) e depois `0016_planos_ciclo.sql` no Supabase ANTES do merge. MCP do Supabase caiu na sessão e o CLI não está logado. Arquivos copiados em `C:\Users\Dvilh\OneDrive\Desktop\outsell-migracoes\`. Ao aplicar via MCP: 0016 tem `drop function` e `revoke` (o MCP recusa) → dividir em partes.
+- Atenção: #17 troca o modelo de preços decidido em 08/10 (Grátis 7 empresas; Radar R$67/100; Rota R$147/500; Território R$397/800) e REMOVE os três pacotes (20/50 buscas, 300 IA) — fica só "+100 empresas R$57" pra Rota. `cota_extra` passa a valer por datas. Contas pro/agencia existentes ganham limites novos na hora.
